@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { answerPieces, safeHttpUrl } from "@/lib/answer-text";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -175,7 +176,23 @@ function Prose({ text }: { text: string }) {
     <div className="space-y-3 text-sm leading-6">
       {text.split(/\n{2,}/).map((block, index) => (
         <p key={index} className="whitespace-pre-wrap">
-          {block}
+          {answerPieces(block).map((piece, pieceIndex) => {
+            if (piece.kind === "link") {
+              return (
+                <a
+                  key={pieceIndex}
+                  className="underline decoration-border underline-offset-2 hover:decoration-foreground"
+                  href={piece.href}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {piece.text}
+                </a>
+              );
+            }
+            if (piece.kind === "strong") return <strong key={pieceIndex}>{piece.text}</strong>;
+            return <span key={pieceIndex}>{piece.text}</span>;
+          })}
         </p>
       ))}
     </div>
@@ -188,16 +205,6 @@ function hasWebSource(raw: string): boolean {
     return Array.isArray(parsed) && parsed.some((item) => Boolean(safeHttpUrl(item?.url)));
   } catch {
     return false;
-  }
-}
-
-function safeHttpUrl(value: string | undefined): string {
-  if (!value) return "";
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : "";
-  } catch {
-    return "";
   }
 }
 
