@@ -1,0 +1,21 @@
+{
+  "ready": false,
+  "description": "Selectors for the live DSR. Extraction refuses to run until ready is true and every selector below was confirmed on the real site.",
+  "login": {
+    "username": "",
+    "password": "",
+    "submit": "",
+    "success": ""
+  },
+  "reportPath": "",
+  "date": "",
+  "currency": "",
+  "table": "",
+  "row": "",
+  "cells": {
+    "location": "",
+    "netSales": "",
+    "treatments": "",
+    "budget": ""
+  }
+}

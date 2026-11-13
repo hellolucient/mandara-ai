@@ -1,0 +1,21 @@
+{
+  "ready": true,
+  "description": "Selectors for the local sandbox. This is not Mandara's DSR.",
+  "login": {
+    "username": "#username",
+    "password": "#password",
+    "submit": "#submit",
+    "success": "#sales-table"
+  },
+  "reportPath": "/report",
+  "date": "#business-date",
+  "currency": "#currency",
+  "table": "#sales-table",
+  "row": "tbody tr",
+  "cells": {
+    "location": "[data-field=location]",
+    "netSales": "[data-field=net]",
+    "treatments": "[data-field=treatments]",
+    "budget": "[data-field=budget]"
+  }
+}
