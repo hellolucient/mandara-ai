@@ -28,6 +28,9 @@ export function shouldRouteToSales(question: string, locationNames: string[]): b
   // Explicit exclusions: these are NOT sales questions even if they mention sales/spa words
   if (isExplicitNonSalesTask(lower)) return false;
   
+  // Hypothetical or scenario questions should go to the model, not stored data
+  if (isHypotheticalQuestion(lower)) return false;
+  
   // Additional check: must be asking about OUR sales, not explaining concepts
   if (isConceptualQuestion(lower)) return false;
   
@@ -37,13 +40,17 @@ export function shouldRouteToSales(question: string, locationNames: string[]): b
   // Sales-related query patterns (attention, below budget, etc. imply sales context)
   const hasSalesQuery = /\b(attention|below budget|underperform|best|worst)\b/i.test(lower);
   
-  // Questions about a specific location's performance
+  // Questions about a specific location's performance (only if asking for real data)
   const mentionsLocation = locationNames.some((name) => lower.includes(name.toLowerCase()));
-  if (mentionsLocation && hasSalesTerm) return true;
+  if (mentionsLocation && hasSalesTerm && hasTimeReference(lower)) return true;
   
   // Sales queries with comparison words (e.g. "Which locations need attention?")
   const hasQueryWord = /\b(what|how|show|which|report)\b/i.test(text);
-  if ((hasQueryWord || hasSalesQuery) && (hasSalesTerm || hasSalesQuery)) return true;
+  if ((hasQueryWord || hasSalesQuery) && (hasSalesTerm || hasSalesQuery)) {
+    // But not if it's asking "what if" or "how to calculate"
+    if (/\b(what if|what'?s the|how to|show the working)\b/.test(lower)) return false;
+    return true;
+  }
   
   // Must have sales term with time reference or comparison
   const hasTime = hasTimeReference(lower);
@@ -61,8 +68,9 @@ function isExplicitNonSalesTask(lower: string): boolean {
   // Translation tasks
   if (/\b(translate|translation)\b/.test(lower)) return true;
   
-  // Calculation/math tasks
+  // Calculation/math tasks - includes both direct "calculate" and math word problems
   if (/\b(calculate|utilisation|utilization|average treatment|treatment rooms?)\b/.test(lower)) return true;
+  if (/\b(show the working|work out|compute|do the math)\b/.test(lower)) return true;
   
   // Explanation tasks
   if (/\b(explain|difference between|what (is|are) the (benefits?|pros|cons))\b/.test(lower)) return true;
@@ -78,6 +86,20 @@ function isExplicitNonSalesTask(lower: string): boolean {
   
   // Memory/preference statements
   if (/\b(remember|my (favourite|favorite)|i (like|prefer|love)|tell me about|products?)\b/.test(lower)) return true;
+  
+  return false;
+}
+
+function isHypotheticalQuestion(lower: string): boolean {
+  // Hypothetical scenarios use "if", "suppose", "imagine", "let's say", etc.
+  if (/\b(if |suppose|imagine|let'?s say|assuming|what if|scenario)\b/.test(lower)) return true;
+  
+  // Math word problems with scenario setup
+  // Pattern: "A spa does X... what's Y?" or "If X then what's Y?"
+  if (/\b(a spa|an? location|we have|there (is|are)).*\?/.test(lower)) {
+    // If it mentions numbers and asks "what's" or "how much", it's a calculation
+    if (/\d/.test(lower) && /what'?s|how much|extra.*revenue/.test(lower)) return true;
+  }
   
   return false;
 }

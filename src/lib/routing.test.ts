@@ -6,6 +6,7 @@ const LOCATIONS = ["Hakuraa", "Olhuveli", "Sheraton"];
 
 describe("sales routing", () => {
   it("routes genuine sales questions to sales path", () => {
+    // Real data lookups with time references or comparisons
     assert.equal(shouldRouteToSales("What were total spa sales yesterday?", LOCATIONS), true);
     assert.equal(shouldRouteToSales("Which locations need attention?", LOCATIONS), true);
     assert.equal(shouldRouteToSales("How did Hakuraa do last week vs budget?", LOCATIONS), true);
@@ -13,6 +14,8 @@ describe("sales routing", () => {
     assert.equal(shouldRouteToSales("What are this month's sales figures?", LOCATIONS), true);
     assert.equal(shouldRouteToSales("Which spas are below budget?", LOCATIONS), true);
     assert.equal(shouldRouteToSales("Sales report for 12 Nov", LOCATIONS), true);
+    assert.equal(shouldRouteToSales("Sales at Hakuraa last week", LOCATIONS), true);
+    assert.equal(shouldRouteToSales("What were yesterday's sales?", LOCATIONS), true);
   });
 
   it("does not route general prompts to sales path", () => {
@@ -26,6 +29,23 @@ describe("sales routing", () => {
     assert.equal(shouldRouteToSales("What are the benefits of hot stone massage?", LOCATIONS), false);
     assert.equal(shouldRouteToSales("How many treatment rooms should a 100-room resort have?", LOCATIONS), false);
     assert.equal(shouldRouteToSales("Tell me about Elemis products", LOCATIONS), false);
+  });
+
+  it("does not route hypothetical calculations to sales path", () => {
+    // Regression test for issue #1: hypothetical calculation was routed to sales
+    assert.equal(
+      shouldRouteToSales(
+        "A spa does $9,500 net revenue a day across 12 locations. If retail is 12% of revenue and we lift it to 18% with no change in treatment revenue, what's the extra monthly revenue? Show the working.",
+        LOCATIONS
+      ),
+      false
+    );
+    
+    // Other hypothetical scenarios
+    assert.equal(shouldRouteToSales("If we increase prices by 10%, what would revenue be?", LOCATIONS), false);
+    assert.equal(shouldRouteToSales("Suppose a location does $5,000 a day. What's the annual total?", LOCATIONS), false);
+    assert.equal(shouldRouteToSales("Imagine we open 3 more spas. What's the impact on revenue?", LOCATIONS), false);
+    assert.equal(shouldRouteToSales("Let's say retail becomes 20% of sales. What's the change?", LOCATIONS), false);
   });
 
   it("handles edge cases correctly", () => {

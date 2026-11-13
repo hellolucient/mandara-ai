@@ -20,8 +20,15 @@ describe("session module structure", () => {
     const response = new Response("test");
     assert.equal(isResponse(response), true);
     
-    // Test with a non-Response object
-    const notResponse = { role: "admin" };
-    assert.equal(isResponse(notResponse), false);
+    // Test with a Member-like object
+    const member = { 
+      stage: "production" as const, 
+      sub: "test", 
+      email: "test@example.com", 
+      name: "Test", 
+      role: "admin" as const,
+      simulated: false 
+    };
+    assert.equal(isResponse(member), false);
   });
 });
