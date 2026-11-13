@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-type Citation = { documentId: string; title: string; excerpt: string; sample: boolean };
+type Citation = { documentId: string; title: string; excerpt: string; sample: boolean; url?: string };
 type Message = {
   id: string;
   role: "user" | "assistant";
@@ -180,6 +180,16 @@ function Prose({ text }: { text: string }) {
   );
 }
 
+function safeHttpUrl(value: string | undefined): string {
+  if (!value) return "";
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
 function Citations({ raw }: { raw: string }) {
   let citations: Citation[] = [];
   try {
@@ -191,12 +201,21 @@ function Citations({ raw }: { raw: string }) {
   if (citations.length === 0) return null;
   return (
     <ul className="mt-3 space-y-2 border-t pt-3">
-      {citations.map((citation) => (
-        <li key={citation.documentId} className="text-xs leading-5 text-muted-foreground">
-          <span className="text-foreground">Source: {citation.title}</span>
-          {citation.sample ? " · Sample document" : ""}
-        </li>
-      ))}
+      {citations.map((citation) => {
+        const href = safeHttpUrl(citation.url);
+        return (
+          <li key={href || citation.documentId || citation.title} className="text-xs leading-5 text-muted-foreground">
+            {href ? (
+              <a className="text-foreground underline-offset-2 hover:underline" href={href} target="_blank" rel="noreferrer noopener">
+                {citation.title}
+              </a>
+            ) : (
+              <span className="text-foreground">Source: {citation.title}</span>
+            )}
+            {citation.sample ? " · Sample document" : ""}
+          </li>
+        );
+      })}
     </ul>
   );
 }
