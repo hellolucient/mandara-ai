@@ -236,7 +236,7 @@ function datesBetween(start: string, end: string): string[] {
 function sourceLine(day: LoadedDay): string {
   if (day.source === "sample") return "Source: sample figures. These were not read from DSR.";
   if (day.source === "import") return "Source: imported file. This was not a live DSR extract.";
-  return "Source: stored DSR extract.";
+  return "Source: Maldives daily DSR. Net sales are total revenue, treatments are treatment guests, and the budget is that day's forecast.";
 }
 
 export function dayHeadline(day: LoadedDay, ordered: LoadedDay[]) {

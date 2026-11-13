@@ -49,7 +49,7 @@ The default model id is `openrouter/auto`. Each question is routed on the middle
 
 ## DSR
 
-Generate report and Check DSR sign-in, on the published app, submit the saved username and password to the saved address. The sign-in reads the login form on the page. It does not store sales figures from that page. The activity log records whether the sign-in was accepted and which tables were visible.
+Check DSR sign-in submits the saved username and password the way the DSR page does, and records whether the account was accepted. Generate report signs in and stores the previous day's Maldives daily DSR: total revenue, that day's forecast, and treatment guests for each spa. It does not change anything in DSR.
 
 The separate extractor is also read-only. It signs in, reads one table, and prints JSON. It does not click anything that would edit DSR.
 

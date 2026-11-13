@@ -59,29 +59,45 @@ export function summarizeDsrHtml(html: string): DsrHtmlSummary {
   };
 }
 
+export type DsrPost = (
+  path: string,
+  fields: Record<string, string>,
+  timeoutMs?: number,
+) => Promise<{ status: number; body: string }>;
+
+export type DsrSession =
+  | { ok: true; probe: DsrProbeResult; userid: string; post: DsrPost }
+  | { ok: false; probe: DsrProbeResult };
+
 export async function probeDsr(fetchImpl: DsrFetch = fetch): Promise<DsrProbeResult> {
+  const session = await openDsrSession(fetchImpl);
+  return session.probe;
+}
+
+export async function openDsrSession(fetchImpl: DsrFetch = fetch): Promise<DsrSession> {
   const baseUrl = process.env.DSR_BASE_URL?.trim() ?? "";
   const username = process.env.DSR_USERNAME?.trim() ?? "";
   const password = process.env.DSR_PASSWORD?.trim() ?? "";
-  if (!baseUrl || !username || !password) return blank(false, "", UNAVAILABLE);
+  if (!baseUrl || !username || !password) return closed(blank(false, "", UNAVAILABLE));
 
   let origin: URL;
   try {
     origin = new URL(baseUrl);
   } catch {
-    return blank(false, "", UNAVAILABLE);
+    return closed(blank(false, "", UNAVAILABLE));
   }
-  if (origin.protocol !== "http:" && origin.protocol !== "https:") return blank(false, "", UNAVAILABLE);
+  if (origin.protocol !== "http:" && origin.protocol !== "https:") return closed(blank(false, "", UNAVAILABLE));
   origin.username = "";
   origin.password = "";
   origin.hash = "";
   const host = origin.host;
 
   try {
-    const first = await fetchPage(fetchImpl, origin, origin, new Map(), "GET");
-    if (first.kind === "unreachable") return blank(false, host, "The DSR server did not respond.");
-    if (first.kind === "off-host") return blank(true, host, "A redirect left the DSR host, so the check stopped.");
-    if (first.kind === "stopped") return blank(true, host, first.note);
+    const jar = new Map<string, string>();
+    const first = await fetchPage(fetchImpl, origin, origin, jar, "GET");
+    if (first.kind === "unreachable") return closed(blank(false, host, "The DSR server did not respond."));
+    if (first.kind === "off-host") return closed(blank(true, host, "A redirect left the DSR host, so the check stopped."));
+    if (first.kind === "stopped") return closed(blank(true, host, first.note));
 
     const login = summarizeDsrHtml(first.body);
     const partial = {
@@ -93,44 +109,107 @@ export async function probeDsr(fetchImpl: DsrFetch = fetch): Promise<DsrProbeRes
       tables: login.tables,
     };
     if (!login.passwordFieldPresent || !login.form) {
-      return scrub(finish(partial, false, "The server did not receive a sign-in form."), password);
+      return closed(scrub(finish(partial, false, "The server did not receive a sign-in form."), password));
     }
     if (!login.form.usernameField || !login.form.passwordField) {
-      return scrub(
-        finish(partial, false, "The sign-in form could not be submitted, so the password was not sent."),
-        password,
+      return closed(
+        scrub(finish(partial, false, "The sign-in form could not be submitted, so the password was not sent."), password),
       );
     }
 
+    const phpSession = login.form.fields.find((field) => field.name === "php_session")?.value ?? "";
+    const steiner = login.form.usernameField === "userid" && login.form.passwordField === "pin" && phpSession !== "";
     let action: URL;
-    try {
-      action = new URL(login.form.action || first.url, first.url);
-    } catch {
-      return scrub(finish(partial, false, "The sign-in form could not be submitted, so the password was not sent."), password);
+    const body = new URLSearchParams();
+    if (steiner) {
+      try {
+        action = new URL("s_login_post.php", first.url);
+      } catch {
+        return closed(scrub(finish(partial, false, "The sign-in form could not be submitted, so the password was not sent."), password));
+      }
+      body.set("userid", username);
+      body.set("pin", password);
+      body.set("pcnm", "");
+      body.set("pcip", "");
+      body.set("php_session", phpSession);
+      body.set("appCodeName", "Mozilla");
+      body.set("appName", "Netscape");
+      body.set("userAgent", "Mozilla/5.0");
+      body.set("appVersion", "5.0");
+      body.set("platform", "Linux x86_64");
+      body.set("oscpu", "Linux x86_64");
+      body.set("product", "Gecko");
+      body.set("screen_w", "1920");
+      body.set("screen_h", "1080");
+      body.set("mode", "LOGIN");
+      body.set("seed", String(Math.floor(Math.random() * 10023)));
+    } else {
+      try {
+        action = new URL(login.form.action || first.url, first.url);
+      } catch {
+        return closed(scrub(finish(partial, false, "The sign-in form could not be submitted, so the password was not sent."), password));
+      }
+      for (const field of login.form.fields) body.append(field.name, field.value);
+      body.set(login.form.usernameField, username);
+      body.set(login.form.passwordField, password);
     }
     if (!sameSite(origin, action)) {
-      return scrub(finish(partial, false, "The sign-in form points at another host, so the password was not sent."), password);
+      return closed(scrub(finish(partial, false, "The sign-in form points at another host, so the password was not sent."), password));
     }
     action.username = "";
     action.password = "";
     action.hash = "";
 
-    const body = new URLSearchParams();
-    for (const field of login.form.fields) body.append(field.name, field.value);
-    body.set(login.form.usernameField, username);
-    body.set(login.form.passwordField, password);
-    const posted = await fetchPage(fetchImpl, action, origin, first.cookies, "POST", body.toString());
+    const posted = await fetchPage(fetchImpl, action, origin, jar, "POST", body.toString());
     if (posted.kind === "unreachable") {
-      return scrub(finish(partial, false, "The DSR server did not respond."), password);
+      return closed(scrub(finish(partial, false, "The DSR server did not respond."), password));
     }
     if (posted.kind === "off-host") {
-      return scrub(finish(partial, false, "A redirect left the DSR host, so the check stopped."), password);
+      return closed(scrub(finish(partial, false, "A redirect left the DSR host, so the check stopped."), password));
     }
-    if (posted.kind === "stopped") return scrub(finish(partial, false, posted.note), password);
+    if (posted.kind === "stopped") return closed(scrub(finish(partial, false, posted.note), password));
+
+    const post: DsrPost = async (path, fields, timeoutMs = 25_000) => {
+      let url: URL;
+      try {
+        url = new URL(path, origin);
+      } catch {
+        return { status: 0, body: "" };
+      }
+      if (!sameSite(origin, url)) return { status: 0, body: "" };
+      const sent = await fetchPage(fetchImpl, url, origin, jar, "POST", new URLSearchParams(fields).toString(), timeoutMs);
+      if (sent.kind !== "page") return { status: 0, body: "" };
+      return { status: sent.status, body: sent.body };
+    };
+
+    if (steiner) {
+      const task = pipeField(posted.body, "TASKSTATUS");
+      if (task) {
+        const signedIn = task === "ACK";
+        const error = pipeField(posted.body, "ERRORSTR");
+        const name = pipeField(posted.body, "G_USERNAME");
+        const userid = pipeField(posted.body, "G_USERID") || username;
+        const note = signedIn
+          ? `Signed in${name ? ` as ${name}` : ""}. The DSR account was accepted. No figures were stored.`
+          : error
+            ? `The DSR server refused the sign-in. The page says: ${error}. No figures were stored.`
+            : "The DSR server refused the sign-in. No figures were stored.";
+        const probe = scrub(
+          finish(
+            { ...partial, passwordFieldPresent: false, tables: [] },
+            signedIn,
+            note,
+          ),
+          password,
+        );
+        if (!signedIn) return closed(probe);
+        return { ok: true, probe, userid, post };
+      }
+    }
 
     const landed = summarizeDsrHtml(posted.body);
     const signedIn = accepted(posted.status, landed.passwordFieldPresent);
-    return scrub(
+    const probe = scrub(
       finish(
         {
           reachable: true,
@@ -145,9 +224,20 @@ export async function probeDsr(fetchImpl: DsrFetch = fetch): Promise<DsrProbeRes
       ),
       password,
     );
+    if (!signedIn) return closed(probe);
+    return { ok: true, probe, userid: username, post };
   } catch {
-    return blank(false, host, "The DSR sign-in check failed.");
+    return closed(blank(false, host, "The DSR sign-in check failed."));
   }
+}
+
+function closed(probe: DsrProbeResult): DsrSession {
+  return { ok: false, probe };
+}
+
+function pipeField(body: string, name: string): string {
+  const line = body.split(/\r?\n/).find((item) => item.startsWith(`${name}|`));
+  return line ? line.slice(name.length + 1).trim() : "";
 }
 
 function blank(reachable: boolean, host: string, note: string): DsrProbeResult {
@@ -230,6 +320,7 @@ async function fetchPage(
   jar: CookieJar,
   method: "GET" | "POST",
   body?: string,
+  timeoutMs = TIMEOUT_MS,
 ): Promise<FetchStop> {
   let current = new URL(start.toString());
   let verb = method;
@@ -252,7 +343,7 @@ async function fetchPage(
         headers,
         body: payload,
         redirect: "manual",
-        signal: AbortSignal.timeout(TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch {
       return { kind: "unreachable" };

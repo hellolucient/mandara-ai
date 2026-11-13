@@ -1,9 +1,10 @@
 import { sql } from "@/lib/db";
 import { businessToday, formatBusinessDate } from "@/lib/dates";
-import { probeDsr } from "@/lib/dsr-probe";
+import { readMaldivesDaily } from "@/lib/dsr-daily";
+import type { DsrFetch } from "@/lib/dsr-probe";
 import { newId } from "@/lib/ids";
 import { reportFor } from "@/lib/sales-answers";
-import { loadDays } from "@/lib/sales-store";
+import { loadDays, removeSampleDays, saveExtract } from "@/lib/sales-store";
 import { integrationStatus } from "@/lib/secrets";
 
 export type AgentRun = {
@@ -24,17 +25,16 @@ export async function runSalesAgent(input: {
   trigger: "manual" | "schedule";
   actor: string;
   today?: string;
+  fetchImpl?: DsrFetch;
 }): Promise<AgentRun> {
   const id = newId();
   const today = input.today ?? businessToday();
+  const businessDate = addIso(today, -1);
   const status = await integrationStatus();
   const lines = [`Run started (${input.trigger}).`];
-  if (!status.dsrUrl || !status.dsrUsername || !status.dsrPassword) {
+  const live = Boolean(status.dsrUrl && status.dsrUsername && status.dsrPassword);
+  if (!live) {
     lines.push("DSR sign-in is not available to this server, so this report uses the records already stored.");
-  } else {
-    const probe = await probeDsr();
-    lines.push(probe.note);
-    lines.push("Figures from the page were not stored. The report below uses the records already stored.");
   }
   await sql(
     `insert into agent_runs (id, stage, agent, trigger, status, actor, log)
@@ -42,8 +42,19 @@ export async function runSalesAgent(input: {
     [id, input.stage, input.trigger, input.actor, lines.join("\n")],
   );
   try {
+    if (live) {
+      const read = await readMaldivesDaily(businessDate, input.fetchImpl);
+      lines.push(read.note);
+      if (!read.ok) {
+        lines.push("No figures were stored.");
+        await finish(id, "failed", null, "", "", lines.join("\n"), read.note);
+        return (await getRun(id))!;
+      }
+      await saveExtract(input.stage, read.extract, "dsr");
+      await removeSampleDays(input.stage);
+    }
     const days = await loadDays(input.stage);
-    const target = days.find((day) => day.businessDate === addIso(today, -1)) ?? null;
+    const target = days.find((day) => day.businessDate === businessDate) ?? null;
     if (!target) {
       const latest = days.at(-1);
       const error = latest
@@ -53,7 +64,8 @@ export async function runSalesAgent(input: {
       await finish(id, "failed", null, "", "", lines.join("\n"), error);
       return (await getRun(id))!;
     }
-    const report = reportFor(target, days);
+    const history = target.source === "dsr" ? days.filter((day) => day.source !== "sample") : days;
+    const report = reportFor(target, history);
     const summary = report.split("\n").find((line) => line.startsWith("Recorded net sales")) ?? "Report stored.";
     lines.push(`Report built for ${target.businessDate} from ${target.source} records.`);
     await finish(id, target.complete ? "completed" : "attention", target.businessDate, summary, report, lines.join("\n"), "");

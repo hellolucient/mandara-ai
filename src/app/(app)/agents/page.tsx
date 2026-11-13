@@ -17,7 +17,7 @@ export default async function AgentsPage() {
   const signedIn = status.dsrUrl && status.dsrUsername && status.dsrPassword;
   const dsrState = !signedIn
     ? "DSR sign-in is not available to this server. Reports use the records already stored, and they name that source."
-    : "The saved login is submitted from this server when you generate a report or check the sign-in. The result is written in the activity log. Sales figures are not taken from the page until the table is identified.";
+    : "Check DSR sign-in only checks the saved account. Generate report signs in and stores the previous day's Maldives daily DSR.";
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 md:px-8">
       <h1 className="font-heading text-3xl">Agents</h1>

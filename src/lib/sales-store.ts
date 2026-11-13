@@ -60,6 +60,10 @@ export async function locationNames(stage: string): Promise<string[]> {
   return rows.map((row) => row.name);
 }
 
+export async function removeSampleDays(stage: string): Promise<void> {
+  await sql("delete from sales_days where stage = $1 and source = 'sample'", [stage]);
+}
+
 export async function saveExtract(stage: string, extract: SalesExtract, source: Exclude<SalesSource, "sample">): Promise<void> {
   const existing = await sql<{ id: string }>(
     "select id from sales_days where stage = $1 and business_date = $2",

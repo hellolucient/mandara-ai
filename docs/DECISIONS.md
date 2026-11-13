@@ -18,7 +18,7 @@ Full-text search in Postgres is enough for the first document set. Embeddings ca
 
 ## DSR
 
-The published app submits the saved DSR login by reading the sign-in form. It records the result and does not store sales figures from an unidentified table. A read-only Playwright extractor still requires `config/dsr-map.json` with `ready: true`. Failed extracts are logged and are not stored as sales.
+The published app signs in the way the DSR page does. Generate report stores the previous day's Maldives daily DSR and drops the sample sales once that extract is saved. A failed read is logged and is not stored as sales. The separate Playwright extractor still requires `config/dsr-map.json` with `ready: true`.
 
 ## Sample data
 
