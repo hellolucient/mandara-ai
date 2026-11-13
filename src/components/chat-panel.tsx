@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { answerPieces, safeHttpUrl, safeImageSrc } from "@/lib/answer-text";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Calculator } from "@/components/calculator";
+import type { CalculatorSpec } from "@/lib/calculator-spec";
 
 type Citation = { documentId: string; title: string; excerpt: string; sample: boolean; url?: string };
 type Message = {
@@ -176,30 +178,48 @@ export function ChatPanel({
 }
 
 function Prose({ text }: { text: string }) {
+  // Extract calculator block if present
+  const calculatorMatch = text.match(/```calculator\s*\n([\s\S]*?)\n```/);
+  let calculatorSpec: CalculatorSpec | null = null;
+  let textWithoutCalculator = text;
+
+  if (calculatorMatch) {
+    try {
+      calculatorSpec = JSON.parse(calculatorMatch[1]) as CalculatorSpec;
+      textWithoutCalculator = text.replace(/```calculator\s*\n[\s\S]*?\n```/, "").trim();
+    } catch {
+      // Failed to parse - ignore and show as text
+      calculatorSpec = null;
+    }
+  }
+
   return (
-    <div className="space-y-3 text-sm leading-6">
-      {text.split(/\n{2,}/).map((block, index) => (
-        <p key={index} className="whitespace-pre-wrap">
-          {answerPieces(block).map((piece, pieceIndex) => {
-            if (piece.kind === "link") {
-              return (
-                <a
-                  key={pieceIndex}
-                  className="underline decoration-border underline-offset-2 hover:decoration-foreground"
-                  href={piece.href}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                >
-                  {piece.text}
-                </a>
-              );
-            }
-            if (piece.kind === "strong") return <strong key={pieceIndex}>{piece.text}</strong>;
-            return <span key={pieceIndex}>{piece.text}</span>;
-          })}
-        </p>
-      ))}
-    </div>
+    <>
+      <div className="space-y-3 text-sm leading-6">
+        {textWithoutCalculator.split(/\n{2,}/).map((block, index) => (
+          <p key={index} className="whitespace-pre-wrap">
+            {answerPieces(block).map((piece, pieceIndex) => {
+              if (piece.kind === "link") {
+                return (
+                  <a
+                    key={pieceIndex}
+                    className="underline decoration-border underline-offset-2 hover:decoration-foreground"
+                    href={piece.href}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    {piece.text}
+                  </a>
+                );
+              }
+              if (piece.kind === "strong") return <strong key={pieceIndex}>{piece.text}</strong>;
+              return <span key={pieceIndex}>{piece.text}</span>;
+            })}
+          </p>
+        ))}
+      </div>
+      {calculatorSpec && <Calculator spec={calculatorSpec} />}
+    </>
   );
 }
 
