@@ -82,7 +82,7 @@ export function ChatPanel({
           <div className="mx-auto max-w-2xl pt-10">
             <p className="font-heading text-4xl text-primary">What do you need done?</p>
             <p className="mt-3 max-w-xl text-base leading-7 text-muted-foreground">
-              Ask about a treatment, a company document, or the sales figures already stored. Sales answers are calculated from the records. They are not guessed by the model.
+              Ask anything. A question about current events is checked while the answer is written. Sales figures still come from the stored records, not from a guess.
             </p>
             {!modelOn ? (
               <p className="mt-4 rounded-lg bg-accent px-3 py-2 text-sm leading-6">
@@ -115,7 +115,9 @@ export function ChatPanel({
                     <p className="mt-2 text-xs text-muted-foreground">Attached: {message.attachment_name}</p>
                   ) : null}
                   {message.role === "assistant" && MODE[message.mode] ? (
-                    <p className="mt-3 text-xs text-muted-foreground">{MODE[message.mode]}</p>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      {message.mode === "general" && hasWebSource(message.citations) ? "Checked the web" : MODE[message.mode]}
+                    </p>
                   ) : null}
                   <Citations raw={message.citations} />
                 </div>
@@ -178,6 +180,15 @@ function Prose({ text }: { text: string }) {
       ))}
     </div>
   );
+}
+
+function hasWebSource(raw: string): boolean {
+  try {
+    const parsed = JSON.parse(raw) as Array<{ url?: string }>;
+    return Array.isArray(parsed) && parsed.some((item) => Boolean(safeHttpUrl(item?.url)));
+  } catch {
+    return false;
+  }
 }
 
 function safeHttpUrl(value: string | undefined): string {
