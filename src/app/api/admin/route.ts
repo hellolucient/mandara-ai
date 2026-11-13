@@ -18,6 +18,7 @@ export async function POST(request: Request) {
     await updateSettings(member.stage, {
       companyName: body.companyName ?? "",
       model: body.model ?? "",
+      imageModel: body.imageModel ?? "",
       currency: body.currency ?? "",
     });
     return json({ ok: true });

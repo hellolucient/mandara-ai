@@ -22,7 +22,8 @@ const ESTIMATES: Record<string, [number, number]> = {
   "deepseek/deepseek-v4-pro": [0.9, 1.5],
 };
 
-const IMAGE_MODEL = "google/gemini-2.5-flash-image";
+const IMAGE_MODEL_DEFAULT = "google/gemini-2.5-flash-image";
+const IMAGE_MODEL_FALLBACK = "google/gemini-3.1-flash-image";
 const ASPECTS = new Set(["1:1", "2:3", "3:2", "3:4", "4:3", "9:16", "16:9"]);
 
 const PICTURE_TOOL = {
@@ -69,10 +70,10 @@ export function gatewayBody(model: string, messages: ModelMessage[], web: boolea
   };
 }
 
-export async function complete(model: string, messages: ModelMessage[], web = false, pictures = false): Promise<Completion> {
+export async function complete(model: string, messages: ModelMessage[], web = false, pictures = false, imageModel?: string): Promise<Completion> {
   const lastUser = [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
   const drawNow = pictures && asksForPicture(lastUser);
-  const directPicture = drawNow ? createPicture(lastUser.slice(0, 2000), "3:2") : Promise.resolve(null);
+  const directPicture = drawNow ? createPicture(lastUser.slice(0, 2000), "3:2", imageModel ?? IMAGE_MODEL_DEFAULT) : Promise.resolve(null);
   try {
     return await finish(model, messages, web, pictures && !drawNow, directPicture, drawNow);
   } catch (error) {
@@ -90,17 +91,19 @@ async function finish(
   messages: ModelMessage[],
   web: boolean,
   tools: boolean,
-  directPicture: Promise<{ url: string; costUsd: number } | null>,
+  directPicture: Promise<{ url: string; costUsd: number; reason?: string } | null>,
   expectDirect: boolean,
 ): Promise<Completion> {
   const completion = await requestCompletion(model, messages, web, tools);
   const drawn = await picturesFromTools(completion.toolCalls);
   const direct = expectDirect ? await directPicture : null;
-  const images = [...drawn.images, ...(direct?.url ? [direct.url] : [])].slice(0, 2);
+  const directImages = completion.images.concat(drawn.images, direct?.url ? [direct.url] : []);
+  const images = directImages.slice(0, 2);
   let text = completion.text;
   if (!text && images.length > 0) text = "Here is the concept.";
   if ((expectDirect || completion.toolCalls.length > 0) && images.length === 0) {
-    text = text ? `${text}\n\nI could not create the picture this time.` : "I could not create the picture this time.";
+    const reason = direct?.reason ? ` (${direct.reason})` : "";
+    text = text ? `${text}\n\nI could not create the picture this time${reason}.` : `I could not create the picture this time${reason}.`;
   }
   if (!text) throw new Error("The model returned an empty answer.");
   const costUsd = completion.costUsd + drawn.costUsd + (direct?.costUsd ?? 0);
@@ -128,19 +131,21 @@ async function requestCompletion(model: string, messages: ModelMessage[], web: b
       const detail = (await response.text()).replace(/\s+/g, " ").slice(0, 180);
       throw new Error(`The model gateway returned status ${response.status}. ${detail}`.trim());
     }
+    type ImageEntry = { image_url?: { url?: unknown } };
     const payload = (await response.json()) as {
       model?: string;
-      choices?: Array<{ message?: { content?: string | null; annotations?: unknown; tool_calls?: unknown } }>;
+      choices?: Array<{ message?: { content?: string | null; annotations?: unknown; tool_calls?: unknown; images?: ImageEntry[] } }>;
       usage?: { prompt_tokens?: number; completion_tokens?: number; cost?: number };
     };
     const message = payload.choices?.[0]?.message;
     const text = typeof message?.content === "string" ? message.content.trim() : "";
     const toolCalls = readToolCalls(message?.tool_calls);
+    const modalityImages = readModalityImages(message?.images);
     const promptTokens = payload.usage?.prompt_tokens ?? 0;
     const completionTokens = payload.usage?.completion_tokens ?? 0;
     const served = typeof payload.model === "string" && payload.model.trim() ? payload.model.trim() : model;
     const sources = sourcesFromAnnotations(message?.annotations);
-    const base = { text, model: served, promptTokens, completionTokens, sources, images: [] as string[], toolCalls };
+    const base = { text, model: served, promptTokens, completionTokens, sources, images: modalityImages, toolCalls };
     if (typeof payload.usage?.cost === "number") {
       return { ...base, costUsd: payload.usage.cost, costKnown: true };
     }
@@ -150,6 +155,21 @@ async function requestCompletion(model: string, messages: ModelMessage[], web: b
   } finally {
     clearTimeout(timer);
   }
+}
+
+export function readModalityImages(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const images: string[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const entry = item as { image_url?: { url?: unknown } };
+    const url = typeof entry.image_url?.url === "string" ? entry.image_url.url.trim() : "";
+    if (url && /^data:image\/(png|jpeg|webp);base64,/.test(url)) {
+      images.push(url);
+      if (images.length === 2) break;
+    }
+  }
+  return images;
 }
 
 function readToolCalls(value: unknown): ToolCall[] {
@@ -180,21 +200,34 @@ async function picturesFromTools(calls: ToolCall[]): Promise<{ images: string[];
   const images: string[] = [];
   let costUsd = 0;
   for (const call of calls) {
-    const picture = await createPicture(call.prompt, call.aspectRatio).catch(() => null);
-    if (!picture) continue;
+    const picture = await createPicture(call.prompt, call.aspectRatio, IMAGE_MODEL_DEFAULT).catch(() => null);
+    if (!picture || !picture.url) continue;
     images.push(picture.url);
     costUsd += picture.costUsd;
   }
   return { images, costUsd };
 }
 
-async function createPicture(prompt: string, aspectRatio: string): Promise<{ url: string; costUsd: number } | null> {
+async function createPicture(prompt: string, aspectRatio: string, imageModel: string): Promise<{ url: string; costUsd: number; reason?: string } | null> {
   const key = process.env.OPENROUTER_API_KEY?.trim() ?? "";
   if (!key || !prompt.trim()) return null;
+  
+  const result = await attemptPictureGeneration(prompt, aspectRatio, imageModel, key);
+  if (result) return result;
+  
+  if (imageModel !== IMAGE_MODEL_FALLBACK) {
+    console.warn(`Image generation failed with ${imageModel}, trying fallback ${IMAGE_MODEL_FALLBACK}`);
+    return attemptPictureGeneration(prompt, aspectRatio, IMAGE_MODEL_FALLBACK, key);
+  }
+  
+  return null;
+}
+
+async function attemptPictureGeneration(prompt: string, aspectRatio: string, model: string, key: string): Promise<{ url: string; costUsd: number; reason?: string } | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 50_000);
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/images", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       signal: controller.signal,
       headers: {
@@ -203,22 +236,54 @@ async function createPicture(prompt: string, aspectRatio: string): Promise<{ url
         "x-title": "Mandara AI",
       },
       body: JSON.stringify({
-        model: IMAGE_MODEL,
-        prompt: prompt.trim().slice(0, 2000),
-        aspect_ratio: ASPECTS.has(aspectRatio) ? aspectRatio : "3:2",
+        model,
+        messages: [{ role: "user", content: prompt.trim().slice(0, 2000) }],
+        modalities: ["image", "text"],
+        image_config: { aspect_ratio: ASPECTS.has(aspectRatio) ? aspectRatio : "3:2" },
       }),
     });
-    if (!response.ok) return null;
+    
+    if (!response.ok) {
+      const status = response.status;
+      let reason = "image model unavailable";
+      try {
+        const errorText = await response.text();
+        const errorData = JSON.parse(errorText) as { error?: { message?: string; code?: number } };
+        const errorMsg = errorData.error?.message || errorText;
+        console.error(`Image generation failed (${status}): ${errorMsg.slice(0, 200)}`);
+        if (status === 402) reason = "out of credit";
+        else if (status === 429) reason = "image model busy";
+        else if (status === 503 || status === 502) reason = "image model unavailable";
+        else if (errorMsg.toLowerCase().includes("credit")) reason = "out of credit";
+        else if (errorMsg.toLowerCase().includes("rate")) reason = "image model busy";
+      } catch {
+        console.error(`Image generation failed with status ${status}`);
+      }
+      return { url: "", costUsd: 0, reason };
+    }
+    
+    type ImageEntry = { image_url?: { url?: unknown } };
     const payload = (await response.json()) as {
-      data?: Array<{ b64_json?: string; media_type?: string }>;
+      choices?: Array<{ message?: { images?: ImageEntry[] } }>;
       usage?: { cost?: number };
     };
-    const encoded = payload.data?.[0]?.b64_json?.replace(/\s/g, "") ?? "";
-    const media = payload.data?.[0]?.media_type || "image/png";
-    if (!encoded || encoded.length > 5_000_000 || !/^image\/(png|jpeg|webp)$/.test(media)) return null;
+    
+    const images = payload.choices?.[0]?.message?.images;
+    const url = typeof images?.[0]?.image_url?.url === "string" ? images[0].image_url.url.trim() : "";
+    
+    if (!url || !/^data:image\/(png|jpeg|webp);base64,/.test(url) || url.length > 5_000_000) {
+      console.error("Image generation returned no valid image");
+      return { url: "", costUsd: 0, reason: "invalid image response" };
+    }
+    
     const costUsd = typeof payload.usage?.cost === "number" ? payload.usage.cost : 0;
-    return { url: `data:${media};base64,${encoded}`, costUsd };
-  } catch {
+    return { url, costUsd };
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      console.error("Image generation timed out");
+      return { url: "", costUsd: 0, reason: "request timed out" };
+    }
+    console.error("Image generation error:", error instanceof Error ? error.message : String(error));
     return null;
   } finally {
     clearTimeout(timer);

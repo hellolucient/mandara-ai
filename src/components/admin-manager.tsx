@@ -16,7 +16,7 @@ async function post(body: Record<string, string>) {
   if (!response.ok) throw new Error(payload.error || "The change was not saved.");
 }
 
-export function SettingsForm({ companyName, model, currency }: { companyName: string; model: string; currency: string }) {
+export function SettingsForm({ companyName, model, imageModel, currency }: { companyName: string; model: string; imageModel: string; currency: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   return (
@@ -31,6 +31,7 @@ export function SettingsForm({ companyName, model, currency }: { companyName: st
             action: "settings",
             companyName: String(form.get("companyName") ?? ""),
             model: String(form.get("model") ?? ""),
+            imageModel: String(form.get("imageModel") ?? ""),
             currency: String(form.get("currency") ?? ""),
           });
           router.refresh();
@@ -47,6 +48,11 @@ export function SettingsForm({ companyName, model, currency }: { companyName: st
         <Label htmlFor="model">OpenRouter model id</Label>
         <Input id="model" name="model" defaultValue={model} className="mt-1 h-10" />
         <p className="mt-1 text-xs text-muted-foreground">Default is deepseek/deepseek-v4.1-flash. Sales maths does not use this model.</p>
+      </div>
+      <div>
+        <Label htmlFor="imageModel">Image model id</Label>
+        <Input id="imageModel" name="imageModel" defaultValue={imageModel} className="mt-1 h-10" />
+        <p className="mt-1 text-xs text-muted-foreground">Default is google/gemini-2.5-flash-image. Used for concept drawings.</p>
       </div>
       <div>
         <Label htmlFor="currency">Currency code</Label>
