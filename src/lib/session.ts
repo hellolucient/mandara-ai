@@ -1,16 +1,25 @@
+import { cache } from "react";
 import { headers } from "next/headers";
 import { getIdentity } from "../../cursor/identity";
 import { ensureSeed } from "@/lib/seed";
 import { memberFromIdentity, type Member } from "@/lib/members";
 import { json } from "@/lib/http";
 
-export async function currentMember(): Promise<Member | null> {
+/**
+ * Get the current signed-in member.
+ * 
+ * IMPORTANT: This function is cached per-request using React's cache().
+ * Multiple calls within the same request (e.g. from layout + page) will
+ * only execute once and return the same result. This prevents issues with
+ * Next.js 15's headers() function being called multiple times.
+ */
+export const currentMember = cache(async (): Promise<Member | null> => {
   const headerList = await headers();
   const identity = await getIdentity(headerList);
   if (!identity.verified || identity.kind !== "person") return null;
   await ensureSeed(identity.stage);
   return memberFromIdentity(identity);
-}
+});
 
 export async function requireMember(request: Request): Promise<Member | Response> {
   const identity = await getIdentity(request);
