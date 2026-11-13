@@ -39,7 +39,7 @@ export default async function AdminPage() {
         <article className="rounded-xl border bg-card p-4">
           <h2 className="font-heading text-2xl">Workspace</h2>
           <div className="mt-4">
-            <SettingsForm companyName={settings.companyName} model={settings.model} imageModel={settings.imageModel} currency={settings.currency} />
+            <SettingsForm companyName={settings.companyName} model={settings.model} imageModel={settings.imageModel} reasoningModel={settings.reasoningModel} currency={settings.currency} />
           </div>
         </article>
         <article className="rounded-xl border bg-card p-4">

@@ -16,7 +16,7 @@ async function post(body: Record<string, string>) {
   if (!response.ok) throw new Error(payload.error || "The change was not saved.");
 }
 
-export function SettingsForm({ companyName, model, imageModel, currency }: { companyName: string; model: string; imageModel: string; currency: string }) {
+export function SettingsForm({ companyName, model, imageModel, reasoningModel, currency }: { companyName: string; model: string; imageModel: string; reasoningModel: string; currency: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   return (
@@ -32,6 +32,7 @@ export function SettingsForm({ companyName, model, imageModel, currency }: { com
             companyName: String(form.get("companyName") ?? ""),
             model: String(form.get("model") ?? ""),
             imageModel: String(form.get("imageModel") ?? ""),
+            reasoningModel: String(form.get("reasoningModel") ?? ""),
             currency: String(form.get("currency") ?? ""),
           });
           router.refresh();
@@ -45,9 +46,14 @@ export function SettingsForm({ companyName, model, imageModel, currency }: { com
         <Input id="companyName" name="companyName" defaultValue={companyName} className="mt-1 h-10" />
       </div>
       <div>
-        <Label htmlFor="model">OpenRouter model id</Label>
+        <Label htmlFor="model">OpenRouter model id (fast)</Label>
         <Input id="model" name="model" defaultValue={model} className="mt-1 h-10" />
-        <p className="mt-1 text-xs text-muted-foreground">Default is deepseek/deepseek-v4.1-flash. Sales maths does not use this model.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Default is deepseek/deepseek-v4.1-flash. Used for everyday prompts.</p>
+      </div>
+      <div>
+        <Label htmlFor="reasoningModel">Reasoning model id (hard questions)</Label>
+        <Input id="reasoningModel" name="reasoningModel" defaultValue={reasoningModel} className="mt-1 h-10" />
+        <p className="mt-1 text-xs text-muted-foreground">Default is deepseek/deepseek-r1. Used for calculations, what-ifs, and complex analysis.</p>
       </div>
       <div>
         <Label htmlFor="imageModel">Image model id</Label>
