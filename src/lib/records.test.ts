@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import { SCHEMA_MIGRATIONS, splitSql } from "./schema-source";
 import { ensureSeed } from "./seed";
 import { searchKnowledge } from "./knowledge";
 import { loadDays } from "./sales-store";
@@ -7,6 +9,12 @@ import { answerSales } from "./sales-answers";
 import { runSalesAgent } from "./agent";
 
 describe("stored records", () => {
+  it("keeps the published schema identical to the migration file", () => {
+    const disk = readFileSync("migrations/001_init.sql", "utf8").trim();
+    assert.equal(SCHEMA_MIGRATIONS[0]?.sql.trim(), disk);
+    assert.ok(splitSql(disk).length >= 10);
+  });
+
   it("seeds sample sales and keeps restricted documents away from staff", async () => {
     await ensureSeed("test");
     const days = await loadDays("test");
