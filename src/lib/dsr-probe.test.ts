@@ -162,4 +162,37 @@ describe("dsr probe", () => {
     assert.match(result.note, /password was not sent/);
     assert.equal(JSON.stringify(result).includes(password), false);
   });
+
+  it("signs in through the DSR account request", async () => {
+    const login = `<html><head><title>Mandaraspa System</title></head><body><form name="form_login">
+      <input name="userid" type="text" id="login_userid">
+      <input name="pin" type="password" id="login_pin">
+      <input name="php_session" type="hidden" id="php_session" value="sess-value">
+    </form></body></html>`;
+    let posted = "";
+    let postUrl = "";
+    const fetchImpl: DsrFetch = async (input, init) => {
+      const method = (init?.method ?? "GET").toUpperCase();
+      if (method === "POST") {
+        posted = typeof init?.body === "string" ? init.body : "";
+        postUrl = String(input);
+        return htmlResponse("TASKSTATUS|ACK\nERRORSTR|\nG_USERNAME|Trent munday\nG_USERID|spa-user\nSESSIONID|secret-session\n");
+      }
+      return htmlResponse(login, 200, { "set-cookie": "PHPSESSID=abc; Path=/" });
+    };
+    const result = await withDsr(() => probeDsr(fetchImpl));
+    const params = new URLSearchParams(posted);
+    assert.equal(new URL(postUrl).pathname, "/s_login_post.php");
+    assert.equal(params.get("mode"), "LOGIN");
+    assert.equal(params.get("userid"), username);
+    assert.equal(params.get("pin"), password);
+    assert.equal(params.get("php_session"), "sess-value");
+    assert.equal(result.signedIn, true);
+    assert.match(result.note, /Signed in as Trent munday/);
+    assert.match(result.note, /No figures were stored/);
+    const packed = JSON.stringify(result);
+    for (const secret of [password, "sess-value", "secret-session", "PHPSESSID"]) {
+      assert.equal(packed.includes(secret), false);
+    }
+  });
 });
