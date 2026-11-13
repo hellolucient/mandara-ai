@@ -17,9 +17,7 @@ export default async function AgentsPage() {
   const signedIn = status.dsrUrl && status.dsrUsername && status.dsrPassword;
   const dsrState = !signedIn
     ? "DSR sign-in is not available to this server. Reports use the records already stored, and they name that source."
-    : status.dsrMapReady
-      ? "The page map is confirmed. Collection runs in the extractor, on a machine with a browser, and the figures are stored here."
-      : "DSR sign-in is saved. The live pages have not been mapped yet, so nothing is collected and no figures are guessed. Reports use the records already stored.";
+    : "The saved login is submitted from this server when you generate a report or check the sign-in. The result is written in the activity log. Sales figures are not taken from the page until the table is identified.";
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 md:px-8">
       <h1 className="font-heading text-3xl">Agents</h1>

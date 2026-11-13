@@ -52,8 +52,8 @@ export function asksForPicture(text: string): boolean {
 
 export function gatewayBody(model: string, messages: ModelMessage[], web: boolean, pictures: boolean) {
   const plugins: Array<Record<string, unknown>> = [];
-  if (model === "openrouter/auto") plugins.push({ id: "auto-router", cost_tier: "high" });
-  if (model === "openrouter/auto-beta") plugins.push({ id: "auto-beta-router", cost_tier: "high" });
+  if (model === "openrouter/auto") plugins.push({ id: "auto-router", cost_tier: "medium" });
+  if (model === "openrouter/auto-beta") plugins.push({ id: "auto-beta-router", cost_tier: "medium" });
   if (web) plugins.push({ id: "web", engine: "exa", max_results: 5 });
   return {
     model,

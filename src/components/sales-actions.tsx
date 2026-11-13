@@ -9,29 +9,54 @@ import { Input } from "@/components/ui/input";
 export function SalesActions({ canRun }: { canRun: boolean }) {
   const router = useRouter();
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<"" | "report" | "check">("");
   const [open, setOpen] = useState(false);
 
-  if (!canRun) return <p className="text-sm text-muted-foreground">A manager can refresh the report or import a file.</p>;
+  if (!canRun) return <p className="text-sm text-muted-foreground">A manager can refresh the report, check the DSR sign-in, or import a file.</p>;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button
-        disabled={busy}
+        disabled={pending !== ""}
         onClick={async () => {
-          setBusy(true);
+          setPending("report");
           setError("");
-          const response = await fetch("/api/agents/sales/run", { method: "POST" });
-          const body = (await response.json()) as { error?: string };
-          setBusy(false);
-          if (!response.ok) {
-            setError(body.error || "The report was not created.");
-            return;
+          try {
+            const response = await fetch("/api/agents/sales/run", { method: "POST" });
+            const body = (await response.json()) as { error?: string };
+            if (!response.ok) {
+              setError(body.error || "The report was not created.");
+              return;
+            }
+            router.refresh();
+          } finally {
+            setPending("");
           }
-          router.refresh();
         }}
       >
-        {busy ? "Working" : "Generate report"}
+        {pending === "report" ? "Working" : "Generate report"}
+      </Button>
+      <Button
+        variant="outline"
+        disabled={pending !== ""}
+        onClick={async () => {
+          setPending("check");
+          setError("");
+          try {
+            const response = await fetch("/api/agents/sales/check", { method: "POST" });
+            const body = (await response.json()) as { error?: string; ok?: boolean; summary?: string };
+            if (!response.ok) {
+              setError(body.error || body.summary || "The DSR sign-in was not checked.");
+              return;
+            }
+            if (body.ok === false) setError(body.summary || body.error || "The DSR sign-in was not checked.");
+            router.refresh();
+          } finally {
+            setPending("");
+          }
+        }}
+      >
+        {pending === "check" ? "Checking" : "Check DSR sign-in"}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger render={<Button variant="outline" />}>Import a file</DialogTrigger>

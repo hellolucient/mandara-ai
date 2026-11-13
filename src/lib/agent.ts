@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
 import { businessToday, formatBusinessDate } from "@/lib/dates";
+import { probeDsr } from "@/lib/dsr-probe";
 import { newId } from "@/lib/ids";
 import { reportFor } from "@/lib/sales-answers";
 import { loadDays } from "@/lib/sales-store";
@@ -27,16 +28,13 @@ export async function runSalesAgent(input: {
   const id = newId();
   const today = input.today ?? businessToday();
   const status = await integrationStatus();
-  const lines = [
-    `Run started (${input.trigger}).`,
-    "The web app does not browse DSR. Collection stays in the extractor, which is read-only.",
-  ];
+  const lines = [`Run started (${input.trigger}).`];
   if (!status.dsrUrl || !status.dsrUsername || !status.dsrPassword) {
-    lines.push("DSR credentials are not configured, so no live collection was attempted.");
-  } else if (!status.dsrMapReady) {
-    lines.push("DSR credentials are present, but the page map is not confirmed. The extractor will refuse to guess the live site.");
+    lines.push("DSR sign-in is not available to this server, so this report uses the records already stored.");
   } else {
-    lines.push("A confirmed page map is on file. This hosted run still waits for the extractor to submit records. It does not open a browser itself.");
+    const probe = await probeDsr();
+    lines.push(probe.note);
+    lines.push("Figures from the page were not stored. The report below uses the records already stored.");
   }
   await sql(
     `insert into agent_runs (id, stage, agent, trigger, status, actor, log)

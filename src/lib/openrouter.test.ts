@@ -21,11 +21,11 @@ describe("web sources", () => {
 });
 
 describe("model routing", () => {
-  it("sends Auto on the high capability tier and keeps web search", () => {
+  it("sends Auto on the middle tier and keeps web search", () => {
     const body = gatewayBody("openrouter/auto", [{ role: "user", content: "Who runs Nvidia?" }], true, false);
     assert.equal(body.model, "openrouter/auto");
     assert.deepEqual(body.plugins, [
-      { id: "auto-router", cost_tier: "high" },
+      { id: "auto-router", cost_tier: "medium" },
       { id: "web", engine: "exa", max_results: 5 },
     ]);
     assert.equal("tools" in body, false);

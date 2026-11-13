@@ -18,7 +18,7 @@ Full-text search in Postgres is enough for the first document set. Embeddings ca
 
 ## DSR
 
-The web app never launches a browser and never invents selectors. Collection is a read-only Playwright script with an explicit page map. The map ships with `ready: false`. A local sandbox proves the script. Failed extracts are logged and are not stored as sales.
+The published app submits the saved DSR login by reading the sign-in form. It records the result and does not store sales figures from an unidentified table. A read-only Playwright extractor still requires `config/dsr-map.json` with `ready: true`. Failed extracts are logged and are not stored as sales.
 
 ## Sample data
 

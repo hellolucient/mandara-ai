@@ -35,7 +35,7 @@ describe("stored records", () => {
     const run = await runSalesAgent({ stage: "test", trigger: "manual", actor: "test", today: "2026-11-13" });
     assert.equal(run.status, "attention");
     assert.match(run.report, /12 Nov 2026/);
-    assert.match(run.log, /does not browse DSR/);
+    assert.match(run.log, /not available to this server/);
     assert.match(run.report, /sample figures/);
   });
 });

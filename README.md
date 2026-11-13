@@ -45,13 +45,15 @@ Fixed infrastructure for this proof of concept is the published app and its Post
 
 Model spend happens only when someone uses open conversation, or when a document answer is rewritten by the model. Sales answers and the daily report do not call a model. A small team on a flash-class model is typically a few dollars a month. The admin page shows the cost the gateway reports. Prices change, and an estimate is labeled when the gateway does not report one.
 
-The default model id is `openrouter/auto`. Each question is routed on the high capability tier, and the reply records the model that actually answered. An administrator can set a specific model id without a code change. A request for a picture or concept drawing is sent to an image model and shown in the chat.
+The default model id is `openrouter/auto`. Each question is routed on the middle tier, and the reply records the model that actually answered. An administrator can set a specific model id without a code change. A request for a picture or concept drawing is sent to an image model and shown in the chat.
 
 ## DSR
 
-The extractor is read-only. It signs in, reads one table, and prints JSON. It does not click anything that would edit DSR.
+Generate report and Check DSR sign-in, on the published app, submit the saved username and password to the saved address. The sign-in reads the login form on the page. It does not store sales figures from that page. The activity log records whether the sign-in was accepted and which tables were visible.
 
-It refuses to run until:
+The separate extractor is also read-only. It signs in, reads one table, and prints JSON. It does not click anything that would edit DSR.
+
+The extractor refuses to run until:
 
 1. `DSR_BASE_URL`, `DSR_USERNAME` and `DSR_PASSWORD` are set in the environment, not in the repo.
 2. `config/dsr-map.json` has `ready: true` and selectors that were confirmed on the real site.
