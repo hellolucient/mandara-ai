@@ -17,6 +17,9 @@ const ESTIMATES: Record<string, [number, number]> = {
   "google/gemini-2.5-flash": [0.15, 0.6],
   "google/gemini-2.0-flash-001": [0.1, 0.4],
   "meta-llama/llama-3.3-70b-instruct": [0.12, 0.28],
+  "deepseek/deepseek-v4.1-flash": [0.3, 1.2],
+  "deepseek/deepseek-v4.1-flash-1017": [0.038, 0.5],
+  "deepseek/deepseek-v4-pro": [0.9, 1.5],
 };
 
 const IMAGE_MODEL = "google/gemini-2.5-flash-image";
