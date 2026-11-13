@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { answerPieces } from "./answer-text";
+import { answerPieces, safeImageSrc } from "./answer-text";
 
 describe("answer text", () => {
   it("turns a long markdown citation into a short link", () => {
@@ -20,5 +20,10 @@ describe("answer text", () => {
     assert.ok(link && link.kind === "link");
     assert.equal(link.text, "apnews.com");
     assert.equal(pieces.some((piece) => piece.kind === "link" && piece.href.startsWith("javascript:")), false);
+  });
+
+  it("accepts a generated image and rejects other data urls", () => {
+    assert.match(safeImageSrc("data:image/png;base64,aaaa"), /^data:image\/png/);
+    assert.equal(safeImageSrc("data:text/html;base64,aaaa"), "");
   });
 });

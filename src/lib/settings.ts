@@ -8,7 +8,7 @@ export type Settings = {
 
 const DEFAULTS: Settings = {
   companyName: "Mandara Spa Maldives",
-  model: "google/gemini-2.5-flash",
+  model: "openrouter/auto",
   currency: "USD",
 };
 

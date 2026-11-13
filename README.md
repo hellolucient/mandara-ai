@@ -45,7 +45,7 @@ Fixed infrastructure for this proof of concept is the published app and its Post
 
 Model spend happens only when someone uses open conversation, or when a document answer is rewritten by the model. Sales answers and the daily report do not call a model. A small team on a flash-class model is typically a few dollars a month. The admin page shows the cost the gateway reports. Prices change, and an estimate is labeled when the gateway does not report one.
 
-The default model id is `google/gemini-2.5-flash`. An administrator can change it without a code change.
+The default model id is `openrouter/auto`. Each question is routed on the high capability tier, and the reply records the model that actually answered. An administrator can set a specific model id without a code change. A request for a picture or concept drawing is sent to an image model and shown in the chat.
 
 ## DSR
 

@@ -28,6 +28,11 @@ export function answerPieces(input: string): AnswerPiece[] {
   return pieces;
 }
 
+export function safeImageSrc(value: string | undefined): string {
+  if (!value) return "";
+  return /^data:image\/(png|jpeg|webp);base64,[a-z0-9+/]+={0,2}$/i.test(value) ? value : "";
+}
+
 export function safeHttpUrl(value: string | undefined): string {
   if (!value) return "";
   const trimmed = value.replace(/[),.;]+$/g, "");

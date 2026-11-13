@@ -4,7 +4,7 @@ import { json, rejectCrossOrigin } from "@/lib/http";
 import { isResponse, requireMember } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(request: Request) {
   const blocked = rejectCrossOrigin(request);

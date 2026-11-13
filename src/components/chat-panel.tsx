@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { answerPieces, safeHttpUrl } from "@/lib/answer-text";
+import { answerPieces, safeHttpUrl, safeImageSrc } from "@/lib/answer-text";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -14,6 +14,8 @@ type Message = {
   attachment_name: string;
   citations: string;
   mode: string;
+  model?: string;
+  images?: string;
 };
 
 const SUGGESTIONS = [
@@ -112,12 +114,14 @@ export function ChatPanel({
                 </p>
                 <div className={message.role === "user" ? "mt-1" : "mt-2 rounded-xl border bg-card px-4 py-3"}>
                   <Prose text={message.content} />
+                  <Pictures raw={message.images} />
                   {message.attachment_name ? (
                     <p className="mt-2 text-xs text-muted-foreground">Attached: {message.attachment_name}</p>
                   ) : null}
                   {message.role === "assistant" && MODE[message.mode] ? (
                     <p className="mt-3 text-xs text-muted-foreground">
                       {message.mode === "general" && hasWebSource(message.citations) ? "Checked the web" : MODE[message.mode]}
+                      {message.model ? ` · ${message.model}` : ""}
                     </p>
                   ) : null}
                   <Citations raw={message.citations} />
@@ -194,6 +198,26 @@ function Prose({ text }: { text: string }) {
             return <span key={pieceIndex}>{piece.text}</span>;
           })}
         </p>
+      ))}
+    </div>
+  );
+}
+
+function Pictures({ raw }: { raw?: string }) {
+  let sources: string[] = [];
+  try {
+    const parsed = JSON.parse(raw || "[]") as unknown;
+    if (Array.isArray(parsed)) sources = parsed.map((item) => safeImageSrc(typeof item === "string" ? item : "")).filter(Boolean);
+  } catch {
+    sources = [];
+  }
+  if (sources.length === 0) return null;
+  return (
+    <div className="mt-3 space-y-3">
+      {sources.map((src) => (
+        // The picture is a data URL from this reply, which the image optimizer cannot fetch.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={src.slice(-24)} src={src} alt="Concept created for this reply" className="w-full rounded-lg border" />
       ))}
     </div>
   );
