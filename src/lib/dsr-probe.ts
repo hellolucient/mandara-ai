@@ -7,6 +7,7 @@ export type DsrLoginForm = {
   action: string;
   usernameField: string;
   passwordField: string;
+  fields: Array<{ name: string; value: string }>;
 };
 
 export type DsrHtmlSummary = {
@@ -30,7 +31,7 @@ export type DsrProbeResult = {
 
 export type DsrFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
-const BODY_CAP = 512 * 1024;
+const BODY_CAP = 2_000_000;
 const TIMEOUT_MS = 12_000;
 const MAX_REDIRECTS = 4;
 
@@ -47,7 +48,14 @@ export function summarizeDsrHtml(html: string): DsrHtmlSummary {
     passwordFieldPresent: hasPasswordField(source),
     loginFields: form?.loginFields ?? [],
     tables: readTables(source),
-    form: form ? { action: form.action, usernameField: form.usernameField, passwordField: form.passwordField } : null,
+    form: form
+      ? {
+          action: form.action,
+          usernameField: form.usernameField,
+          passwordField: form.passwordField,
+          fields: form.fields,
+        }
+      : null,
   };
 }
 
@@ -108,6 +116,7 @@ export async function probeDsr(fetchImpl: DsrFetch = fetch): Promise<DsrProbeRes
     action.hash = "";
 
     const body = new URLSearchParams();
+    for (const field of login.form.fields) body.append(field.name, field.value);
     body.set(login.form.usernameField, username);
     body.set(login.form.passwordField, password);
     const posted = await fetchPage(fetchImpl, action, origin, first.cookies, "POST", body.toString());
@@ -132,7 +141,7 @@ export async function probeDsr(fetchImpl: DsrFetch = fetch): Promise<DsrProbeRes
           tables: landed.tables,
         },
         signedIn,
-        noteFor(signedIn, posted.status, landed),
+        noteFor(signedIn, posted.status, landed, posted.body, login.form),
       ),
       password,
     );
@@ -159,7 +168,7 @@ function finish(
   signedIn: boolean,
   note: string,
 ): DsrProbeResult {
-  return { ...partial, signedIn, note: clip(note, 500) };
+  return { ...partial, signedIn, note: clip(note, 700) };
 }
 
 function accepted(status: number, passwordFieldPresent: boolean): boolean {
@@ -168,9 +177,18 @@ function accepted(status: number, passwordFieldPresent: boolean): boolean {
   return status >= 200 && status < 300;
 }
 
-function noteFor(signedIn: boolean, status: number, summary: DsrHtmlSummary): string {
+function noteFor(
+  signedIn: boolean,
+  status: number,
+  summary: DsrHtmlSummary,
+  html: string,
+  submitted: DsrLoginForm | null,
+): string {
   if (status === 401 || status === 403) return "The DSR server refused the sign-in. No figures were stored.";
-  if (summary.passwordFieldPresent) return "The sign-in form is still on the page. No figures were stored.";
+  if (summary.passwordFieldPresent) {
+    const detail = loginFailureDetail(summary, html, submitted);
+    return `The sign-in page came back. ${detail} No figures were stored.`;
+  }
   if (!signedIn) return "The DSR server did not confirm the sign-in. No figures were stored.";
   if (summary.tables.length === 0) return "Signed in. The page has no table. No figures were stored.";
   const described = summary.tables.map((table) => {
@@ -192,7 +210,7 @@ function scrub(result: DsrProbeResult, password: string): DsrProbeResult {
       headers: table.headers.map((header) => clean(header).trim()).filter((header) => header !== ""),
       rows: table.rows,
     })),
-    note: clip(clean(result.note), 500),
+    note: clip(clean(result.note), 700),
     host: result.host,
   };
 }
@@ -324,30 +342,61 @@ function readLoginForm(html: string): (DsrLoginForm & { loginFields: string[] })
   const forms = html.matchAll(/<form\b([^>]*)>([\s\S]*?)<\/form>/gi);
   for (const form of forms) {
     const inputs = inputTags(form[2]);
-    if (!inputs.some((input) => inputType(input) === "password")) continue;
-    const loginFields: string[] = [];
+    const passwordIndex = inputs.findIndex((input) => inputType(input) === "password" && input.get("name")?.trim());
+    if (passwordIndex < 0) continue;
+    const passwordField = inputs[passwordIndex].get("name")?.trim() ?? "";
     let usernameField = "";
-    let passwordField = "";
+    for (let index = passwordIndex - 1; index >= 0; index -= 1) {
+      const type = inputType(inputs[index]);
+      const name = inputs[index].get("name")?.trim() ?? "";
+      if (!name || (type !== "text" && type !== "email" && type !== "username")) continue;
+      usernameField = name;
+      break;
+    }
+    const loginFields = [usernameField, passwordField].filter(Boolean);
+    const fields: Array<{ name: string; value: string }> = [];
     for (const input of inputs) {
       const type = inputType(input);
       const name = input.get("name")?.trim() ?? "";
-      const credential = type === "text" || type === "email" || type === "username" || type === "password";
-      if (!credential) continue;
-      if (name) loginFields.push(name);
-      if (type === "password") {
-        if (!passwordField && name) passwordField = name;
-        continue;
+      if (!name || name === usernameField || name === passwordField) continue;
+      if (type === "hidden" || type === "submit") fields.push({ name, value: input.get("value") ?? "" });
+    }
+    const button = form[2].match(/<button\b([^>]*)>/i);
+    if (button) {
+      const attrs = formAttrs(button[1]);
+      const name = attrs.get("name")?.trim() ?? "";
+      const type = (attrs.get("type") || "submit").toLowerCase();
+      if (name && type === "submit" && !fields.some((field) => field.name === name)) {
+        fields.push({ name, value: attrs.get("value") ?? "" });
       }
-      if (!usernameField && name) usernameField = name;
     }
     return {
       action: formAttrs(form[1]).get("action")?.trim() ?? "",
       usernameField,
       passwordField,
+      fields,
       loginFields,
     };
   }
   return null;
+}
+
+function loginFailureDetail(summary: DsrHtmlSummary, html: string, submitted: DsrLoginForm | null): string {
+  const title = summary.title ? `Page title: ${summary.title}.` : "The page has no title.";
+  const names = submitted
+    ? [submitted.usernameField, submitted.passwordField, ...submitted.fields.map((field) => field.name)].filter(
+        (name, index, all) => Boolean(name) && all.indexOf(name) === index,
+      )
+    : [];
+  const fields = names.length ? `Fields sent: ${names.join(", ")}.` : "No named fields were sent.";
+  const message = visibleError(html);
+  return `${title} ${fields}${message ? ` The page says: ${message}.` : " No error text was found on the page."}`;
+}
+
+function visibleError(html: string): string {
+  const text = visibleText(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ""));
+  const match = text.match(/(?:invalid|incorrect|failed|denied|unauthori[sz]ed|wrong|try again|locked|expired)[^.]{0,120}/i);
+  return match ? clip(match[0], 140) : "";
 }
 
 function readTables(html: string): DsrTableSummary[] {

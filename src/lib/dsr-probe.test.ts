@@ -99,6 +99,31 @@ describe("dsr probe", () => {
     }
   });
 
+  it("sends hidden fields and reports the page that came back", async () => {
+    const login = `<form method="post" action="/login"><input type="hidden" name="token" value="abc"><input name="user"><input type="password" name="pass"><button name="go" value="1">Sign in</button></form>`;
+    const again = `<html><head><title>DSR login</title></head><body><p>Invalid password.</p>${login}</body></html>`;
+    let posted = "";
+    const fetchImpl: DsrFetch = async (input, init) => {
+      const method = (init?.method ?? "GET").toUpperCase();
+      if (method === "POST") {
+        posted = typeof init?.body === "string" ? init.body : "";
+        return htmlResponse(again);
+      }
+      return htmlResponse(login);
+    };
+    const result = await withDsr(() => probeDsr(fetchImpl));
+    const params = new URLSearchParams(posted);
+    assert.equal(params.get("token"), "abc");
+    assert.equal(params.get("user"), username);
+    assert.equal(params.get("pass"), password);
+    assert.equal(params.get("go"), "1");
+    assert.equal(result.signedIn, false);
+    assert.match(result.note, /DSR login/);
+    assert.match(result.note, /Invalid password/);
+    assert.match(result.note, /Fields sent: user, pass, token, go/);
+    assert.equal(result.note.includes(password), false);
+  });
+
   it("does not treat a 401 page as signed in", async () => {
     const login = fixture("login");
     const fetchImpl: DsrFetch = async (input, init) => {
