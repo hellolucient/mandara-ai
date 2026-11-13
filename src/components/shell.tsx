@@ -25,6 +25,7 @@ export function Shell({
     { href: "/knowledge", label: "Knowledge" },
     { href: "/sales", label: "Sales" },
     { href: "/agents", label: "Agents" },
+    { href: "/memories", label: "Memories" },
   ];
   if (member.role === "admin") items.push({ href: "/admin", label: "Admin" });
   return (
