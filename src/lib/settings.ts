@@ -8,7 +8,7 @@ export type Settings = {
 
 const DEFAULTS: Settings = {
   companyName: "Mandara Spa Maldives",
-  model: "openrouter/auto",
+  model: "deepseek/deepseek-v4.1-flash",
   currency: "USD",
 };
 

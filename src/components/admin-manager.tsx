@@ -46,7 +46,7 @@ export function SettingsForm({ companyName, model, currency }: { companyName: st
       <div>
         <Label htmlFor="model">OpenRouter model id</Label>
         <Input id="model" name="model" defaultValue={model} className="mt-1 h-10" />
-        <p className="mt-1 text-xs text-muted-foreground">Default is openrouter/auto, on the middle tier. Sales maths does not use this model.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Default is deepseek/deepseek-v4.1-flash. Also try deepseek/deepseek-v4.1-flash-1017 (cheaper) or deepseek/deepseek-v4-pro (reasoning). Sales maths does not use this model.</p>
       </div>
       <div>
         <Label htmlFor="currency">Currency code</Label>
