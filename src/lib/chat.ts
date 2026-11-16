@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db";
 import { businessToday } from "@/lib/dates";
 import { newId } from "@/lib/ids";
+import { validateCalculatorSpec } from "@/lib/calculator-spec";
 import { searchKnowledge, type Hit } from "@/lib/knowledge";
 import type { Member } from "@/lib/members";
 import { extractMemoryContent, formatMemoriesForPrompt, getMemories, saveMemory, shouldSaveMemory } from "@/lib/memory";
@@ -185,6 +186,22 @@ For business analysis, calculations, and strategic questions:
 - Give a brief action plan if the question implies next steps
 - List 2-3 key metrics to track for success
 
+For financial models with adjustable assumptions (P&L, fee splits, pricing, occupancy):
+- You can output an interactive calculator
+- After your text answer, add a JSON block with this EXACT format:
+\`\`\`calculator
+{
+  "title": "Model Title",
+  "inputs": [{"id": "var_name", "label": "Display Name", "min": 0, "max": 10000, "step": 100, "default": 5000, "unit": "$"}],
+  "outputs": [{"id": "result", "label": "Result", "formula": "var_name * 0.12", "unit": "$", "format": "currency"}],
+  "bar": {"parts": [{"label": "Part 1", "formula": "13"}], "note": "Assumptions text"}
+}
+\`\`\`
+- Formula syntax: +, -, *, /, %, ** (power), min(), max(), abs(), round()
+- Formulas reference input IDs only, not output IDs
+- Keep it simple: 2-4 inputs, 2-5 outputs
+- Only include calculator if the question asks for a model with adjustable assumptions
+
 For casual questions (translations, captions, simple explanations):
 - Stay brief and conversational
 - Just do what they asked
@@ -220,8 +237,29 @@ General rules:
      values ($1, $2, $3, 'chat', $4, $5, $6, $7, $8)`,
     [newId(), member.stage, member.sub, result.model, result.promptTokens, result.completionTokens, result.costUsd, result.costKnown],
   );
+  
+  // Extract and validate calculator blocks if present
+  let finalContent = result.text;
+  const calculatorMatch = result.text.match(/```calculator\s*\n([\s\S]*?)\n```/);
+  if (calculatorMatch) {
+    try {
+      const calcSpec = JSON.parse(calculatorMatch[1]);
+      const validationError = validateCalculatorSpec(calcSpec);
+      if (validationError) {
+        // Invalid calculator - remove the block but keep the text answer
+        finalContent = result.text.replace(/```calculator\s*\n[\s\S]*?\n```/, "").trim();
+        console.error("mandara: invalid calculator spec:", validationError);
+      }
+      // Valid calculator - UI will render it
+    } catch {
+      // Failed to parse - remove the block
+      finalContent = result.text.replace(/```calculator\s*\n[\s\S]*?\n```/, "").trim();
+      console.error("mandara: failed to parse calculator spec");
+    }
+  }
+  
   return {
-    content: result.text,
+    content: finalContent,
     citations: result.sources.map((source) => ({
       documentId: source.url,
       title: source.title,
