@@ -69,15 +69,17 @@ export default async function AdminPage() {
       <section className="rounded-xl border bg-card p-4">
         <h2 className="font-heading text-2xl">Company profile</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-          Empty until you add it. The assistant uses this, plus stored location and menu names, to recognise our spas, people, and contracts. Short forms of a saved spa name are recognised automatically. One entry per line.
+          This starting profile is loaded only while the saved profile is still empty. Edit any field and save. Notes at the bottom stay in Admin and are not shown to the assistant.
         </p>
         <div className="mt-4">
           <CompanyProfileForm
             description={company.description}
             spasText={company.spasText}
             peopleText={company.peopleText}
+            contactsText={company.contactsText}
             contractsText={company.contractsText}
             keywordsText={company.keywordsText}
+            adminNotes={company.adminNotes}
           />
         </div>
       </section>

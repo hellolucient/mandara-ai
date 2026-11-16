@@ -1,3 +1,4 @@
+import { initialCompanyProfileJson } from "@/lib/company-profile-seed";
 import { sql } from "@/lib/db";
 import { chunkText } from "@/lib/chunk";
 import { SAMPLE_DOCUMENTS, SAMPLE_LOCATIONS, buildSampleDays } from "@/lib/sample-data";
@@ -79,7 +80,7 @@ export async function ensureSeed(stage: string): Promise<void> {
   await sql(
     `insert into settings (stage, key, value) values ($1, 'companyProfile', $2)
      on conflict (stage, key) do nothing`,
-    [stage, JSON.stringify({ description: "", spas: [], people: [], contracts: [], keywords: [] })],
+    [stage, initialCompanyProfileJson()],
   );
   await sql(
     `insert into settings (stage, key, value) values ($1, 'sampleSeed', 'done')

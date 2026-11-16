@@ -75,14 +75,18 @@ export function CompanyProfileForm({
   description,
   spasText,
   peopleText,
+  contactsText,
   contractsText,
   keywordsText,
+  adminNotes,
 }: {
   description: string;
   spasText: string;
   peopleText: string;
+  contactsText: string;
   contractsText: string;
   keywordsText: string;
+  adminNotes: string;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -99,8 +103,10 @@ export function CompanyProfileForm({
             description: String(form.get("description") ?? ""),
             spasText: String(form.get("spasText") ?? ""),
             peopleText: String(form.get("peopleText") ?? ""),
+            contactsText: String(form.get("contactsText") ?? ""),
             contractsText: String(form.get("contractsText") ?? ""),
             keywordsText: String(form.get("keywordsText") ?? ""),
+            adminNotes: String(form.get("adminNotes") ?? ""),
           });
           router.refresh();
         } catch (caught) {
@@ -124,14 +130,25 @@ export function CompanyProfileForm({
           id="spasText"
           name="spasText"
           defaultValue={spasText}
-          placeholder={"Adaaran Prestige Vadoo | Vadoo, Vadou\nHakuraa"}
+          placeholder={"Mandara Spa at Adaaran Prestige Vadoo | open | Vadoo, Vaadhoo"}
           className="mt-1 min-h-32"
         />
-        <p className="mt-1 text-xs text-muted-foreground">Name, then a bar, then aliases and misspellings.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Name, status (open, closed, former, negotiation, or declined), then aliases.</p>
       </div>
       <div>
         <Label htmlFor="peopleText">People and roles</Label>
-        <Textarea id="peopleText" name="peopleText" defaultValue={peopleText} placeholder={"Amina Shah | Spa director"} className="mt-1 min-h-32" />
+        <Textarea id="peopleText" name="peopleText" defaultValue={peopleText} placeholder={"Tenille Jade Keats | Country Manager Maldives | Tenille"} className="mt-1 min-h-32" />
+      </div>
+      <div>
+        <Label htmlFor="contactsText">Partner contacts</Label>
+        <Textarea
+          id="contactsText"
+          name="contactsText"
+          defaultValue={contactsText}
+          placeholder={"Suresh Athukorala | General Manager | Adaaran Select Meedhupparu"}
+          className="mt-1 min-h-32"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">Name, role, organisation, then aliases. No phone numbers or emails.</p>
       </div>
       <div>
         <Label htmlFor="contractsText">Hotel partner contracts</Label>
@@ -139,14 +156,19 @@ export function CompanyProfileForm({
           id="contractsText"
           name="contractsText"
           defaultValue={contractsText}
-          placeholder={"Adaaran management agreement | Adaaran"}
+          placeholder={"Adaaran Prestige Vadoo | Unique Resorts Pvt Ltd | signed"}
           className="mt-1 min-h-28"
         />
       </div>
       <div>
         <Label htmlFor="keywordsText">Extra keywords</Label>
-        <Textarea id="keywordsText" name="keywordsText" defaultValue={keywordsText} placeholder={"elemis\nmandara menu"} className="mt-1 min-h-28" />
+        <Textarea id="keywordsText" name="keywordsText" defaultValue={keywordsText} placeholder={"DSR\nSteiners"} className="mt-1 min-h-28" />
         <p className="mt-1 text-xs text-muted-foreground">One keyword or phrase per line.</p>
+      </div>
+      <div className="md:col-span-2">
+        <Label htmlFor="adminNotes">Notes for Admin</Label>
+        <Textarea id="adminNotes" name="adminNotes" defaultValue={adminNotes} className="mt-1 min-h-28" />
+        <p className="mt-1 text-xs text-muted-foreground">Kept in Admin only. The assistant does not see these notes.</p>
       </div>
       {error ? <p className="text-sm text-destructive md:col-span-2">{error}</p> : null}
       <div className="md:col-span-2">

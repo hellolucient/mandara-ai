@@ -73,9 +73,42 @@ const GENERIC = new Set([
 export type Lexicon = {
   places: Array<{ form: string; name: string }>;
   terms: string[];
+  /** Company words that count only together with we/our/us or a known spa. */
+  contextTerms: string[];
 };
 
-export const EMPTY_LEXICON: Lexicon = { places: [], terms: [] };
+export const EMPTY_LEXICON: Lexicon = { places: [], terms: [], contextTerms: [] };
+
+const CONTEXT_ONLY = new Set([
+  "guest",
+  "guests",
+  "occupancy",
+  "visa",
+  "visas",
+  "budget",
+  "forecast",
+  "promotion",
+  "promotions",
+  "payroll",
+  "treatment",
+  "treatments",
+  "facial",
+  "facials",
+  "massage",
+  "massages",
+  "package",
+  "packages",
+  "retail",
+  "menu",
+  "menus",
+  "therapist",
+  "therapists",
+  "ytd",
+  "gop",
+  "gor",
+]);
+
+const CONTRACT_NOISE = new Set(["private", "limited", "company", "services", "investments", "investment", "properties", "world", "travel", "holding", "unique"]);
 
 export type QuestionRoute = {
   lane: "company" | "general";
@@ -91,6 +124,7 @@ export function buildLexicon(input: {
 }): Lexicon {
   const places: Array<{ form: string; name: string }> = [];
   const terms = new Set<string>();
+  const contextTerms = new Set<string>();
   const addPlace = (name: string, extras: string[] = []) => {
     const clean = name.trim();
     if (!clean) return;
@@ -105,24 +139,45 @@ export function buildLexicon(input: {
   if (input.companyName) {
     for (const token of distinctiveTokens(input.companyName)) terms.add(token);
   }
-  for (const person of input.profile?.people ?? []) {
-    const phrase = fold(person.name);
-    if (phrase.length >= 5) terms.add(phrase);
-  }
+  for (const person of input.profile?.people ?? []) addNamedTerms(person.name, person.aliases ?? [], terms);
+  for (const contact of input.profile?.contacts ?? []) addNamedTerms(contact.name, contact.aliases ?? [], terms);
   for (const contract of input.profile?.contracts ?? []) {
-    for (const value of [contract.name, contract.partner]) {
-      const phrase = fold(value);
-      if (phrase.length >= 5) terms.add(phrase);
-    }
+    addContractTerms(contract.name, terms);
+    addContractTerms((contract.partner.split(".")[0] ?? "").slice(0, 80), terms);
   }
   for (const keyword of input.profile?.keywords ?? []) {
     const form = fold(keyword);
-    if (form.length >= 3) terms.add(form);
+    if (form.length < 3) continue;
+    if (CONTEXT_ONLY.has(form)) contextTerms.add(form);
+    else terms.add(form);
   }
   for (const title of input.menuTitles ?? []) {
     for (const token of distinctiveTokens(title)) terms.add(token);
   }
-  return { places, terms: [...terms] };
+  return { places, terms: [...terms], contextTerms: [...contextTerms] };
+}
+
+function addNamedTerms(name: string, aliases: string[], terms: Set<string>): void {
+  const phrase = fold(name);
+  if (phrase.length >= 5) terms.add(phrase);
+  const parts = phrase.split(" ").filter(Boolean);
+  const last = parts[parts.length - 1];
+  if (last && last.length >= 5 && !GENERIC.has(last)) terms.add(last);
+  for (const alias of aliases) {
+    const form = fold(alias);
+    if (form.length >= 3) terms.add(form);
+  }
+}
+
+function addContractTerms(value: string, terms: Set<string>): void {
+  const lead = value.trim();
+  if (!lead) return;
+  const phrase = fold(lead);
+  if (phrase.length >= 5 && phrase.length <= 70) terms.add(phrase);
+  if (!/\b(ltd|limited|pvt|private)\b/i.test(lead)) return;
+  for (const token of distinctiveTokens(lead)) {
+    if (!CONTRACT_NOISE.has(token)) terms.add(token);
+  }
 }
 
 export function routeQuestion(question: string, lexicon: Lexicon = EMPTY_LEXICON): QuestionRoute {
@@ -141,7 +196,7 @@ export function routeQuestion(question: string, lexicon: Lexicon = EMPTY_LEXICON
   if (place && (isOurOffering(folded) || isCompanySignal(folded) || isPossessiveCatalog(folded))) {
     return { lane: "company", web: false, place };
   }
-  if (isPossessiveCatalog(folded) || isCompanySignal(folded) || isStoredSalesQuestion(folded) || matchesTerm(folded, lexicon)) {
+  if (isPossessiveCatalog(folded) || isCompanySignal(folded) || isStoredSalesQuestion(folded) || matchesTerm(folded, lexicon.terms) || matchesContextTerm(folded, lexicon)) {
     return { lane: "company", web: false, place };
   }
   if (place) return { lane: "company", web: false, place };
@@ -231,10 +286,15 @@ function matchPlace(folded: string, lexicon: Lexicon): string | null {
   return null;
 }
 
-function matchesTerm(folded: string, lexicon: Lexicon): boolean {
+function matchesContextTerm(folded: string, lexicon: Lexicon): boolean {
+  if (!matchesTerm(folded, lexicon.contextTerms)) return false;
+  return /\b(we|our|ours|us)\b/.test(folded) || matchPlace(folded, lexicon) !== null;
+}
+
+function matchesTerm(folded: string, terms: string[]): boolean {
   const padded = ` ${folded} `;
   const words = new Set<string>(folded.match(/[a-z0-9]+/g) ?? []);
-  for (const term of lexicon.terms) {
+  for (const term of terms) {
     if (!term) continue;
     if (term.includes(" ")) {
       if (padded.includes(` ${term} `)) return true;
