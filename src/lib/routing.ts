@@ -47,8 +47,8 @@ export function shouldRouteToSales(question: string, locationNames: string[]): b
   // Sales queries with comparison words (e.g. "Which locations need attention?")
   const hasQueryWord = /\b(what|how|show|which|report)\b/i.test(text);
   if ((hasQueryWord || hasSalesQuery) && (hasSalesTerm || hasSalesQuery)) {
-    // But not if it's asking "what if" or "how to calculate"
-    if (/\b(what if|what'?s the|how to|show the working)\b/.test(lower)) return false;
+    // But not if it's asking "what if", "how to calculate", or starts with "hypothetical"
+    if (/\b(hypothetical|what if|what'?s the|how to|show the working)\b/i.test(lower)) return false;
     return true;
   }
   
@@ -62,8 +62,8 @@ export function shouldRouteToSales(question: string, locationNames: string[]): b
 }
 
 function isExplicitNonSalesTask(lower: string): boolean {
-  // Writing tasks
-  if (/\b(write|draft|compose|create a|rewrite)\b/.test(lower)) return true;
+  // Writing tasks (create a/an/your/this catches "create a model", "create an app", etc.)
+  if (/\b(write|draft|compose|create (a|an|your|this)|rewrite)\b/.test(lower)) return true;
   
   // Translation tasks
   if (/\b(translate|translation)\b/.test(lower)) return true;

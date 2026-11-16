@@ -48,6 +48,40 @@ describe("sales routing", () => {
     assert.equal(shouldRouteToSales("Let's say retail becomes 20% of sales. What's the change?", LOCATIONS), false);
   });
 
+  it("does not route production failure cases from 16 Nov 2026", () => {
+    // REGRESSION: All 4 test prompts incorrectly routed to sales in production after main 28d3525 deployment
+    
+    // Test 2: Hypothetical prompt with "Hypothetical:" prefix
+    assert.equal(
+      shouldRouteToSales(
+        "Hypothetical: a spa does $8,360 a day in treatment revenue and retail is currently $1,140 a day. If treatment revenue stays the same but retail rises to 18% of total revenue, how much extra revenue per day is that, and per 30 days?",
+        LOCATIONS
+      ),
+      false,
+      "Bug: 'Hypothetical:' prefix wasn't excluded from sales routing"
+    );
+
+    // Test 3: Math problem with "Show the working"
+    assert.equal(
+      shouldRouteToSales(
+        "A spa does $9,500 net revenue a day. If retail is 12% of revenue and we lift it to 18% with no change in treatment revenue, what's the extra monthly revenue? Show the working.",
+        LOCATIONS
+      ),
+      false,
+      "'Show the working' should trigger isExplicitNonSalesTask"
+    );
+
+    // Test 4: Calculator generation prompt - the "create an" bug
+    assert.equal(
+      shouldRouteToSales(
+        "Create an interactive financial model for a Maldives resort with 100 villas. Show management fees with adjustable inputs: occupancy (50-100%), average room rate ($300-$800), operating margin (20-40%), base management fee (1-3%), and incentive fee on GOP (5-15%). Display annual resort revenue, operating profit, management fees, and remaining profit after fees. Include a split bar. Assume room revenue is 65% of total revenue.",
+        LOCATIONS
+      ),
+      false,
+      "Bug: 'create an' didn't match the regex that only checked 'create a'"
+    );
+  });
+
   it("handles edge cases correctly", () => {
     assert.equal(shouldRouteToSales("", LOCATIONS), false);
     assert.equal(shouldRouteToSales("spa", LOCATIONS), false);
