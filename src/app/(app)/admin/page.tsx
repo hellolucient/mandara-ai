@@ -26,6 +26,7 @@ export default async function AdminPage() {
     ["DSR username", status.dsrUsername],
     ["DSR password", status.dsrPassword],
     ["DSR page map", status.dsrMapReady],
+    ["Workspace owner", status.workspaceOwner],
   ] as const;
   return (
     <main className="mx-auto max-w-5xl space-y-8 px-4 py-6 md:px-8">
@@ -79,7 +80,7 @@ export default async function AdminPage() {
       <section className="rounded-xl border bg-card p-4">
         <h2 className="font-heading text-2xl">People</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          A role set by email applies the first time that person opens the workspace.
+          A role set by email applies when that person signs in with a verified email. An unverified address stays on staff.
         </p>
         <div className="mt-3">
           <InviteForm />
@@ -88,7 +89,7 @@ export default async function AdminPage() {
           <ul className="mt-3 text-sm text-muted-foreground">
             {invites.map((invite) => (
               <li key={invite.email}>
-                {invite.email} · {invite.role} · waiting for first sign-in
+                {invite.email} · {invite.role} · waiting for a verified sign-in
               </li>
             ))}
           </ul>

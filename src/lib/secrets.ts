@@ -2,7 +2,16 @@ import { timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 export function envPresent(name: string): boolean {
-  return Boolean(process.env[name]?.trim());
+  return Boolean(readEnv(name));
+}
+
+export function workspaceOwnerSub(): string {
+  return readEnv("WORKSPACE_OWNER_SUB");
+}
+
+function readEnv(name: string): string {
+  const inlined = process.env[name];
+  return typeof inlined === "string" ? inlined.trim() : "";
 }
 
 export function cronAuthorized(provided: string): boolean {
@@ -22,6 +31,7 @@ export function integrationStatus() {
     dsrUsername: envPresent("DSR_USERNAME"),
     dsrPassword: envPresent("DSR_PASSWORD"),
     dsrMapReady: readMapReady(),
+    workspaceOwner: envPresent("WORKSPACE_OWNER_SUB"),
   };
 }
 

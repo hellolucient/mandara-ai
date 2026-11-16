@@ -14,10 +14,12 @@ const MARK = (
 export function Shell({
   member,
   companyName,
+  needsOwner,
   children,
 }: {
   member: Member;
   companyName: string;
+  needsOwner?: boolean;
   children: React.ReactNode;
 }) {
   const items = [
@@ -60,6 +62,11 @@ export function Shell({
             <NavLinks items={items} tone="bar" />
           </div>
         </header>
+        {needsOwner ? (
+          <p className="border-b bg-accent px-4 py-2 text-sm text-accent-foreground">
+            No administrator is assigned. The owner sets WORKSPACE_OWNER_SUB to their sign-in id. Yours is {member.sub}.
+          </p>
+        ) : null}
         {member.simulated ? (
           <p className="border-b bg-accent px-4 py-2 text-sm text-accent-foreground">
             Local preview uses an invented administrator named Dev Viewer. This is not a real sign-in.

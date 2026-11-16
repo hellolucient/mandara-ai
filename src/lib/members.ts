@@ -1,7 +1,9 @@
-import { sql } from "@/lib/db";
 import type { VerifiedIdentity } from "../../cursor/identity";
+import { sql } from "@/lib/db";
+import { decideMembership, isWorkspaceOwner, type Role } from "@/lib/membership";
+import { workspaceOwnerSub } from "@/lib/secrets";
 
-export type Role = "admin" | "manager" | "staff";
+export type { Role };
 
 export type Member = {
   stage: "production" | "preview";
@@ -17,59 +19,45 @@ type MemberRow = { sub: string; email: string; name: string; role: Role };
 export async function memberFromIdentity(identity: VerifiedIdentity): Promise<Member | null> {
   if (identity.kind !== "person") return null;
   const stage = identity.stage;
-  const email = identity.email.trim().toLowerCase();
-  const name = identity.name.trim() || email || "Staff member";
-  
-  // Check if member already exists (by sub, which is the stable user ID)
+  const trustedEmail = identity.emailVerified ? identity.email.trim().toLowerCase() : "";
   const existing = await sql<MemberRow>(
     "select sub, email, name, role from members where stage = $1 and sub = $2",
     [stage, identity.sub],
   );
-  
-  if (existing[0]) {
-    // Member exists - update their email/name in case it changed
-    await sql(
-      "update members set email = $3, name = $4, updated_at = now() where stage = $1 and sub = $2",
-      [stage, identity.sub, email, name],
-    );
-    return { stage, sub: identity.sub, email, name, role: existing[0].role, simulated: identity.simulated };
-  }
-  
-  // New member - check for invitation (case-insensitive email match)
-  const invited = email
-    ? await sql<{ role: Role }>(
-        "select role from role_invites where stage = $1 and lower(email) = $2",
-        [stage, email]
-      )
+  const invited = trustedEmail
+    ? await sql<{ role: Role }>("select role from role_invites where stage = $1 and lower(email) = $2", [stage, trustedEmail])
     : [];
-  
-  // Determine role: invited role, or admin if first member, otherwise staff
-  const count = await sql<{ n: number }>("select count(*)::int as n from members where stage = $1", [stage]);
-  const role = invited[0]?.role ?? (Number(count[0]?.n ?? 0) === 0 ? "admin" : "staff");
-  
-  // Create new member
-  await sql(
-    "insert into members (stage, sub, email, name, role) values ($1, $2, $3, $4, $5) on conflict (stage, sub) do nothing",
-    [stage, identity.sub, email, name, role],
-  );
-  
-  // Clean up used invitation (case-insensitive)
-  if (email) {
-    await sql("delete from role_invites where stage = $1 and lower(email) = $2", [stage, email]);
+  const decision = decideMembership({
+    existingRole: existing[0]?.role ?? null,
+    invitedRole: invited[0]?.role ?? null,
+    emailVerified: trustedEmail !== "",
+    simulated: identity.simulated,
+    owner: isWorkspaceOwner(identity.sub, workspaceOwnerSub()),
+  });
+  const email = trustedEmail || existing[0]?.email || "";
+  const name = identity.name.trim() || email || "Staff member";
+
+  if (existing[0]) {
+    await sql(
+      "update members set email = $3, name = $4, role = $5, updated_at = now() where stage = $1 and sub = $2",
+      [stage, identity.sub, email, name, decision.role],
+    );
+  } else {
+    await sql(
+      "insert into members (stage, sub, email, name, role) values ($1, $2, $3, $4, $5) on conflict (stage, sub) do nothing",
+      [stage, identity.sub, email, name, decision.role],
+    );
   }
-  
-  // Fetch the stored member to get their final state
+
+  if (decision.consumeInvite && trustedEmail) {
+    await sql("delete from role_invites where stage = $1 and lower(email) = $2", [stage, trustedEmail]);
+  }
+
   const stored = await sql<MemberRow>(
     "select sub, email, name, role from members where stage = $1 and sub = $2",
     [stage, identity.sub],
   );
-  
-  if (!stored[0]) {
-    // This should never happen due to the insert above, but handle it gracefully
-    console.error("mandara: member creation succeeded but fetch failed for sub:", identity.sub);
-    return null;
-  }
-  
+  if (!stored[0]) return null;
   return {
     stage,
     sub: identity.sub,
@@ -78,6 +66,14 @@ export async function memberFromIdentity(identity: VerifiedIdentity): Promise<Me
     role: stored[0].role,
     simulated: identity.simulated,
   };
+}
+
+export async function hasAdministrator(stage: string): Promise<boolean> {
+  const rows = await sql<{ n: number }>(
+    "select count(*)::int as n from members where stage = $1 and role = 'admin'",
+    [stage],
+  );
+  return (rows[0]?.n ?? 0) > 0;
 }
 
 export async function listMembers(stage: string): Promise<MemberRow[]> {
