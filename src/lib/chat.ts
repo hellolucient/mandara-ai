@@ -7,7 +7,8 @@ import type { Member } from "@/lib/members";
 import { extractMemoryContent, formatMemoriesForPrompt, getMemories, saveMemory, shouldSaveMemory } from "@/lib/memory";
 import { complete, modelConfigured, type ModelMessage } from "@/lib/openrouter";
 import { needsReasoningModel } from "@/lib/question-complexity";
-import { shouldRouteToSales, shouldSearchWeb } from "@/lib/routing";
+import { shouldSearchWeb } from "@/lib/routing";
+import { classifySalesIntent } from "@/lib/sales-classifier";
 import { answerSales } from "@/lib/sales-answers";
 import { isKnowledgeQuestion, parseSalesQuestion } from "@/lib/sales-questions";
 import { loadDays, locationNames } from "@/lib/sales-store";
@@ -128,20 +129,22 @@ async function compose(
     }
   }
   
-  const names = await locationNames(member.stage);
-  
-  // More precise sales routing
-  if (shouldRouteToSales(content, names) && !attachmentText) {
-    const salesIntent = parseSalesQuestion(content, names);
-    if (salesIntent) {
-      const days = await loadDays(member.stage);
-      return {
-        content: answerSales(salesIntent, days, businessToday()),
-        citations: [],
-        mode: "sales",
-        model: "",
-        images: [],
-      };
+  // Model-based sales routing: classify if message is asking for stored sales data
+  if (!attachmentText) {
+    const classification = await classifySalesIntent(content);
+    if (classification.isSalesQuery) {
+      const names = await locationNames(member.stage);
+      const salesIntent = parseSalesQuestion(content, names);
+      if (salesIntent) {
+        const days = await loadDays(member.stage);
+        return {
+          content: answerSales(salesIntent, days, businessToday()),
+          citations: [],
+          mode: "sales",
+          model: "",
+          images: [],
+        };
+      }
     }
   }
   if (isKnowledgeQuestion(content) && !attachmentText) {
