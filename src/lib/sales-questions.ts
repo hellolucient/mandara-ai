@@ -25,5 +25,5 @@ export function parseSalesQuestion(text: string, locationNames: string[]): Sales
 }
 
 export function isKnowledgeQuestion(text: string): boolean {
-  return /\b(operating agreement|sop|procedure|policy|insurance|certificate|handbook|treatment room|document|say about|what does)\b/i.test(text);
+  return /\b(operating agreement|sop|handbook|company policy|our policy|insurance note|insurance certificate|insurance clause|treatment room opening)\b/i.test(text);
 }

@@ -1,4 +1,5 @@
-import { InviteForm, RoleSelect, SettingsForm } from "@/components/admin-manager";
+import { CompanyProfileForm, InviteForm, RoleSelect, SettingsForm } from "@/components/admin-manager";
+import { getCompanyProfile, profileToForm } from "@/lib/company-profile";
 import { listInvites, listMembers } from "@/lib/members";
 import { integrationStatus } from "@/lib/secrets";
 import { currentMember } from "@/lib/session";
@@ -12,13 +13,15 @@ export default async function AdminPage() {
   const member = await currentMember();
   if (!member) redirect("/");
   if (member.role !== "admin") redirect("/chat");
-  const [settings, people, invites, usage, status] = await Promise.all([
+  const [settings, profile, people, invites, usage, status] = await Promise.all([
     getSettings(member.stage),
+    getCompanyProfile(member.stage),
     listMembers(member.stage),
     listInvites(member.stage),
     usageSummary(member.stage),
     Promise.resolve(integrationStatus()),
   ]);
+  const company = profileToForm(profile);
   const rows = [
     ["OpenRouter", status.openRouter],
     ["Schedule secret", status.cron],
@@ -62,6 +65,21 @@ export default async function AdminPage() {
             <p className="mt-3 text-sm">No model calls yet this month.</p>
           )}
         </article>
+      </section>
+      <section className="rounded-xl border bg-card p-4">
+        <h2 className="font-heading text-2xl">Company profile</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+          Empty until you add it. The assistant uses this, plus stored location and menu names, to recognise our spas, people, and contracts. Short forms of a saved spa name are recognised automatically. One entry per line.
+        </p>
+        <div className="mt-4">
+          <CompanyProfileForm
+            description={company.description}
+            spasText={company.spasText}
+            peopleText={company.peopleText}
+            contractsText={company.contractsText}
+            keywordsText={company.keywordsText}
+          />
+        </div>
       </section>
       <section className="rounded-xl border bg-card p-4">
         <h2 className="font-heading text-2xl">Connections</h2>

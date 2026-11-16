@@ -77,6 +77,11 @@ export async function ensureSeed(stage: string): Promise<void> {
     );
   }
   await sql(
+    `insert into settings (stage, key, value) values ($1, 'companyProfile', $2)
+     on conflict (stage, key) do nothing`,
+    [stage, JSON.stringify({ description: "", spas: [], people: [], contracts: [], keywords: [] })],
+  );
+  await sql(
     `insert into settings (stage, key, value) values ($1, 'sampleSeed', 'done')
      on conflict (stage, key) do update set value = excluded.value`,
     [stage],

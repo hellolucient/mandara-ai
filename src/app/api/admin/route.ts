@@ -1,3 +1,4 @@
+import { profileFromForm, saveCompanyProfile } from "@/lib/company-profile";
 import { json, rejectCrossOrigin } from "@/lib/http";
 import { listMembers, saveInvite, setMemberRole, type Role } from "@/lib/members";
 import { isResponse, requireMember } from "@/lib/session";
@@ -22,6 +23,10 @@ export async function POST(request: Request) {
       reasoningModel: body.reasoningModel ?? "",
       currency: body.currency ?? "",
     });
+    return json({ ok: true });
+  }
+  if (body.action === "profile") {
+    await saveCompanyProfile(member.stage, profileFromForm(body));
     return json({ ok: true });
   }
   if (body.action === "role") {

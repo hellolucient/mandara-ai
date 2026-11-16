@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { buildLexicon, routeQuestion } from "./mandara-context";
+import { EMPTY_PROFILE } from "./company-profile";
 import { shouldRouteToSales, shouldSearchWeb } from "./routing";
+
+const SPAS = [
+  "Adaaran Prestige Vadoo",
+  "Hakuraa",
+  "Hudhuranfushi",
+  "Thulusdhoo",
+  "Mandara Spa Manhattan Hulhumale",
+  "Chavanaspa Dhonveli",
+];
+const LEXICON = buildLexicon({ locations: SPAS, profile: EMPTY_PROFILE });
 
 const LOCATIONS = ["Hakuraa", "Olhuveli", "Sheraton"];
 
@@ -104,15 +116,54 @@ describe("web search decision", () => {
     assert.equal(shouldSearchWeb("News about Four Seasons Maldives"), true);
   });
 
-  it("does not search for tasks that don't need external data", () => {
+  it("searches general questions, including ones with no 'current' or 'now'", () => {
+    assert.equal(shouldSearchWeb("what's the cost of a biz class flight in mid-Feb from Bangkok to Zurich"), true);
+    assert.equal(shouldSearchWeb("how much is a 5-star hotel in Zurich in February"), true);
+    assert.equal(shouldSearchWeb("what's SWISS business class to Zurich like"), true);
+    assert.equal(shouldSearchWeb("What is a hydrafacial?"), true);
+    assert.equal(shouldSearchWeb("Explain the difference between gross revenue share and fixed rent"), true);
+  });
+
+  it("does not search for self-contained tasks or stored company questions", () => {
     assert.equal(shouldSearchWeb("Write a 120-word Instagram caption for a Christmas spa promotion"), false);
     assert.equal(shouldSearchWeb("Translate this into Russian and Chinese: 'Welcome'"), false);
     assert.equal(shouldSearchWeb("Calculate 1,150 treatments / 30 days / 6 rooms"), false);
-    assert.equal(shouldSearchWeb("Explain the difference between gross revenue share and fixed rent"), false);
     assert.equal(shouldSearchWeb("Draft an email to a resort GM about taking over their spa"), false);
     assert.equal(shouldSearchWeb("What's my favourite treatment?"), false);
     assert.equal(shouldSearchWeb("Rewrite this more formally: 'Hi there'"), false);
     assert.equal(shouldSearchWeb("Summarize the attached document"), false);
+    assert.equal(shouldSearchWeb("What were total spa sales yesterday?"), false);
+    assert.equal(shouldSearchWeb("What type of facials do we have?"), false);
+    assert.equal(shouldSearchWeb("Give me a list of all our facials"), false);
+  });
+
+  it("treats our resort names, short forms, and close misspellings as company context", () => {
+    const massage = routeQuestion("At Vadoo, what's the price of a Balinese massage?", LEXICON);
+    assert.equal(massage.lane, "company");
+    assert.equal(massage.web, false);
+    assert.equal(massage.place, "Adaaran Prestige Vadoo");
+
+    const weather = routeQuestion("What's the weather in Vadoo?", LEXICON);
+    assert.equal(weather.lane, "general");
+    assert.equal(weather.web, true);
+    assert.equal(weather.place, "Adaaran Prestige Vadoo");
+
+    assert.equal(routeQuestion("prices at Vadou", LEXICON).place, "Adaaran Prestige Vadoo");
+    assert.equal(routeQuestion("How is Hakuraa doing this month?", LEXICON).lane, "company");
+    assert.equal(routeQuestion("therapists at Huduranfushi", LEXICON).place, "Hudhuranfushi");
+    assert.equal(routeQuestion("the menu at Thulusdhoo", LEXICON).lane, "company");
+    assert.equal(routeQuestion("sales at Manhattan", LEXICON).place, "Mandara Spa Manhattan Hulhumale");
+    assert.equal(routeQuestion("DSR for Hulhumale", LEXICON).place, "Mandara Spa Manhattan Hulhumale");
+    assert.equal(routeQuestion("what's on at Chavana?", LEXICON).place, "Chavanaspa Dhonveli");
+
+    const ours = routeQuestion("What type of facials do we have?", LEXICON);
+    assert.equal(ours.lane, "company");
+    assert.equal(ours.place, null);
+    const list = routeQuestion("Give me a list of all our facials", LEXICON);
+    assert.equal(list.lane, "company");
+    assert.equal(list.web, false);
+    assert.equal(routeQuestion("What is a hydrafacial?", LEXICON).lane, "general");
+    assert.equal(routeQuestion("What is a hydrafacial?", LEXICON).web, true);
   });
 
   it("handles edge cases", () => {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 async function post(body: Record<string, string>) {
   const response = await fetch("/api/admin", {
@@ -66,6 +67,91 @@ export function SettingsForm({ companyName, model, imageModel, reasoningModel, c
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <Button type="submit">Save settings</Button>
+    </form>
+  );
+}
+
+export function CompanyProfileForm({
+  description,
+  spasText,
+  peopleText,
+  contractsText,
+  keywordsText,
+}: {
+  description: string;
+  spasText: string;
+  peopleText: string;
+  contractsText: string;
+  keywordsText: string;
+}) {
+  const router = useRouter();
+  const [error, setError] = useState("");
+  return (
+    <form
+      className="grid gap-4 md:grid-cols-2"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        setError("");
+        try {
+          await post({
+            action: "profile",
+            description: String(form.get("description") ?? ""),
+            spasText: String(form.get("spasText") ?? ""),
+            peopleText: String(form.get("peopleText") ?? ""),
+            contractsText: String(form.get("contractsText") ?? ""),
+            keywordsText: String(form.get("keywordsText") ?? ""),
+          });
+          router.refresh();
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : "The profile was not saved.");
+        }
+      }}
+    >
+      <div className="md:col-span-2">
+        <Label htmlFor="description">Who we are</Label>
+        <Textarea
+          id="description"
+          name="description"
+          defaultValue={description}
+          placeholder="A short description of the company and what it does."
+          className="mt-1 min-h-24"
+        />
+      </div>
+      <div>
+        <Label htmlFor="spasText">Spas and resorts</Label>
+        <Textarea
+          id="spasText"
+          name="spasText"
+          defaultValue={spasText}
+          placeholder={"Adaaran Prestige Vadoo | Vadoo, Vadou\nHakuraa"}
+          className="mt-1 min-h-32"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">Name, then a bar, then aliases and misspellings.</p>
+      </div>
+      <div>
+        <Label htmlFor="peopleText">People and roles</Label>
+        <Textarea id="peopleText" name="peopleText" defaultValue={peopleText} placeholder={"Amina Shah | Spa director"} className="mt-1 min-h-32" />
+      </div>
+      <div>
+        <Label htmlFor="contractsText">Hotel partner contracts</Label>
+        <Textarea
+          id="contractsText"
+          name="contractsText"
+          defaultValue={contractsText}
+          placeholder={"Adaaran management agreement | Adaaran"}
+          className="mt-1 min-h-28"
+        />
+      </div>
+      <div>
+        <Label htmlFor="keywordsText">Extra keywords</Label>
+        <Textarea id="keywordsText" name="keywordsText" defaultValue={keywordsText} placeholder={"elemis\nmandara menu"} className="mt-1 min-h-28" />
+        <p className="mt-1 text-xs text-muted-foreground">One keyword or phrase per line.</p>
+      </div>
+      {error ? <p className="text-sm text-destructive md:col-span-2">{error}</p> : null}
+      <div className="md:col-span-2">
+        <Button type="submit">Save company profile</Button>
+      </div>
     </form>
   );
 }
