@@ -16,7 +16,6 @@ export const metadata: Metadata = {
   title: "Mandara",
   description: "Assistant, company knowledge and daily sales for Mandara Spa Maldives.",
   robots: { index: false, follow: false },
-  manifest: "/manifest.json",
   themeColor: "#16a34a",
   viewport: {
     width: "device-width",
@@ -33,6 +32,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${outfit.variable} ${fraunces.variable}`}>
+      <head>
+        {/* Browsers omit cookies on manifest fetches unless crossOrigin is set, even for a same-origin file.
+            Without credentials, Cursor's app gate redirects /manifest.json to cursor.com/apps-gate/authorize,
+            which the browser reports as a CORS / ERR_FAILED failure and blocks "Add to Dock" / app-window install.
+            Next only adds this attribute automatically on Vercel preview deployments. */}
+        <link rel="manifest" href="/manifest.json" crossOrigin="use-credentials" />
+      </head>
       <body className="antialiased">{children}</body>
     </html>
   );

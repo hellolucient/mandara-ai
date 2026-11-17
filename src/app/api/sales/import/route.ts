@@ -1,4 +1,5 @@
 import { canManage } from "@/lib/members";
+import { importTotals } from "@/lib/sales-import";
 import { parseCsv, validateExtract } from "@/lib/sales-validate";
 import { saveExtract } from "@/lib/sales-store";
 import { json, rejectCrossOrigin } from "@/lib/http";
@@ -32,7 +33,14 @@ export async function POST(request: Request) {
   }
   if (!validated.ok) return json({ error: validated.error }, 422);
   await saveExtract(member.stage, validated.extract, "import");
-  return json({ ok: true, issues: validated.extract.issues, businessDate: validated.extract.businessDate });
+  const totals = importTotals(validated.extract.rows);
+  return json({
+    ok: true,
+    issues: validated.extract.issues,
+    businessDate: validated.extract.businessDate,
+    locations: totals.locations,
+    netSales: totals.netSales,
+  });
 }
 
 function safeJson(text: string) {

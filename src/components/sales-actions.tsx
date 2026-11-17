@@ -5,12 +5,25 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { formatImportConfirmation } from "@/lib/sales-import";
+
+type ImportResponse = {
+  error?: string;
+  issues?: string[];
+  ok?: boolean;
+  businessDate?: string;
+  locations?: number;
+  netSales?: number;
+};
 
 export function SalesActions({ canRun }: { canRun: boolean }) {
   const router = useRouter();
   const [error, setError] = useState("");
-  const [pending, setPending] = useState<"" | "report" | "check">("");
+  const [pending, setPending] = useState<"" | "report" | "check" | "import">("");
   const [open, setOpen] = useState(false);
+  const [importError, setImportError] = useState("");
+  const [importSaved, setImportSaved] = useState("");
+  const [savedNotice, setSavedNotice] = useState("");
 
   if (!canRun) return <p className="text-sm text-muted-foreground">A manager can refresh the report, check the DSR sign-in, or import a file.</p>;
 
@@ -58,7 +71,16 @@ export function SalesActions({ canRun }: { canRun: boolean }) {
       >
         {pending === "check" ? "Checking" : "Check DSR sign-in"}
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (next) {
+            setImportError("");
+            setImportSaved("");
+          }
+        }}
+      >
         <DialogTrigger render={<Button variant="outline" />}>Import a file</DialogTrigger>
         <DialogContent>
           <DialogHeader>
@@ -71,23 +93,46 @@ export function SalesActions({ canRun }: { canRun: boolean }) {
             className="space-y-3"
             onSubmit={async (event) => {
               event.preventDefault();
-              setError("");
-              const response = await fetch("/api/sales/import", { method: "POST", body: new FormData(event.currentTarget) });
-              const body = (await response.json()) as { error?: string; issues?: string[] };
-              if (!response.ok) {
-                setError(body.error || "The file was not stored.");
-                return;
+              setImportError("");
+              setImportSaved("");
+              setPending("import");
+              try {
+                const response = await fetch("/api/sales/import", { method: "POST", body: new FormData(event.currentTarget) });
+                const body = (await response.json()) as ImportResponse;
+                if (!response.ok) {
+                  setImportError(body.error || "The file was not stored.");
+                  return;
+                }
+                const confirmation =
+                  body.businessDate && body.locations != null && body.netSales != null
+                    ? formatImportConfirmation({
+                        businessDate: body.businessDate,
+                        locations: body.locations,
+                        netSales: body.netSales,
+                      })
+                    : "Saved.";
+                const withIssues =
+                  body.issues && body.issues.length > 0 ? `${confirmation}. ${body.issues.join(" ")}` : confirmation;
+                setImportSaved(withIssues);
+                setSavedNotice(confirmation);
+                router.refresh();
+              } catch {
+                setImportError("The file was not stored.");
+              } finally {
+                setPending("");
               }
-              setOpen(false);
-              router.refresh();
             }}
           >
             <Input name="file" type="file" accept=".csv,.json,text/csv,application/json" required />
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            <Button type="submit">Store records</Button>
+            {importError ? <p className="text-sm text-destructive">{importError}</p> : null}
+            {importSaved ? <p className="text-sm text-foreground">{importSaved}</p> : null}
+            <Button type="submit" disabled={pending !== ""}>
+              {pending === "import" ? "Saving" : "Store records"}
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
+      {savedNotice ? <p className="w-full text-sm text-foreground">{savedNotice}</p> : null}
       {error ? <p className="w-full text-sm text-destructive">{error}</p> : null}
     </div>
   );
