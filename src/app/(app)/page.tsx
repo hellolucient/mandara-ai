@@ -15,6 +15,9 @@ import { WorldClocks } from "@/components/world-clocks";
 import { Sparkline } from "@/components/sparkline";
 import { currentMember } from "@/lib/session";
 import { calculateHomeKPIs, getSpaSummaries, type HomeKPIs, type SpaSummary } from "@/lib/home-kpis";
+import { ProspectsCard } from "@/components/prospects/home-card";
+import { canSeeProspects } from "@/lib/prospects-access";
+import { prospectSummary } from "@/lib/prospects-store";
 
 export const dynamic = "force-dynamic";
 
@@ -44,9 +47,11 @@ export default async function HomePage() {
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
 
-  const [kpis, spas] = await Promise.all([
+  // The Prospects card is for administrators only: nothing is read for anyone else.
+  const [kpis, spas, prospects] = await Promise.all([
     calculateHomeKPIs(member.stage, today),
     getSpaSummaries(member.stage, today),
+    canSeeProspects(member.role) ? prospectSummary(member) : Promise.resolve(null),
   ]);
 
   const firstName = member.name?.split(" ")[0] || "there";
@@ -84,6 +89,8 @@ export default async function HomePage() {
       </section>
 
       {spas.length > 0 ? <SpaTable spas={spas} currency={currency} /> : null}
+
+      {prospects ? <ProspectsCard summary={prospects} /> : null}
     </main>
   );
 }

@@ -1,5 +1,6 @@
 import { NavLinks } from "@/components/nav-links";
 import type { Member } from "@/lib/members";
+import { navItems } from "@/lib/nav";
 
 const MARK = (
   <svg className="mark" viewBox="0 0 32 32" aria-hidden="true">
@@ -22,15 +23,7 @@ export function Shell({
   needsOwner?: boolean;
   children: React.ReactNode;
 }) {
-  const items = [
-    { href: "/", label: "Home" },
-    { href: "/chat", label: "Chat" },
-    { href: "/knowledge", label: "Knowledge" },
-    { href: "/sales", label: "Sales" },
-    { href: "/agents", label: "Agents" },
-    { href: "/memories", label: "Memories" },
-  ];
-  if (member.role === "admin") items.push({ href: "/admin", label: "Admin" });
+  const items = navItems(member.role);
   return (
     <div className="min-h-screen md:grid md:grid-cols-[232px_1fr]">
       <aside className="hidden bg-primary text-primary-foreground md:flex md:flex-col md:px-4 md:py-6">
