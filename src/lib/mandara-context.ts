@@ -233,8 +233,11 @@ function isUserSuppliedMath(folded: string): boolean {
   if (/\b(calculate|compute|equation|formula|utilisation|utilization|show the working|work out|do the math)\b/.test(folded)) return true;
   const amounts = folded.match(/\d+(?:\.\d+)?%?/g) ?? [];
   const currency = /[$€£]\s*\d/.test(folded);
-  const computing = /\b(if|suppose|assuming|hypothetical|extra|what would|per day|per month)\b/.test(folded);
+  const computing = /\b(if|suppose|assuming|hypothetical|extra|what would|per day|per month|daily average|what s the|average|total)\b/.test(folded);
+  // Math word problems with user-supplied numbers: needs both numbers and computation language
   if ((currency || amounts.length >= 2) && computing) return true;
+  // Explicit "if X then what's Y" patterns (hypothetical math scenarios)
+  if (/\b(a spa|an? resort|if (a|an|we|you)).*\d.*what/.test(folded)) return true;
   return /\d[\d,]*\s*\/\s*\d/.test(folded);
 }
 

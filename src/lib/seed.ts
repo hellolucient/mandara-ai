@@ -83,6 +83,16 @@ export async function ensureSeed(stage: string): Promise<void> {
     [stage, initialCompanyProfileJson()],
   );
   await sql(
+    `insert into settings (stage, key, value)
+     values ($1, 'model', 'deepseek/deepseek-v4.1-flash'),
+            ($1, 'imageModel', 'google/gemini-2.5-flash-image'),
+            ($1, 'reasoningModel', 'deepseek/deepseek-r1'),
+            ($1, 'currency', 'USD'),
+            ($1, 'companyName', 'Mandara Spa Maldives')
+     on conflict (stage, key) do nothing`,
+    [stage],
+  );
+  await sql(
     `insert into settings (stage, key, value) values ($1, 'sampleSeed', 'done')
      on conflict (stage, key) do update set value = excluded.value`,
     [stage],
