@@ -38,7 +38,9 @@ export function validateExtract(input: unknown): { ok: true; extract: SalesExtra
     const net = nullableNumber(item.netSales);
     const treatments = nullableNumber(item.treatments);
     const budget = nullableNumber(item.budget);
-    if (!net.ok || !treatments.ok || !budget.ok) {
+    const treatmentRevenue = nullableNumber(item.treatmentSales);
+    const retailRevenue = nullableNumber(item.retailSales);
+    if (!net.ok || !treatments.ok || !budget.ok || !treatmentRevenue.ok || !retailRevenue.ok) {
       return { ok: false, error: `${location} has a value that is not a number.` };
     }
     let netSales = net.value;
@@ -56,8 +58,18 @@ export function validateExtract(input: unknown): { ok: true; extract: SalesExtra
       issues.push(`${location}: budget was negative and was not stored.`);
       budgetValue = null;
     }
+    let treatmentSales = treatmentRevenue.value;
+    let retailSales = retailRevenue.value;
+    if (treatmentSales != null && treatmentSales < 0) {
+      issues.push(`${location}: treatment sales were negative and were not stored.`);
+      treatmentSales = null;
+    }
+    if (retailSales != null && retailSales < 0) {
+      issues.push(`${location}: retail sales were negative and were not stored.`);
+      retailSales = null;
+    }
     if (netSales == null) issues.push(`${location}: net sales are missing.`);
-    rows.push({ location, netSales, treatments: treatmentCount, budget: budgetValue });
+    rows.push({ location, netSales, treatments: treatmentCount, budget: budgetValue, treatmentSales, retailSales });
   }
   if (rows.every((row) => row.netSales == null)) {
     return { ok: false, error: "Every location is missing net sales, so nothing was stored." };
@@ -83,6 +95,8 @@ export function parseCsv(text: string): { ok: true; extract: SalesExtract } | { 
   const salesIndex = header.indexOf("net_sales");
   const treatmentsIndex = header.indexOf("treatments");
   const budgetIndex = header.indexOf("budget");
+  const treatmentSalesIndex = header.indexOf("treatment_sales");
+  const retailSalesIndex = header.indexOf("retail_sales");
   if (dateIndex < 0 || locationIndex < 0 || salesIndex < 0) {
     return { ok: false, error: "The CSV header must include business_date, location and net_sales." };
   }
@@ -97,6 +111,8 @@ export function parseCsv(text: string): { ok: true; extract: SalesExtract } | { 
       netSales: cells[salesIndex]?.trim() ?? "",
       treatments: treatmentsIndex >= 0 ? cells[treatmentsIndex]?.trim() ?? "" : "",
       budget: budgetIndex >= 0 ? cells[budgetIndex]?.trim() ?? "" : "",
+      treatmentSales: treatmentSalesIndex >= 0 ? cells[treatmentSalesIndex]?.trim() ?? "" : "",
+      retailSales: retailSalesIndex >= 0 ? cells[retailSalesIndex]?.trim() ?? "" : "",
     });
   }
   if (dates.size !== 1) return { ok: false, error: "Import one business date per file." };

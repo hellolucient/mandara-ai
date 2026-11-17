@@ -4,7 +4,9 @@ import { describe, it } from "node:test";
 import { SCHEMA_MIGRATIONS, splitSql } from "./schema-source";
 import { ensureSeed } from "./seed";
 import { searchKnowledge } from "./knowledge";
-import { loadDays } from "./sales-store";
+import { loadDays, saveExtract } from "./sales-store";
+import { calculateHomeKPIs, getSpaSummaries } from "./home-kpis";
+import { validateExtract } from "./sales-validate";
 import { answerSales } from "./sales-answers";
 import { runSalesAgent } from "./agent";
 
@@ -28,6 +30,46 @@ describe("stored records", () => {
     assert.ok(admin.hits.some((hit) => /14 days/.test(hit.excerpt)));
     const room = await searchKnowledge("test", "treatment room opening linen", "staff");
     assert.ok(room.hits.some((hit) => hit.title.includes("treatment room")));
+  });
+
+  it("stores treatment and retail sales and totals retail month to date on Home", async () => {
+    const stage = "retail-test";
+    const day = (businessDate: string, rows: unknown[]) => {
+      const result = validateExtract({ businessDate, currency: "USD", rows });
+      if (!result.ok) throw new Error(result.error);
+      return result.extract;
+    };
+    await saveExtract(
+      stage,
+      day("2026-11-15", [
+        { location: "Dhonveli", netSales: 1000, treatments: 10, budget: null, treatmentSales: 900, retailSales: 100 },
+        { location: "Vadoo", netSales: 500, treatments: 5, budget: null },
+      ]),
+      "import",
+    );
+    await saveExtract(
+      stage,
+      day("2026-11-16", [
+        { location: "Dhonveli", netSales: 1235.51, treatments: 15, budget: null, treatmentSales: 1157.79, retailSales: 77.72 },
+        { location: "Vadoo", netSales: 600, treatments: 6, budget: null },
+      ]),
+      "import",
+    );
+    const days = await loadDays(stage);
+    const dhonveli = days.at(-1)?.lines.find((line) => line.locationName === "Dhonveli");
+    assert.equal(dhonveli?.treatmentSales, 1157.79);
+    assert.equal(dhonveli?.retailSales, 77.72);
+    assert.equal(days.at(-1)?.lines.find((line) => line.locationName === "Vadoo")?.retailSales, null);
+
+    const kpis = await calculateHomeKPIs(stage, "2026-11-17");
+    assert.ok(kpis);
+    assert.equal(Math.round((kpis.mtdRetailSales ?? 0) * 100) / 100, 177.72);
+    // Share is over the lines that report retail only (Dhonveli), not all net sales.
+    assert.equal(Math.round((kpis.retailShare ?? 0) * 100) / 100, Math.round((177.72 / 2235.51) * 10000) / 100);
+
+    const spas = await getSpaSummaries(stage, "2026-11-17");
+    assert.equal(Math.round((spas.find((spa) => spa.locationName === "Dhonveli")?.mtdRetailSales ?? 0) * 100) / 100, 177.72);
+    assert.equal(spas.find((spa) => spa.locationName === "Vadoo")?.mtdRetailSales, null);
   });
 
   it("records a report run without claiming it read DSR", async () => {

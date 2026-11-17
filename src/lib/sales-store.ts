@@ -18,6 +18,8 @@ type LineRow = {
   net_sales: number | null;
   treatments: number | null;
   budget: number | null;
+  treatment_sales: number | null;
+  retail_sales: number | null;
 };
 
 export async function loadDays(stage: string): Promise<LoadedDay[]> {
@@ -28,7 +30,8 @@ export async function loadDays(stage: string): Promise<LoadedDay[]> {
   );
   if (days.length === 0) return [];
   const lines = await sql<LineRow>(
-    `select l.day_id, l.location_id, l.location_name, l.net_sales, l.treatments, l.budget
+    `select l.day_id, l.location_id, l.location_name, l.net_sales, l.treatments, l.budget,
+            l.treatment_sales, l.retail_sales
      from sales_lines l
      join sales_days d on d.id = l.day_id
      where d.stage = $1`,
@@ -48,6 +51,8 @@ export async function loadDays(stage: string): Promise<LoadedDay[]> {
         netSales: num(line.net_sales),
         treatments: line.treatments == null ? null : Number(line.treatments),
         budget: num(line.budget),
+        treatmentSales: num(line.treatment_sales),
+        retailSales: num(line.retail_sales),
       })),
   }));
 }
@@ -80,9 +85,19 @@ export async function saveExtract(stage: string, extract: SalesExtract, source: 
   for (const row of extract.rows) {
     const locationId = await ensureLocation(stage, row.location);
     await sql(
-      `insert into sales_lines (id, day_id, location_id, location_name, net_sales, treatments, budget)
-       values ($1, $2, $3, $4, $5, $6, $7)`,
-      [newId(), dayId, locationId, row.location, row.netSales, row.treatments, row.budget],
+      `insert into sales_lines (id, day_id, location_id, location_name, net_sales, treatments, budget, treatment_sales, retail_sales)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        newId(),
+        dayId,
+        locationId,
+        row.location,
+        row.netSales,
+        row.treatments,
+        row.budget,
+        row.treatmentSales ?? null,
+        row.retailSales ?? null,
+      ],
     );
   }
 }

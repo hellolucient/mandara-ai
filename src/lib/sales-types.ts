@@ -6,6 +6,10 @@ export type SalesLine = {
   netSales: number | null;
   treatments: number | null;
   budget: number | null;
+  /** Treatment revenue for the day, when the source splits it out. */
+  treatmentSales?: number | null;
+  /** Retail (product) revenue for the day, when the source splits it out. */
+  retailSales?: number | null;
 };
 
 export type LoadedDay = {
@@ -36,6 +40,8 @@ export type ExtractRow = {
   netSales: number | null;
   treatments: number | null;
   budget: number | null;
+  treatmentSales?: number | null;
+  retailSales?: number | null;
 };
 
 export type SalesExtract = {

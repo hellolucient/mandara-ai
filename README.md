@@ -70,7 +70,7 @@ The username and password above are for the local sandbox only. Any non-empty pa
 
 A scheduler can post the printed JSON to `/api/cron/sales` with `Authorization: Bearer <CRON_SECRET>`. An empty body rebuilds the report from records already stored. A body of `{ "ok": false, "error": "..." }` is stored as a failed run and does not overwrite sales.
 
-Managers can also import a CSV with the columns `business_date,location,net_sales,treatments,budget`.
+Managers can also import a CSV with the columns `business_date,location,net_sales,treatments,budget`. Two optional columns, `treatment_sales` and `retail_sales`, split each location's net sales into treatment and retail revenue (`treatmentSales` and `retailSales` in a JSON extract). Files without them still import; Home then shows retail as —.
 
 ## Roles
 

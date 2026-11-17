@@ -39,16 +39,18 @@ export function ChatPanel({
   conversationMode,
   initialMessages,
   modelOn,
+  initialDraft = "",
 }: {
   conversationId: string;
   conversationMode?: string;
+  initialDraft?: string;
   initialMessages: Message[];
   modelOn: boolean;
 }) {
   const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
   const [mode, setMode] = useState<string>(conversationMode || "general");
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(initialDraft);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

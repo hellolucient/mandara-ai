@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isSalesDataStale, num } from "./home-kpis.js";
+import { isSalesDataStale, num, sumKnown } from "./home-kpis.js";
 
 describe("home KPIs", () => {
   it("detects stale sales data (>2 days old)", () => {
@@ -61,5 +61,12 @@ describe("home KPIs", () => {
     assert.equal(num(null), null);
     assert.equal(num("abc"), null);
     assert.equal(["092", "1228"].reduce((s, v) => s + (num(v) ?? 0), 0), 1320);
+  });
+
+  it("sums retail only where it was reported, and keeps all-missing as missing", () => {
+    assert.equal(sumKnown([null, null]), null);
+    assert.equal(sumKnown([]), null);
+    assert.equal(sumKnown([77.72, null, 92.44]), 170.16);
+    assert.equal(sumKnown([0, null]), 0);
   });
 });

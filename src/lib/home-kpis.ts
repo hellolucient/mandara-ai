@@ -5,6 +5,9 @@ export type HomeKPIs = {
   latestRevenue: number;
   mtdRevenue: number;
   mtdTreatments: number;
+  /** Retail revenue month to date; null when no stored day splits out retail. */
+  mtdRetailSales: number | null;
+  /** Retail as a share of net sales, over the lines that report retail. */
   retailShare: number | null;
   avgSpendPerGuest: number | null;
   currency: string;
@@ -18,6 +21,8 @@ export type SpaSummary = {
   mtdRevenue: number;
   budgetAmount: number | null;
   budgetPercent: number | null;
+  /** Retail revenue month to date; null when no day for this spa splits out retail. */
+  mtdRetailSales: number | null;
   sparklineData: Array<{ date: string; revenue: number | null }>;
 };
 
@@ -32,11 +37,15 @@ export async function calculateHomeKPIs(stage: string, today: string): Promise<H
     currency: string;
     net_sales: number | null;
     treatments: number | null;
+    retail_sales: number | null;
+    net_with_retail: number | null;
   }>(
     `select to_char(business_date, 'YYYY-MM-DD') as business_date,
             source, currency,
             sum(net_sales) as net_sales,
-            sum(treatments) as treatments
+            sum(treatments) as treatments,
+            sum(retail_sales) as retail_sales,
+            sum(case when retail_sales is not null then net_sales end) as net_with_retail
      from sales_days d
      left join sales_lines l on l.day_id = d.id
      where d.stage = $1
@@ -65,9 +74,10 @@ export async function calculateHomeKPIs(stage: string, today: string): Promise<H
   const mtdRevenue = mtdDays.reduce((sum, d) => sum + (num(d.net_sales) ?? 0), 0);
   const mtdTreatments = mtdDays.reduce((sum, d) => sum + (num(d.treatments) ?? 0), 0);
 
-  // Retail share and avg spend require more detailed data - return null for now
-  // These would need retail/treatment breakdown in the data model
-  const retailShare = null;
+  // Retail is optional per line; only days and spas that report it are counted.
+  const mtdRetailSales = sumKnown(mtdDays.map((d) => num(d.retail_sales)));
+  const netWithRetail = sumKnown(mtdDays.map((d) => num(d.net_with_retail)));
+  const retailShare = mtdRetailSales !== null && netWithRetail ? (mtdRetailSales / netWithRetail) * 100 : null;
   const avgSpendPerGuest = mtdTreatments > 0 ? mtdRevenue / mtdTreatments : null;
 
   return {
@@ -75,6 +85,7 @@ export async function calculateHomeKPIs(stage: string, today: string): Promise<H
     latestRevenue,
     mtdRevenue,
     mtdTreatments,
+    mtdRetailSales,
     retailShare,
     avgSpendPerGuest,
     currency,
@@ -117,10 +128,12 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
     location_id: string;
     business_date: string;
     net_sales: number | null;
+    retail_sales: number | null;
   }>(
     `select l.location_id,
             to_char(d.business_date, 'YYYY-MM-DD') as business_date,
-            l.net_sales
+            l.net_sales,
+            l.retail_sales
      from sales_lines l
      join sales_days d on d.id = l.day_id
      where d.stage = $1
@@ -128,7 +141,10 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
      order by l.location_id, d.business_date`,
     [stage, fromDate],
   );
-  for (const row of salesData) row.net_sales = num(row.net_sales);
+  for (const row of salesData) {
+    row.net_sales = num(row.net_sales);
+    row.retail_sales = num(row.retail_sales);
+  }
   const latestMtdDate = salesData
     .map((s) => s.business_date)
     .filter((d) => d.startsWith(currentMonth) && d <= today)
@@ -148,6 +164,7 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
     // MTD revenue
     const mtdSales = locSales.filter((s) => s.business_date.startsWith(currentMonth) && s.business_date <= today);
     const mtdRevenue = mtdSales.reduce((sum, s) => sum + (s.net_sales ?? 0), 0);
+    const mtdRetailSales = sumKnown(mtdSales.map((s) => s.retail_sales));
 
     // Budget comparison
     const budgetAmount = budgetMap.get(loc.location_id) ?? null;
@@ -170,6 +187,7 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
       mtdRevenue,
       budgetAmount,
       budgetPercent,
+      mtdRetailSales,
       sparklineData,
     });
   }
@@ -183,6 +201,13 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
 export function isSalesDataStale(latestDate: string, today: string): boolean {
   const daysSince = Math.floor((Date.parse(today) - Date.parse(latestDate)) / (1000 * 60 * 60 * 24));
   return daysSince > 2;
+}
+
+/** Sum of the known values, or null when every value is missing (so "no data" is not shown as 0). */
+export function sumKnown(values: Array<number | null>): number | null {
+  let total: number | null = null;
+  for (const value of values) if (value !== null) total = (total ?? 0) + value;
+  return total;
 }
 
 /** Postgres returns numeric and bigint sums as strings; convert safely. */

@@ -77,6 +77,56 @@ describe("sales questions", () => {
     if (result.ok) assert.equal(result.extract.rows[0].budget, null);
   });
 
+  it("accepts treatment and retail sales in a csv and keeps old csv files working", () => {
+    const split = parseCsv(
+      "business_date,location,net_sales,treatments,budget,treatment_sales,retail_sales\n" +
+        "2026-11-16,Dhonveli,1235.51,15,1338.87,1157.79,77.72\n" +
+        "2026-11-16,Rannalhi,,,614.43,,\n",
+    );
+    assert.equal(split.ok, true);
+    if (split.ok) {
+      assert.equal(split.extract.rows[0].treatmentSales, 1157.79);
+      assert.equal(split.extract.rows[0].retailSales, 77.72);
+      assert.equal(split.extract.rows[1].treatmentSales, null);
+      assert.equal(split.extract.rows[1].retailSales, null);
+    }
+    const old = parseCsv("business_date,location,net_sales,treatments,budget\n2026-11-10,Cinnamon Velifushi,100,4,\n");
+    assert.equal(old.ok, true);
+    if (old.ok) {
+      assert.equal(old.extract.rows[0].retailSales, null);
+      assert.equal(old.extract.rows[0].treatmentSales, null);
+      assert.equal(old.extract.complete, true);
+    }
+  });
+
+  it("accepts treatmentSales and retailSales in a JSON extract, optional and validated", () => {
+    const result = validateExtract({
+      businessDate: "2026-11-16",
+      currency: "USD",
+      rows: [
+        { location: "Dhonveli", netSales: 1235.51, treatments: 15, budget: 1338.87, treatmentSales: 1157.79, retailSales: 77.72 },
+        { location: "Vadoo", netSales: 656, treatments: 9, budget: 600 },
+        { location: "Velifushi", netSales: 436, treatments: 5, budget: 650, treatmentSales: "420", retailSales: -16 },
+      ],
+    });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const [dhonveli, vadoo, velifushi] = result.extract.rows;
+      assert.equal(dhonveli.retailSales, 77.72);
+      assert.equal(vadoo.retailSales, null);
+      assert.equal(vadoo.treatmentSales, null);
+      assert.equal(velifushi.treatmentSales, 420);
+      assert.equal(velifushi.retailSales, null);
+      assert.ok(result.extract.issues.some((issue) => /Velifushi: retail sales were negative/.test(issue)));
+    }
+    const bad = validateExtract({
+      businessDate: "2026-11-16",
+      currency: "USD",
+      rows: [{ location: "Dhonveli", netSales: 10, treatments: 1, budget: 9, retailSales: "lots" }],
+    });
+    assert.equal(bad.ok, false);
+  });
+
   it("chunks long text without dropping the ending", () => {
     const chunks = chunkText(`${"Alpha ".repeat(200)}\n\n${"Omega ".repeat(40)}`);
     assert.ok(chunks.length > 1);
