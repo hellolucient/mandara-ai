@@ -23,7 +23,8 @@ export function Shell({
   children: React.ReactNode;
 }) {
   const items = [
-    { href: "/chat", label: "Assistant" },
+    { href: "/", label: "Home" },
+    { href: "/chat", label: "Chat" },
     { href: "/knowledge", label: "Knowledge" },
     { href: "/sales", label: "Sales" },
     { href: "/agents", label: "Agents" },

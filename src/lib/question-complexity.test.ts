@@ -43,6 +43,8 @@ describe("question complexity detection", () => {
     assert.equal(needsReasoningModel("What are the benefits of hot stone massage?", false, 0), false);
     assert.equal(needsReasoningModel("Tell me about Elemis products", false, 0), false);
     assert.equal(needsReasoningModel("Create a picture of a spa at sunset", false, 0), false);
+    assert.equal(needsReasoningModel("Name a scrub", false, 0), false);
+    assert.equal(needsReasoningModel("name a scrub", false, 0), false);
   });
 
   it("does not trigger reasoning for short attachments", () => {

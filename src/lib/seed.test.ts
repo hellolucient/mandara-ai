@@ -6,6 +6,30 @@ import { getSettings } from "./settings";
 import { getCompanyProfile } from "./company-profile";
 
 describe("seed functionality", () => {
+  it("never seeds sample data into production stage", async () => {
+    // Ensure seed is called for production
+    await ensureSeed("production");
+    
+    // Verify no sample sales days exist
+    const sampleDays = await sql<{ count: number }>(
+      "select count(*)::int as count from sales_days where stage = 'production' and source = 'sample'",
+    );
+    assert.equal(sampleDays[0]?.count, 0, "Production should have no sample sales days");
+    
+    // Verify no sample documents exist
+    const sampleDocs = await sql<{ count: number }>(
+      "select count(*)::int as count from documents where stage = 'production' and sample = true",
+    );
+    assert.equal(sampleDocs[0]?.count, 0, "Production should have no sample documents");
+    
+    // Verify no sample locations exist
+    const sampleLocs = await sql<{ count: number }>(
+      `select count(*)::int as count from locations 
+       where stage = 'production' and id in ('velifushi', 'north-male', 'south-ari', 'baa', 'male-house')`,
+    );
+    assert.equal(sampleLocs[0]?.count, 0, "Production should have no sample locations");
+  });
+  
   it("seeds default settings including reasoning model on fresh stage", async () => {
     // REGRESSION: Bug #2 - Reasoning model setting was missing in fresh DB
     const testStage = `test-${Date.now()}`;

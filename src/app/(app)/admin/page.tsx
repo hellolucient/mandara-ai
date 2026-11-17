@@ -1,4 +1,5 @@
 import { CompanyProfileForm, InviteForm, RoleSelect, SettingsForm } from "@/components/admin-manager";
+import { BudgetForm } from "@/components/budget-form";
 import { getCompanyProfile, profileToForm } from "@/lib/company-profile";
 import { listInvites, listMembers } from "@/lib/members";
 import { integrationStatus } from "@/lib/secrets";
@@ -81,6 +82,15 @@ export default async function AdminPage() {
             keywordsText={company.keywordsText}
             adminNotes={company.adminNotes}
           />
+        </div>
+      </section>
+      <section className="rounded-xl border bg-card p-4">
+        <h2 className="font-heading text-2xl">Monthly Budgets</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+          Set monthly revenue targets for each spa. The home dashboard will show progress as a percentage of budget. Paste budget data in CSV format below.
+        </p>
+        <div className="mt-4">
+          <BudgetForm />
         </div>
       </section>
       <section className="rounded-xl border bg-card p-4">

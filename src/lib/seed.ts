@@ -6,6 +6,11 @@ import { SAMPLE_DOCUMENTS, SAMPLE_LOCATIONS, buildSampleDays } from "@/lib/sampl
 const seeded = new Set<string>();
 
 export async function ensureSeed(stage: string): Promise<void> {
+  // Never seed sample data into production
+  if (stage === "production") {
+    seeded.add(stage);
+    return;
+  }
   if (seeded.has(stage)) return;
   const existing = await sql<{ value: string }>(
     "select value from settings where stage = $1 and key = 'sampleSeed'",
