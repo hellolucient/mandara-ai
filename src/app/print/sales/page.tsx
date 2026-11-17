@@ -45,6 +45,65 @@ const PRINT_CSS = `
   .report thead { display: table-header-group; }
 }
 .report { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.report-stat-value { overflow: visible; font-variant-numeric: tabular-nums; }
+/* Narrow phones (portrait). Print and landscape/desktop keep the A4 layout. */
+@media screen and (max-width: 639px) {
+  .report {
+    padding: 1.25rem 0.75rem !important;
+  }
+  .report-header { gap: 0.75rem; }
+  .report-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .report-kpis > * { min-width: 0; }
+  .report-compares {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  .report-stat-value {
+    font-size: 1.125rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: visible;
+  }
+  .report-stat-note { overflow-wrap: anywhere; }
+  .report-change {
+    display: block;
+    margin-left: 0;
+    margin-top: 1px;
+  }
+  .report-table {
+    font-size: 9.5px;
+  }
+  .report-table th,
+  .report-table td {
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
+    vertical-align: top;
+  }
+  .report-table th:first-child,
+  .report-table td:first-child { padding-left: 0; }
+  .report-table th:last-child,
+  .report-table td:last-child { padding-right: 0; }
+  .report-table th {
+    letter-spacing: 0.06em;
+    font-size: 8px;
+    line-height: 1.2;
+  }
+  .report-table th[data-short] .label-full { display: none; }
+  .report-table th[data-short]::after { content: attr(data-short); }
+  .report-num { white-space: nowrap; }
+  .report-spa { overflow-wrap: break-word; }
+  .report-var-pct {
+    display: block;
+    margin-left: 0;
+  }
+  .report-footer {
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+}
 `;
 
 function Report({ report: r }: { report: SalesReport }) {
@@ -58,7 +117,7 @@ function Report({ report: r }: { report: SalesReport }) {
 
   return (
     <>
-      <header className="flex items-start justify-between gap-6 border-b-2 border-[#1f4f4a] pb-4">
+      <header className="report-header flex items-start justify-between gap-6 border-b-2 border-[#1f4f4a] pb-4">
         <div className="flex items-center gap-3">
           <svg viewBox="0 0 32 32" aria-hidden="true" className="size-9 text-[#1f4f4a]">
             <circle cx="16" cy="16" r="3.2" fill="currentColor" />
@@ -85,7 +144,7 @@ function Report({ report: r }: { report: SalesReport }) {
         {r.sample ? " Sample figures, not from the DSR." : ""}
       </p>
 
-      <section className="avoid-break mt-5 grid grid-cols-4 gap-2.5">
+      <section className="report-kpis avoid-break mt-5 grid grid-cols-4 gap-2.5">
         <Stat label="Net sales" value={m(t.netSales)} note={`${t.locations} spa${t.locations === 1 ? "" : "s"} reporting`} strong />
         <Stat
           label="vs budget"
@@ -101,15 +160,15 @@ function Report({ report: r }: { report: SalesReport }) {
         />
       </section>
 
-      <section className="avoid-break mt-2.5 grid grid-cols-3 gap-2.5 text-[11px]">
+      <section className="report-compares avoid-break mt-2.5 grid grid-cols-3 gap-2.5 text-[11px]">
         <Compare label="Previous day" data={r.previousDay} m={m} pct={pct} tone={tone} />
         <Compare label="Same weekday last week" data={r.weekEarlier} m={m} pct={pct} tone={tone} />
         <div className="rounded-lg border border-[#e3e0d8] px-3 py-2">
           <p className="text-[9px] font-medium tracking-[0.16em] text-[#5b6e6b] uppercase">Month to date</p>
           <p className="mt-0.5 text-[12.5px] font-medium tabular-nums">
-            {m(r.monthToDate.netSales)}
+            <span className="report-num">{m(r.monthToDate.netSales)}</span>
             {r.monthToDate.budgetPercent != null ? (
-              <span className="ml-1.5 font-normal text-[#5b6e6b]">{r.monthToDate.budgetPercent.toFixed(0)}% of budget*</span>
+              <span className="report-change ml-1.5 font-normal text-[#5b6e6b]">{r.monthToDate.budgetPercent.toFixed(0)}% of budget*</span>
             ) : null}
           </p>
           <p className="text-[#5b6e6b]">
@@ -120,43 +179,43 @@ function Report({ report: r }: { report: SalesReport }) {
       </section>
 
       <h2 className="mt-5 font-heading text-[15px] text-[#1f4f4a]">By spa</h2>
-      <table className="mt-2 w-full border-collapse text-[11px] tabular-nums">
+      <table className="report-table mt-2 w-full border-collapse text-[11px] tabular-nums">
         <thead>
           <tr className="border-b border-[#1f4f4a]/40 text-left text-[9px] tracking-[0.12em] text-[#5b6e6b] uppercase">
             <th className="py-1.5 pr-2 font-medium">Spa</th>
-            <th className="px-2 py-1.5 text-right font-medium">Net sales</th>
+            <th className="px-2 py-1.5 text-right font-medium" data-short="Sales"><span className="label-full">Net sales</span></th>
             <th className="px-2 py-1.5 text-right font-medium">Budget</th>
-            <th className="px-2 py-1.5 text-right font-medium">Variance</th>
-            <th className="px-2 py-1.5 text-right font-medium">Guests</th>
-            {r.hasRetail ? <th className="px-2 py-1.5 text-right font-medium">Retail</th> : null}
-            <th className="py-1.5 pl-2 text-right font-medium">vs last week</th>
+            <th className="px-2 py-1.5 text-right font-medium" data-short="Var"><span className="label-full">Variance</span></th>
+            <th className="px-2 py-1.5 text-right font-medium" data-short="Guests"><span className="label-full">Guests</span></th>
+            {r.hasRetail ? <th className="px-2 py-1.5 text-right font-medium" data-short="Retail"><span className="label-full">Retail</span></th> : null}
+            <th className="py-1.5 pl-2 text-right font-medium" data-short="vs wk"><span className="label-full">vs last week</span></th>
           </tr>
         </thead>
         <tbody>
           {r.lines.map((line) => (
             <tr key={line.name} className="border-b border-[#ebe8e1]">
-              <td className="py-[5px] pr-2 font-medium">{line.name}</td>
-              <td className="px-2 py-[5px] text-right">{line.netSales == null ? <span className="text-[#a65a2b]">Missing</span> : m(line.netSales)}</td>
-              <td className="px-2 py-[5px] text-right text-[#5b6e6b]">{m(line.budget)}</td>
-              <td className={`px-2 py-[5px] text-right ${tone(line.variance)}`}>
+              <td className="report-spa py-[5px] pr-2 font-medium">{line.name}</td>
+              <td className="report-num px-2 py-[5px] text-right">{line.netSales == null ? <span className="text-[#a65a2b]">Missing</span> : m(line.netSales)}</td>
+              <td className="report-num px-2 py-[5px] text-right text-[#5b6e6b]">{m(line.budget)}</td>
+              <td className={`report-num px-2 py-[5px] text-right ${tone(line.variance)}`}>
                 {signed(line.variance)}
-                {line.variancePercent != null ? <span className="ml-1 text-[9.5px] opacity-75">{pct(line.variancePercent)}</span> : null}
+                {line.variancePercent != null ? <span className="report-var-pct ml-1 text-[9.5px] opacity-75">{pct(line.variancePercent)}</span> : null}
               </td>
-              <td className="px-2 py-[5px] text-right">{line.guests ?? "—"}</td>
-              {r.hasRetail ? <td className="px-2 py-[5px] text-right">{m(line.retailSales)}</td> : null}
-              <td className={`py-[5px] pl-2 text-right ${tone(line.weekChange)}`}>{line.weekChange == null ? "—" : pct(line.weekChange)}</td>
+              <td className="report-num px-2 py-[5px] text-right">{line.guests ?? "—"}</td>
+              {r.hasRetail ? <td className="report-num px-2 py-[5px] text-right">{m(line.retailSales)}</td> : null}
+              <td className={`report-num py-[5px] pl-2 text-right ${tone(line.weekChange)}`}>{line.weekChange == null ? "—" : pct(line.weekChange)}</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="border-t-2 border-[#1f4f4a]/60 font-semibold">
             <td className="py-1.5 pr-2">Total</td>
-            <td className="px-2 py-1.5 text-right">{m(t.netSales)}</td>
-            <td className="px-2 py-1.5 text-right">{m(t.budget)}</td>
-            <td className={`px-2 py-1.5 text-right ${tone(t.variance)}`}>{signed(t.variance)}</td>
-            <td className="px-2 py-1.5 text-right">{t.guests ?? "—"}</td>
-            {r.hasRetail ? <td className="px-2 py-1.5 text-right">{m(t.retailSales)}</td> : null}
-            <td className={`py-1.5 pl-2 text-right ${tone(r.weekEarlier?.change ?? null)}`}>
+            <td className="report-num px-2 py-1.5 text-right">{m(t.netSales)}</td>
+            <td className="report-num px-2 py-1.5 text-right">{m(t.budget)}</td>
+            <td className={`report-num px-2 py-1.5 text-right ${tone(t.variance)}`}>{signed(t.variance)}</td>
+            <td className="report-num px-2 py-1.5 text-right">{t.guests ?? "—"}</td>
+            {r.hasRetail ? <td className="report-num px-2 py-1.5 text-right">{m(t.retailSales)}</td> : null}
+            <td className={`report-num py-1.5 pl-2 text-right ${tone(r.weekEarlier?.change ?? null)}`}>
               {r.weekEarlier?.change == null ? "—" : pct(r.weekEarlier.change)}
             </td>
           </tr>
@@ -187,7 +246,7 @@ function Report({ report: r }: { report: SalesReport }) {
 
       {r.note ? <p className="mt-4 text-[10.5px] text-[#5b6e6b]">Note on this day: {r.note}</p> : null}
 
-      <footer className="mt-5 flex justify-between border-t border-[#e3e0d8] pt-2 text-[9px] text-[#8a9794]">
+      <footer className="report-footer mt-5 flex justify-between border-t border-[#e3e0d8] pt-2 text-[9px] text-[#8a9794]">
         <span>Mandara Spa (Maldives) Pvt Ltd · Internal management report</span>
         <span>Generated {generated}</span>
       </footer>
@@ -199,8 +258,8 @@ function Stat({ label, value, note, strong, valueClass = "" }: { label: string; 
   return (
     <div className={`rounded-lg px-3 py-2.5 ${strong ? "bg-[#1f4f4a] text-white" : "border border-[#e3e0d8]"}`}>
       <p className={`text-[9px] font-medium tracking-[0.16em] uppercase ${strong ? "text-white/70" : "text-[#5b6e6b]"}`}>{label}</p>
-      <p className={`mt-1 text-[19px] leading-tight font-medium tabular-nums ${valueClass}`}>{value}</p>
-      <p className={`mt-0.5 text-[10px] ${strong ? "text-white/70" : "text-[#5b6e6b]"}`}>{note}</p>
+      <p className={`report-stat-value mt-1 text-[19px] leading-tight font-medium tabular-nums ${valueClass}`}>{value}</p>
+      <p className={`report-stat-note mt-0.5 text-[10px] ${strong ? "text-white/70" : "text-[#5b6e6b]"}`}>{note}</p>
     </div>
   );
 }
@@ -224,8 +283,8 @@ function Compare({
       {data ? (
         <>
           <p className="mt-0.5 text-[12.5px] font-medium tabular-nums">
-            {m(data.netSales)}
-            {data.change != null ? <span className={`ml-1.5 font-normal ${tone(data.change)}`}>today {pct(data.change)}</span> : null}
+            <span className="report-num">{m(data.netSales)}</span>
+            {data.change != null ? <span className={`report-change ml-1.5 font-normal ${tone(data.change)}`}>today {pct(data.change)}</span> : null}
           </p>
           <p className="text-[#5b6e6b]">{formatBusinessDate(data.date)}</p>
         </>

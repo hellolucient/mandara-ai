@@ -75,4 +75,15 @@ describe("sales report for the PDF export", () => {
     assert.match(sales, /if \(!member\) redirect\("\/"\);/);
     assert.doesNotMatch(sales, /Treatments<\/th>/);
   });
+
+  it("keeps the A4 print layout and only tightens the on-screen portrait view", () => {
+    const print = readFileSync("src/app/print/sales/page.tsx", "utf8");
+    assert.match(print, /@page \{ size: A4; margin: 12mm 13mm 14mm; \}/);
+    assert.match(print, /@media screen and \(max-width: 639px\)/);
+    assert.match(print, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+    assert.match(print, /className="report-kpis /);
+    assert.match(print, /className="report-compares /);
+    assert.match(print, /className="report-change /);
+    assert.match(print, /className="report-var-pct /);
+  });
 });
