@@ -11,9 +11,16 @@ export function parseSalesQuestion(text: string, locationNames: string[]): Sales
     return null;
   }
   const location = locationNames.find((name) => lower.includes(name.toLowerCase()));
-  const salesish = /\b(sales|revenue|budget|underperform|month-to-date|mtd|locations?|spas?|yesterday|last week|previous week|best|worst|attention)\b/i.test(question);
+  // Only match explicit sales/revenue terms, not just "spa" or "location"
+  const hasSalesTerm = /\b(sales|revenue|budget|takings)\b/i.test(question);
+  // Sales-specific patterns that don't need explicit "sales" term
+  const hasSalesPattern = /\b(underperform|month-to-date|mtd|below budget|under budget|need attention|which (locations?|spas?))\b/i.test(question);
+  // Time periods must be combined with business context
+  const hasTimeWithContext = /\b(yesterday|last week|previous week)\b/i.test(question) && (/\b(sales|revenue|takings|perform|budget|spa|location)\b/i.test(question) || location);
+  const hasComparison = /\b(best|worst|attention)\b/i.test(question) && (/\b(spa|location|perform|sales)\b/i.test(question) || location);
+  const salesish = hasSalesTerm || hasSalesPattern || hasTimeWithContext || hasComparison;
   if (!salesish && !location) return null;
-  if (location && !salesish && !/\b(perform|performing|did|sales)\b/i.test(question)) return null;
+  if (location && !salesish && !/\b(perform|performing|did|how did|sales|revenue)\b/i.test(question)) return null;
   if (/\bbelow budget\b|\bunder budget\b|\bunderperform/i.test(question)) return { kind: "below-budget" };
   if (/\bmonth-to-date\b|\bmtd\b|\bthis month\b/i.test(question)) return { kind: "mtd" };
   if (/\blast week\b|\bprevious week\b|\bmajor changes\b/i.test(question)) return { kind: "week" };

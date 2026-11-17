@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { needsReasoningModel } from "./question-complexity";
+import { needsReasoningModel } from "./question-complexity.js";
 
 describe("question complexity detection", () => {
   it("detects calculations with numbers", () => {
@@ -48,5 +48,17 @@ describe("question complexity detection", () => {
   it("does not trigger reasoning for short attachments", () => {
     assert.equal(needsReasoningModel("Summarize this", true, 1000), false);
     assert.equal(needsReasoningModel("What does this say?", true, 500), false);
+  });
+
+  it("does not trigger reasoning for general questions with 'how much' or 'what's' (Bug #2 regression)", () => {
+    // REGRESSION: These went to reasoning model incorrectly
+    assert.equal(needsReasoningModel("What's the cheapest way to fly from Malé to Zurich next month?", false, 0), false);
+    assert.equal(needsReasoningModel("How much is a business class ticket to Bangkok?", false, 0), false);
+    assert.equal(needsReasoningModel("What's the weather like in the Maldives in March?", false, 0), false);
+    assert.equal(needsReasoningModel("How much is a 5-star hotel in Dubai?", false, 0), false);
+    
+    // But explicit calculations still should
+    assert.equal(needsReasoningModel("Calculate the cost difference between economy and business class", false, 0), false); // No numbers
+    assert.equal(needsReasoningModel("If a flight costs $1,200 and we get 10% off, what's the final price?", false, 0), true); // Has numbers + calc
   });
 });

@@ -12,7 +12,7 @@ const DEFAULTS: Settings = {
   companyName: "Mandara Spa Maldives",
   model: "deepseek/deepseek-v4.1-flash",
   imageModel: "google/gemini-2.5-flash-image",
-  reasoningModel: "deepseek/deepseek-r1",
+  reasoningModel: "deepseek/deepseek-v4-pro",
   currency: "USD",
 };
 

@@ -29,18 +29,29 @@ export function needsReasoningModel(question: string, hasAttachment: boolean, at
 }
 
 function hasCalculationRequest(lower: string): boolean {
-  // Must have both numbers AND calculation indicators
+  // Explicit calculation requests with "show the working" or similar
+  if (/\b(show the working|work out|calculate|compute)\b/.test(lower)) {
+    // Must have numbers to be a real calculation (otherwise it's just asking for general info)
+    return /\d/.test(lower);
+  }
+  
+  // Must have both numbers AND financial/business context
   const hasNumbers = /\d/.test(lower);
   if (!hasNumbers) return false;
   
-  // Calculation keywords
-  const calcWords = /\b(calculate|compute|work out|show the working|what'?s the|how much|extra|impact|difference|change)\b/.test(lower);
-  if (!calcWords) return false;
+  // Questions asking "how much is" or "what's the cheapest" WITHOUT calculation language are lookups, not calculations
+  if (/\b(how much is|what s the cheapest|what is the|price of|cost of)\b/.test(lower)) {
+    // Unless they explicitly ask for calculation or have "if" hypothetical
+    if (!/\b(if |calculate|compute|difference|what s the.*\d.*off|discount|percentage|extra)\b/.test(lower)) {
+      return false;
+    }
+  }
   
-  // Financial/business terms make it more likely to be complex
-  const hasFinancialTerms = /\b(revenue|profit|margin|cost|price|fee|percentage|roi|break-?even)\b/.test(lower);
+  // Financial/business terms
+  const hasFinancialTerms = /\b(revenue|profit|margin|cost|price|fee|percentage|roi|break-?even|extra|impact|lift|increase.*to|decrease.*to|off|discount)\b/.test(lower);
+  if (!hasFinancialTerms) return false;
   
-  return hasFinancialTerms || calcWords;
+  return true;
 }
 
 function hasBusinessWhatIf(lower: string): boolean {
@@ -62,8 +73,9 @@ function hasLegalAnalysis(lower: string): boolean {
 function hasMultiStepAnalysis(lower: string): boolean {
   // Questions that require multiple steps of reasoning
   
-  // Explicit multi-step indicators
-  if (/\b(first|then|next|finally|step-by-step|breakdown|break down|process|workflow)\b/.test(lower)) return true;
+  // Explicit multi-step indicators (but not "next month", "next week", etc.)
+  if (/\b(first|then|finally|step-by-step|breakdown|break down|process|workflow)\b/.test(lower)) return true;
+  if (/\bnext\b/.test(lower) && !/\b(next (week|month|year|quarter|day))\b/.test(lower)) return true;
   
   // Comparison or trade-off analysis
   if (/\b(compare|comparison|versus|vs\.?|pros? and cons?|trade-?offs?|advantages? and disadvantages?|better than)\b/.test(lower)) return true;

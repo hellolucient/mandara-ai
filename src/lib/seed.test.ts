@@ -16,7 +16,7 @@ describe("seed functionality", () => {
     // Verify settings were created
     const settings = await getSettings(testStage);
     assert.equal(settings.model, "deepseek/deepseek-v4.1-flash", "Default model should be seeded");
-    assert.equal(settings.reasoningModel, "deepseek/deepseek-r1", "Reasoning model should be seeded");
+    assert.equal(settings.reasoningModel, "deepseek/deepseek-v4-pro", "Reasoning model should be seeded");
     assert.equal(settings.imageModel, "google/gemini-2.5-flash-image", "Image model should be seeded");
     assert.equal(settings.currency, "USD", "Currency should be seeded");
     assert.equal(settings.companyName, "Mandara Spa Maldives", "Company name should be seeded");
