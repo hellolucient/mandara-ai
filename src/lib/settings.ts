@@ -5,6 +5,7 @@ export type Settings = {
   model: string;
   imageModel: string;
   reasoningModel: string;
+  visionModel: string;
   currency: string;
 };
 
@@ -13,10 +14,11 @@ const DEFAULTS: Settings = {
   model: "deepseek/deepseek-v4.1-flash",
   imageModel: "google/gemini-2.5-flash-image",
   reasoningModel: "deepseek/deepseek-v4-pro",
+  visionModel: "google/gemini-2.5-flash",
   currency: "USD",
 };
 
-const ALLOWED = new Set(["companyName", "model", "imageModel", "reasoningModel", "currency"]);
+const ALLOWED = new Set(["companyName", "model", "imageModel", "reasoningModel", "visionModel", "currency"]);
 
 export async function getSettings(stage: string): Promise<Settings> {
   const rows = await sql<{ key: string; value: string }>(
@@ -29,6 +31,7 @@ export async function getSettings(stage: string): Promise<Settings> {
     if (row.key === "model") settings.model = row.value;
     if (row.key === "imageModel") settings.imageModel = row.value;
     if (row.key === "reasoningModel") settings.reasoningModel = row.value;
+    if (row.key === "visionModel") settings.visionModel = row.value;
     if (row.key === "currency") settings.currency = row.value;
   }
   return settings;
@@ -42,6 +45,7 @@ export async function updateSettings(stage: string, patch: Record<string, string
     if (key === "model" && !/^[\w./:-]{3,80}$/.test(clean)) continue;
     if (key === "imageModel" && !/^[\w./:-]{3,80}$/.test(clean)) continue;
     if (key === "reasoningModel" && !/^[\w./:-]{3,80}$/.test(clean)) continue;
+    if (key === "visionModel" && !/^[\w./:-]{3,80}$/.test(clean)) continue;
     if (key === "currency" && !/^[A-Z]{3}$/.test(clean)) continue;
     await sql(
       `insert into settings (stage, key, value) values ($1, $2, $3)

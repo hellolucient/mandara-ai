@@ -92,6 +92,7 @@ export async function ensureSeed(stage: string): Promise<void> {
      values ($1, 'model', 'deepseek/deepseek-v4.1-flash'),
             ($1, 'imageModel', 'google/gemini-2.5-flash-image'),
             ($1, 'reasoningModel', 'deepseek/deepseek-v4-pro'),
+            ($1, 'visionModel', 'google/gemini-2.5-flash'),
             ($1, 'currency', 'USD'),
             ($1, 'companyName', 'Mandara Spa Maldives')
      on conflict (stage, key) do nothing`,

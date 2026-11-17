@@ -17,7 +17,7 @@ async function post(body: Record<string, string>) {
   if (!response.ok) throw new Error(payload.error || "The change was not saved.");
 }
 
-export function SettingsForm({ companyName, model, imageModel, reasoningModel, currency }: { companyName: string; model: string; imageModel: string; reasoningModel: string; currency: string }) {
+export function SettingsForm({ companyName, model, imageModel, reasoningModel, visionModel, currency }: { companyName: string; model: string; imageModel: string; reasoningModel: string; visionModel: string; currency: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   return (
@@ -34,6 +34,7 @@ export function SettingsForm({ companyName, model, imageModel, reasoningModel, c
             model: String(form.get("model") ?? ""),
             imageModel: String(form.get("imageModel") ?? ""),
             reasoningModel: String(form.get("reasoningModel") ?? ""),
+            visionModel: String(form.get("visionModel") ?? ""),
             currency: String(form.get("currency") ?? ""),
           });
           router.refresh();
@@ -55,6 +56,11 @@ export function SettingsForm({ companyName, model, imageModel, reasoningModel, c
         <Label htmlFor="reasoningModel">Reasoning model id (hard questions)</Label>
         <Input id="reasoningModel" name="reasoningModel" defaultValue={reasoningModel} className="mt-1 h-10" />
         <p className="mt-1 text-xs text-muted-foreground">Default is deepseek/deepseek-v4-pro. Used for calculations, what-ifs, and complex analysis.</p>
+      </div>
+      <div>
+        <Label htmlFor="visionModel">Vision model id</Label>
+        <Input id="visionModel" name="visionModel" defaultValue={visionModel} className="mt-1 h-10" />
+        <p className="mt-1 text-xs text-muted-foreground">Default is google/gemini-2.5-flash. Used when a photo is attached and the chat model cannot see images.</p>
       </div>
       <div>
         <Label htmlFor="imageModel">Image model id</Label>

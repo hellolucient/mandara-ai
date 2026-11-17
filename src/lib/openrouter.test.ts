@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { asksForPicture, gatewayBody, readModalityImages, sourcesFromAnnotations } from "./openrouter";
+import { asksForPicture, gatewayBody, readModalityImages, sourcesFromAnnotations, textFromContent } from "./openrouter";
 
 describe("web sources", () => {
   it("keeps distinct http sources and drops anything else", () => {
@@ -69,5 +69,32 @@ describe("image generation", () => {
     assert.deepEqual(readModalityImages(null), []);
     assert.deepEqual(readModalityImages([]), []);
     assert.deepEqual(readModalityImages([{ not: "an image" }]), []);
+  });
+});
+
+describe("multimodal messages", () => {
+  it("passes image parts through to the gateway body", () => {
+    const messages = [
+      {
+        role: "user" as const,
+        content: [
+          { type: "text" as const, text: "What is in this photo?" },
+          { type: "image_url" as const, image_url: { url: "data:image/jpeg;base64,aaaa" } },
+        ],
+      },
+    ];
+    const body = gatewayBody("google/gemini-2.5-flash", messages, false, false);
+    assert.deepEqual(body.messages, messages);
+  });
+
+  it("reads text out of a multimodal content array", () => {
+    assert.equal(textFromContent("plain"), "plain");
+    assert.equal(
+      textFromContent([
+        { type: "text", text: "Look at this." },
+        { type: "image_url", image_url: { url: "data:image/png;base64,aaaa" } },
+      ]),
+      "Look at this.",
+    );
   });
 });

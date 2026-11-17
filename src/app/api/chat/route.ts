@@ -1,4 +1,5 @@
 import { reply } from "@/lib/chat";
+import { ATTACHMENT_MAX_BYTES, imageKindFromBytes, isDeclaredImage, readChatImage } from "@/lib/chat-images";
 import { extractText, safeFilename } from "@/lib/extract-text";
 import { json, rejectCrossOrigin } from "@/lib/http";
 import { isResponse, requireMember } from "@/lib/session";
@@ -32,11 +33,17 @@ async function readPayload(request: Request) {
   const file = form.get("file");
   let attachmentName = "";
   let attachmentText = "";
+  let attachmentImage = "";
   if (file instanceof File && file.size > 0) {
-    if (file.size > 2_000_000) throw new Error("Attachments are limited to 2 MB.");
+    if (file.size > ATTACHMENT_MAX_BYTES) throw new Error("Attachments are limited to 2 MB.");
     attachmentName = safeFilename(file.name);
-    attachmentText = await extractText(file.name, file.type, new Uint8Array(await file.arrayBuffer()));
-    if (!attachmentText.trim()) throw new Error("That file did not contain readable text.");
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    if (isDeclaredImage(file.name, file.type) || imageKindFromBytes(bytes)) {
+      attachmentImage = readChatImage(file.name, file.type, bytes).dataUrl;
+    } else {
+      attachmentText = await extractText(file.name, file.type, bytes);
+      if (!attachmentText.trim()) throw new Error("That file did not contain readable text.");
+    }
   }
   return {
     conversationId: String(form.get("conversationId") ?? ""),
@@ -44,5 +51,6 @@ async function readPayload(request: Request) {
     content: String(form.get("content") ?? ""),
     attachmentName,
     attachmentText,
+    attachmentImage,
   };
 }

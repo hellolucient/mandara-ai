@@ -7,6 +7,7 @@ Private assistant for Mandara Spa Maldives. Staff can talk to an OpenRouter mode
 - Sign-in is the host's sign-in for a private or team deployment. The app then gives each person a role: staff, manager, or administrator.
 - Conversations are private to the person who started them.
 - Documents can be uploaded as PDF, Word, text, Markdown or CSV. Answers cite the document. Restricted documents are hidden from staff.
+- Chat can also take a JPEG, PNG, WebP or HEIC photo. If the everyday model cannot see images, that turn is sent to `google/gemini-2.5-flash`.
 - Sales figures are calculated in the application. A missing figure stays missing, and a budget is used only when one was stored.
 - The sales agent can be run by a manager, or by a scheduler. Every run is logged. A failed collection does not invent numbers.
 - Sample documents and sample sales for 1–12 November 2026 are loaded so the workspace can be tried before real files and DSR are connected. They are labeled sample.

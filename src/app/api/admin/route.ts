@@ -21,6 +21,7 @@ export async function POST(request: Request) {
       model: body.model ?? "",
       imageModel: body.imageModel ?? "",
       reasoningModel: body.reasoningModel ?? "",
+      visionModel: body.visionModel ?? "",
       currency: body.currency ?? "",
     });
     return json({ ok: true });

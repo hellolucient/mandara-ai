@@ -1,4 +1,16 @@
-export type ModelMessage = { role: "system" | "user" | "assistant"; content: string };
+export type ModelContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+export type ModelMessage = { role: "system" | "user" | "assistant"; content: string | ModelContentPart[] };
+
+export function textFromContent(content: ModelMessage["content"]): string {
+  if (typeof content === "string") return content;
+  return content
+    .filter((part): part is { type: "text"; text: string } => part.type === "text")
+    .map((part) => part.text)
+    .join("\n");
+}
 
 export type WebSource = { title: string; url: string };
 
@@ -71,7 +83,7 @@ export function gatewayBody(model: string, messages: ModelMessage[], web: boolea
 }
 
 export async function complete(model: string, messages: ModelMessage[], web = false, pictures = false, imageModel?: string): Promise<Completion> {
-  const lastUser = [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
+  const lastUser = textFromContent([...messages].reverse().find((message) => message.role === "user")?.content ?? "");
   const drawNow = pictures && asksForPicture(lastUser);
   const directPicture = drawNow ? createPicture(lastUser.slice(0, 2000), "3:2", imageModel ?? IMAGE_MODEL_DEFAULT) : Promise.resolve(null);
   try {
