@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { answerPieces, safeHttpUrl, safeImageSrc } from "@/lib/answer-text";
+import { safeHttpUrl, safeImageSrc } from "@/lib/answer-text";
+import { parseMarkdown, type MarkdownBlock, type MarkdownPiece } from "@/lib/markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Calculator } from "@/components/calculator";
@@ -229,34 +230,109 @@ function Prose({ text }: { text: string }) {
     }
   }
 
+  const blocks = parseMarkdown(textWithoutCalculator);
+
   return (
     <>
       <div className="space-y-3 text-sm leading-6">
-        {textWithoutCalculator.split(/\n{2,}/).map((block, index) => (
-          <p key={index} className="whitespace-pre-wrap">
-            {answerPieces(block).map((piece, pieceIndex) => {
-              if (piece.kind === "link") {
-                return (
-                  <a
-                    key={pieceIndex}
-                    className="underline decoration-border underline-offset-2 hover:decoration-foreground"
-                    href={piece.href}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                  >
-                    {piece.text}
-                  </a>
-                );
-              }
-              if (piece.kind === "strong") return <strong key={pieceIndex}>{piece.text}</strong>;
-              return <span key={pieceIndex}>{piece.text}</span>;
-            })}
-          </p>
+        {blocks.map((block, index) => (
+          <Block key={index} block={block} />
         ))}
       </div>
       {calculatorSpec && <Calculator spec={calculatorSpec} />}
     </>
   );
+}
+
+function Block({ block }: { block: MarkdownBlock }) {
+  if (block.kind === "paragraph") {
+    return (
+      <p className="whitespace-pre-wrap">
+        {block.pieces.map((piece, i) => (
+          <Piece key={i} piece={piece} />
+        ))}
+      </p>
+    );
+  }
+
+  if (block.kind === "table") {
+    return (
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-border text-sm">
+          <thead>
+            <tr className="bg-muted/50">
+              {block.headers.map((header, i) => (
+                <th key={i} className="px-3 py-2 text-left font-medium">
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {block.rows.map((row, i) => (
+              <tr key={i} className="hover:bg-muted/30">
+                {row.map((cell, j) => (
+                  <td key={j} className="px-3 py-2">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  if (block.kind === "list") {
+    const ListTag = block.ordered ? "ol" : "ul";
+    return (
+      <ListTag className={block.ordered ? "list-decimal list-inside space-y-1" : "list-disc list-inside space-y-1"}>
+        {block.items.map((item, i) => (
+          <li key={i}>
+            {item.map((piece, j) => (
+              <Piece key={j} piece={piece} />
+            ))}
+          </li>
+        ))}
+      </ListTag>
+    );
+  }
+
+  if (block.kind === "code") {
+    return (
+      <pre className="overflow-x-auto rounded-lg bg-muted p-3 text-xs">
+        <code>{block.code}</code>
+      </pre>
+    );
+  }
+
+  return null;
+}
+
+function Piece({ piece }: { piece: MarkdownPiece }) {
+  if (piece.kind === "link") {
+    return (
+      <a
+        className="underline decoration-border underline-offset-2 hover:decoration-foreground"
+        href={piece.href}
+        target="_blank"
+        rel="noreferrer noopener"
+      >
+        {piece.text}
+      </a>
+    );
+  }
+
+  if (piece.kind === "strong") {
+    return <strong>{piece.text}</strong>;
+  }
+
+  if (piece.kind === "code") {
+    return <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">{piece.text}</code>;
+  }
+
+  return <span>{piece.text}</span>;
 }
 
 function Pictures({ raw }: { raw?: string }) {

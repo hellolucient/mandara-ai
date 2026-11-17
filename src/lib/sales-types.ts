@@ -25,7 +25,11 @@ export type SalesIntent =
   | { kind: "week" }
   | { kind: "attention" }
   | { kind: "location"; name: string }
-  | { kind: "overview" };
+  | { kind: "overview" }
+  | { kind: "last-month" }
+  | { kind: "this-month" }
+  | { kind: "named-month"; month: string }
+  | { kind: "comparison"; period: "last-month" | "this-month" | "week" | "yesterday" };
 
 export type ExtractRow = {
   location: string;

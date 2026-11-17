@@ -129,7 +129,10 @@ async function requestCompletion(model: string, messages: ModelMessage[], web: b
     });
     if (!response.ok) {
       const detail = (await response.text()).replace(/\s+/g, " ").slice(0, 180);
-      throw new Error(`The model gateway returned status ${response.status}. ${detail}`.trim());
+      const error = new Error(`The model gateway returned status ${response.status}. ${detail}`.trim());
+      // Mark which model failed for fallback logic
+      (error as Error & { failedModel?: string }).failedModel = model;
+      throw error;
     }
     type ImageEntry = { image_url?: { url?: unknown } };
     const payload = (await response.json()) as {

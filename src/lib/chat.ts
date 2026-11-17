@@ -287,8 +287,14 @@ General rules:
   } catch (error) {
     // If reasoning model fails and we tried it, fall back to chat model
     if (useReasoning && modelToUse !== settings.model) {
-      console.error(`mandara: reasoning model ${modelToUse} failed, falling back to chat model:`, error);
-      result = await complete(settings.model, messages, needsWeb, true, settings.imageModel);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`mandara: reasoning model ${modelToUse} failed (${errorMsg}), falling back to chat model`);
+      try {
+        result = await complete(settings.model, messages, needsWeb, true, settings.imageModel);
+      } catch (fallbackError) {
+        // Both models failed - throw original error with context
+        throw new Error(`Both reasoning and chat models failed. Reasoning: ${errorMsg}. Chat: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
+      }
     } else {
       // Chat model itself failed, rethrow
       throw error;

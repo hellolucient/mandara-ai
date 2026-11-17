@@ -54,7 +54,7 @@ export function SettingsForm({ companyName, model, imageModel, reasoningModel, c
       <div>
         <Label htmlFor="reasoningModel">Reasoning model id (hard questions)</Label>
         <Input id="reasoningModel" name="reasoningModel" defaultValue={reasoningModel} className="mt-1 h-10" />
-        <p className="mt-1 text-xs text-muted-foreground">Default is deepseek/deepseek-r1. Used for calculations, what-ifs, and complex analysis.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Default is deepseek/deepseek-v4-pro. Used for calculations, what-ifs, and complex analysis.</p>
       </div>
       <div>
         <Label htmlFor="imageModel">Image model id</Label>

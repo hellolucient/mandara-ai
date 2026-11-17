@@ -7,7 +7,16 @@ export function answerSales(intent: SalesIntent, days: LoadedDay[], today: strin
   const ordered = [...days].sort((a, b) => a.businessDate.localeCompare(b.businessDate));
   const target = addDays(today, -1);
   const day = ordered.find((item) => item.businessDate === target) ?? null;
-  if (!day && intent.kind !== "mtd") {
+  
+  // Period-based queries don't need yesterday's data
+  if (intent.kind === "last-month") return lastMonthAnswer(ordered, today);
+  if (intent.kind === "this-month") return thisMonthAnswer(ordered, today);
+  if (intent.kind === "named-month") return namedMonthAnswer(ordered, intent.month, today);
+  if (intent.kind === "comparison") return comparisonAnswer(ordered, intent.period, today);
+  if (intent.kind === "mtd") return mtdAnswer(ordered, day?.businessDate ?? target);
+  
+  // Single-day queries need yesterday's data
+  if (!day) {
     const latest = ordered.at(-1);
     return latest
       ? `There is no sales record for ${formatBusinessDate(target)}. The latest stored date is ${formatBusinessDate(latest.businessDate)}. Nothing was estimated.`
@@ -18,7 +27,6 @@ export function answerSales(intent: SalesIntent, days: LoadedDay[], today: strin
   if (intent.kind === "below-budget") return budgetAnswer(day!);
   if (intent.kind === "attention" || intent.kind === "overview") return reportFor(day!, ordered);
   if (intent.kind === "week") return weekAnswer(day!, ordered);
-  if (intent.kind === "mtd") return mtdAnswer(ordered, day?.businessDate ?? target);
   return locationAnswer(day!, ordered, intent.name);
 }
 
@@ -237,6 +245,138 @@ function sourceLine(day: LoadedDay): string {
   if (day.source === "sample") return "Source: sample figures. These were not read from DSR.";
   if (day.source === "import") return "Source: imported file. This was not a live DSR extract.";
   return "Source: Maldives daily DSR. Net sales are total revenue, treatments are treatment guests, and the budget is that day's forecast.";
+}
+
+function lastMonthAnswer(ordered: LoadedDay[], today: string): string {
+  const [year, month] = today.split("-").map(Number);
+  const lastMonth = month === 1 ? 12 : month - 1;
+  const lastMonthYear = month === 1 ? year - 1 : year;
+  const monthKey = `${lastMonthYear}-${String(lastMonth).padStart(2, "0")}`;
+  return monthPeriodAnswer(ordered, monthKey, "last month");
+}
+
+function thisMonthAnswer(ordered: LoadedDay[], today: string): string {
+  const monthKey = today.slice(0, 7);
+  return monthPeriodAnswer(ordered, monthKey, "this month");
+}
+
+function namedMonthAnswer(ordered: LoadedDay[], monthName: string, today: string): string {
+  const months = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+  const monthNumber = months.indexOf(monthName.toLowerCase()) + 1;
+  if (monthNumber === 0) return "That month name was not recognized.";
+  
+  const year = Number(today.slice(0, 4));
+  const monthKey = `${year}-${String(monthNumber).padStart(2, "0")}`;
+  return monthPeriodAnswer(ordered, monthKey, monthName.charAt(0).toUpperCase() + monthName.slice(1));
+}
+
+function monthPeriodAnswer(ordered: LoadedDay[], monthKey: string, periodLabel: string): string {
+  const inMonth = ordered.filter((day) => day.businessDate.startsWith(monthKey));
+  if (inMonth.length === 0) return `No sales records are stored for ${periodLabel}.`;
+  
+  const currency = inMonth[0].currency;
+  const locationTotals = new Map<string, number>();
+  
+  for (const day of inMonth) {
+    for (const line of day.lines) {
+      if (line.netSales != null) {
+        locationTotals.set(line.locationName, (locationTotals.get(line.locationName) ?? 0) + line.netSales);
+      }
+    }
+  }
+  
+  if (locationTotals.size === 0) return `No location has sales figures for ${periodLabel}.`;
+  
+  const sortedLocations = Array.from(locationTotals.entries()).sort((a, b) => b[1] - a[1]);
+  const grandTotal = sortedLocations.reduce((sum, [, total]) => sum + total, 0);
+  
+  const firstDay = inMonth[0].businessDate;
+  const lastDay = inMonth[inMonth.length - 1].businessDate;
+  const coverage = firstDay === lastDay 
+    ? `${formatBusinessDate(firstDay)} only`
+    : `${formatBusinessDate(firstDay)} through ${formatBusinessDate(lastDay)}`;
+  
+  const lines = [
+    `Sales for ${periodLabel} (${coverage}, ${inMonth.length} days stored):`,
+    `Total: ${money(grandTotal, currency)}`,
+    "",
+    "By location:",
+    ...sortedLocations.map(([name, total]) => `${name}: ${money(total, currency)}`),
+  ];
+  
+  return lines.join("\n");
+}
+
+function comparisonAnswer(ordered: LoadedDay[], period: "last-month" | "this-month" | "week" | "yesterday", today: string): string {
+  let periodKey: string;
+  let periodLabel: string;
+  let daysInPeriod: LoadedDay[];
+  
+  if (period === "last-month") {
+    const [year, month] = today.split("-").map(Number);
+    const lastMonth = month === 1 ? 12 : month - 1;
+    const lastMonthYear = month === 1 ? year - 1 : year;
+    periodKey = `${lastMonthYear}-${String(lastMonth).padStart(2, "0")}`;
+    periodLabel = "last month";
+    daysInPeriod = ordered.filter((day) => day.businessDate.startsWith(periodKey));
+  } else if (period === "this-month") {
+    periodKey = today.slice(0, 7);
+    periodLabel = "this month";
+    daysInPeriod = ordered.filter((day) => day.businessDate.startsWith(periodKey));
+  } else if (period === "week") {
+    const weekStart = addDays(today, -7);
+    periodLabel = "last week";
+    daysInPeriod = ordered.filter((day) => day.businessDate >= weekStart && day.businessDate < today);
+  } else {
+    // yesterday
+    const target = addDays(today, -1);
+    periodLabel = "yesterday";
+    const day = ordered.find((item) => item.businessDate === target);
+    daysInPeriod = day ? [day] : [];
+  }
+  
+  if (daysInPeriod.length === 0) return `No sales records are stored for ${periodLabel}.`;
+  
+  const currency = daysInPeriod[0].currency;
+  const locationTotals = new Map<string, number>();
+  
+  for (const day of daysInPeriod) {
+    for (const line of day.lines) {
+      if (line.netSales != null) {
+        locationTotals.set(line.locationName, (locationTotals.get(line.locationName) ?? 0) + line.netSales);
+      }
+    }
+  }
+  
+  if (locationTotals.size === 0) return `No location has sales figures for ${periodLabel}.`;
+  
+  const sortedLocations = Array.from(locationTotals.entries()).sort((a, b) => b[1] - a[1]);
+  const highest = sortedLocations[0];
+  const lowest = sortedLocations[sortedLocations.length - 1];
+  
+  const firstDay = daysInPeriod[0].businessDate;
+  const lastDay = daysInPeriod[daysInPeriod.length - 1].businessDate;
+  const coverage = firstDay === lastDay 
+    ? formatBusinessDate(firstDay)
+    : `${formatBusinessDate(firstDay)} through ${formatBusinessDate(lastDay)}`;
+  
+  const lines = [
+    `Revenue comparison for ${periodLabel} (${coverage}, ${daysInPeriod.length} day${daysInPeriod.length === 1 ? "" : "s"} stored):`,
+    "",
+    `Highest: ${highest[0]} with ${money(highest[1], currency)}`,
+  ];
+  
+  if (sortedLocations.length > 1) {
+    lines.push(`Lowest: ${lowest[0]} with ${money(lowest[1], currency)}`);
+  }
+  
+  if (sortedLocations.length > 2) {
+    lines.push("");
+    lines.push("All locations:");
+    lines.push(...sortedLocations.map(([name, total]) => `${name}: ${money(total, currency)}`));
+  }
+  
+  return lines.join("\n");
 }
 
 export function dayHeadline(day: LoadedDay, ordered: LoadedDay[]) {

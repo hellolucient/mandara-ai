@@ -42,4 +42,31 @@ describe("sales question parsing", () => {
     assert.ok(parseSalesQuestion("Show me yesterday's revenue", LOCATIONS));
     assert.ok(parseSalesQuestion("Month-to-date sales totals", LOCATIONS));
   });
+
+  it("handles period-based queries (Bug from retest - last month routing)", () => {
+    // REGRESSION: "last month" was not recognized and defaulted to "yesterday"
+    const lastMonth = parseSalesQuestion("Which of our spas had the highest revenue last month?", LOCATIONS);
+    assert.ok(lastMonth);
+    assert.equal(lastMonth.kind, "comparison");
+    assert.equal((lastMonth as { period?: string }).period, "last-month");
+
+    const thisMonth = parseSalesQuestion("What were sales this month?", LOCATIONS);
+    assert.ok(thisMonth);
+    assert.equal(thisMonth.kind, "this-month");
+
+    const namedMonth = parseSalesQuestion("How much did we make in October?", LOCATIONS);
+    assert.ok(namedMonth);
+    assert.equal(namedMonth.kind, "named-month");
+    assert.equal((namedMonth as { month?: string }).month, "october");
+  });
+
+  it("distinguishes last month from mtd", () => {
+    const lastMonth = parseSalesQuestion("Show me last month's sales", LOCATIONS);
+    assert.ok(lastMonth);
+    assert.equal(lastMonth.kind, "last-month");
+
+    const mtd = parseSalesQuestion("Show me month-to-date sales", LOCATIONS);
+    assert.ok(mtd);
+    assert.equal(mtd.kind, "mtd");
+  });
 });
