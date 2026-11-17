@@ -60,7 +60,7 @@ publish-app mandara
 **1. Check Deployed Commit**
 ```bash
 # Should return: 38c4eba...
-curl -s https://mandara.apps.grok.bot/api/version 2>/dev/null || echo "No version endpoint"
+# Signed-in only: open https://mandara.apps.grok.bot/api/version in a signed-in browser (signed-out requests get 401)
 ```
 
 **2. Test Ordinary Question**

@@ -1,21 +1,15 @@
-import { json } from "@/lib/http";
 import { sql } from "@/lib/db";
+import { requireMember } from "@/lib/session";
+import { LAST_MIGRATION_QUERY, versionResponse } from "@/lib/version";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  let lastMigration = "unknown";
-  try {
-    const migrations = await sql<{ name: string }>(
-      "select name from schema_migrations order by name desc limit 1",
-    );
-    lastMigration = migrations[0]?.name || "none";
-  } catch {
-    lastMigration = "error-querying";
-  }
-  
-  return json({
-    commit: process.env.VERCEL_GIT_COMMIT_SHA || process.env.COMMIT_SHA || "unknown",
-    lastMigration,
+export async function GET(request: Request) {
+  return versionResponse(request, {
+    authorize: requireMember,
+    lastMigration: async () => {
+      const rows = await sql<{ name: string }>(LAST_MIGRATION_QUERY);
+      return rows[0]?.name || "none";
+    },
   });
 }
