@@ -243,7 +243,7 @@ function datesBetween(start: string, end: string): string[] {
 
 function sourceLine(day: LoadedDay): string {
   if (day.source === "sample") return "Source: sample figures. These were not read from DSR.";
-  if (day.source === "import") return "Source: imported file. This was not a live DSR extract.";
+  if (day.source === "import") return "Source: Steiners DSR, imported from the daily export. Net sales are total revenue, treatments are treatment guests, and the budget is that day's forecast.";
   return "Source: Maldives daily DSR. Net sales are total revenue, treatments are treatment guests, and the budget is that day's forecast.";
 }
 
@@ -394,6 +394,6 @@ export function dayHeadline(day: LoadedDay, ordered: LoadedDay[]) {
 
 export function sourceLabel(source: SalesSource): string {
   if (source === "sample") return "Sample data";
-  if (source === "import") return "Imported file";
+  if (source === "import") return "Steiners DSR (imported)";
   return "DSR extract";
 }
