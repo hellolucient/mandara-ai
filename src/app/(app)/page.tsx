@@ -68,7 +68,7 @@ export default async function HomePage() {
               value={formatCurrency(kpis.mtdRevenue, kpis.currency)}
             />
             <KpiCard
-              label="Treatments (MTD)"
+              label="Guests (MTD)"
               value={kpis.mtdTreatments.toLocaleString()}
             />
             <KpiCard
@@ -98,7 +98,7 @@ export default async function HomePage() {
                   <th className="pb-2 font-medium">Spa</th>
                   <th className="pb-2 font-medium text-right">Latest Day</th>
                   <th className="pb-2 font-medium text-right">Month-to-Date</th>
-                  <th className="pb-2 font-medium text-center">vs Budget</th>
+                  <th className="pb-2 font-medium text-center">vs Budget to date</th>
                   <th className="pb-2 font-medium">Last 14 Days</th>
                 </tr>
               </thead>

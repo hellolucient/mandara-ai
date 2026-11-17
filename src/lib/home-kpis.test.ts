@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isSalesDataStale } from "./home-kpis.js";
+import { isSalesDataStale, num } from "./home-kpis.js";
 
 describe("home KPIs", () => {
   it("detects stale sales data (>2 days old)", () => {
@@ -53,5 +53,13 @@ describe("home KPIs", () => {
     const noTreatments = 0;
     const noAvg = noTreatments > 0 ? mtdRevenue / noTreatments : null;
     assert.equal(noAvg, null);
+  });
+
+  it("converts Postgres string sums to numbers so totals add, not concatenate", () => {
+    assert.equal(num("1092"), 1092);
+    assert.equal(num("10806.25"), 10806.25);
+    assert.equal(num(null), null);
+    assert.equal(num("abc"), null);
+    assert.equal(["092", "1228"].reduce((s, v) => s + (num(v) ?? 0), 0), 1320);
   });
 });

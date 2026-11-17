@@ -56,14 +56,14 @@ export async function calculateHomeKPIs(stage: string, today: string): Promise<H
   const isStale = daysSinceLatest > 2;
 
   // Latest day revenue
-  const latestRevenue = latestDay.net_sales ?? 0;
+  const latestRevenue = num(latestDay.net_sales) ?? 0;
 
   // MTD calculations
   const currentMonth = today.slice(0, 7); // YYYY-MM
   const mtdDays = days.filter((d) => d.business_date.startsWith(currentMonth) && d.business_date <= today);
 
-  const mtdRevenue = mtdDays.reduce((sum, d) => sum + (d.net_sales ?? 0), 0);
-  const mtdTreatments = mtdDays.reduce((sum, d) => sum + (d.treatments ?? 0), 0);
+  const mtdRevenue = mtdDays.reduce((sum, d) => sum + (num(d.net_sales) ?? 0), 0);
+  const mtdTreatments = mtdDays.reduce((sum, d) => sum + (num(d.treatments) ?? 0), 0);
 
   // Retail share and avg spend require more detailed data - return null for now
   // These would need retail/treatment breakdown in the data model
@@ -88,6 +88,8 @@ export async function calculateHomeKPIs(stage: string, today: string): Promise<H
 export async function getSpaSummaries(stage: string, today: string): Promise<SpaSummary[]> {
   const fourteenDaysAgo = new Date(Date.parse(today) - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const currentMonth = today.slice(0, 7);
+  const monthStart = `${currentMonth}-01`;
+  const fromDate = monthStart < fourteenDaysAgo ? monthStart : fourteenDaysAgo;
   const [year, month] = currentMonth.split("-").map(Number);
 
   // Get all location names from recent data
@@ -107,7 +109,8 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
      where stage = $1 and year = $2 and month = $3`,
     [stage, year, month],
   );
-  const budgetMap = new Map(budgets.map((b) => [b.location_id, b.amount]));
+  const budgetMap = new Map(budgets.map((b) => [b.location_id, num(b.amount)]));
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
 
   // Get sales data for last 14 days and MTD
   const salesData = await sql<{
@@ -123,8 +126,15 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
      where d.stage = $1
        and d.business_date >= $2
      order by l.location_id, d.business_date`,
-    [stage, fourteenDaysAgo],
+    [stage, fromDate],
   );
+  for (const row of salesData) row.net_sales = num(row.net_sales);
+  const latestMtdDate = salesData
+    .map((s) => s.business_date)
+    .filter((d) => d.startsWith(currentMonth) && d <= today)
+    .sort()
+    .pop();
+  const daysCovered = latestMtdDate ? Number(latestMtdDate.slice(8, 10)) : 0;
 
   const summaries: SpaSummary[] = [];
 
@@ -141,7 +151,9 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
 
     // Budget comparison
     const budgetAmount = budgetMap.get(loc.location_id) ?? null;
-    const budgetPercent = budgetAmount && budgetAmount > 0 ? (mtdRevenue / budgetAmount) * 100 : null;
+    // Compare against the budget for the days covered so far, not the whole month.
+    const budgetToDate = budgetAmount && budgetAmount > 0 && daysCovered > 0 ? (budgetAmount * daysCovered) / daysInMonth : null;
+    const budgetPercent = budgetToDate ? (mtdRevenue / budgetToDate) * 100 : null;
 
     // Sparkline data (last 14 days)
     const sparklineData: Array<{ date: string; revenue: number | null }> = [];
@@ -171,4 +183,11 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
 export function isSalesDataStale(latestDate: string, today: string): boolean {
   const daysSince = Math.floor((Date.parse(today) - Date.parse(latestDate)) / (1000 * 60 * 60 * 24));
   return daysSince > 2;
+}
+
+/** Postgres returns numeric and bigint sums as strings; convert safely. */
+export function num(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
 }
