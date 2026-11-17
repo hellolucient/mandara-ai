@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { companyPrompt, EMPTY_PROFILE, isPlaceholderProfile, parseCompanyProfile, profileFromForm, profileToForm } from "./company-profile";
-import { initialCompanyProfile, initialCompanyProfileJson } from "./company-profile-seed";
+import { initialCompanyProfile } from "./company-profile-seed";
+import { sql } from "./db";
+import { splitSql } from "./schema-source";
 import { buildLexicon, routeQuestion, storedGapMessage } from "./mandara-context";
 
 describe("company profile", () => {
@@ -58,15 +60,15 @@ describe("company profile", () => {
   it("loads Trent's draft without showing the unchecked notes to the model", () => {
     const profile = initialCompanyProfile();
     const prompt = companyPrompt(profile);
-    assert.equal(profile.spas.length, 20);
+    assert.equal(profile.spas.length, 18);
     assert.equal(profile.people.length, 8);
-    assert.equal(profile.contacts.length, 10);
-    assert.equal(profile.contracts.length, 14);
+    assert.equal(profile.contacts.length, 7);
+    assert.equal(profile.contracts.length, 12);
     assert.match(profile.description, /C-0321\/2000/);
     assert.match(profile.description, /21 October 2026/);
     assert.equal(profile.spas.find((spa) => spa.name.includes("Vadoo"))?.status, "open");
     assert.equal(profile.spas.find((spa) => spa.name.includes("Whale Lagoon"))?.status, "closed");
-    assert.equal(profile.spas.find((spa) => spa.name === "Thulusdhoo")?.status, "declined");
+    assert.equal(profile.spas.find((spa) => spa.name === "Thulusdhoo"), undefined);
     assert.ok(profile.spas.find((spa) => spa.name.includes("Vadoo"))?.aliases.includes("Vaadhoo"));
     assert.equal(profile.people.find((person) => person.name.startsWith("Tenille"))?.aliases.includes("Tenille"), true);
     assert.match(profile.adminNotes, /Still to confirm/);
@@ -74,7 +76,8 @@ describe("company profile", () => {
     assert.doesNotMatch(prompt, /\[check\]/i);
     assert.match(prompt, /Tenille Jade Keats/);
     assert.match(prompt, /Tranquility/);
-    assert.match(prompt, /not proceeding/);
+    // Prospects and deals live in the admin-only Prospects tab, never in the profile the assistant reads.
+    assert.doesNotMatch(JSON.stringify(profile), /manhattan|hulhumal|thulusdhoo|vissna|visana|naeem|thompey|guest-house|negotiation|prospect/i);
     const lexicon = buildLexicon({ profile });
     assert.equal(routeQuestion("At Vadoo, what's the price of a Balinese massage?", lexicon).lane, "company");
     assert.equal(routeQuestion("What's the weather in Vadoo?", lexicon).web, true);
@@ -93,7 +96,7 @@ describe("company profile", () => {
     assert.match(migration, /companyProfile/);
     assert.match(migration, /not exists/);
     assert.doesNotMatch(migration, /do update set value/);
-    assert.ok(migration.includes(initialCompanyProfileJson()));
+    assert.match(migration, /\$profile\$/);
   });
 
   it("offers a web search instead of inventing a missing company answer", () => {
@@ -102,5 +105,53 @@ describe("company profile", () => {
     assert.match(message, /have not invented/);
     assert.match(message, /search the web/);
     assert.doesNotMatch(message, /I don't have that in any company record/);
+  });
+});
+
+describe("migration 015: prospects out of the stored profile", () => {
+  const stored = (): string => {
+    const migration = readFileSync("migrations/008_company_profile_seed.sql", "utf8");
+    const match = /\$profile\$([\s\S]*?)\$profile\$/.exec(migration);
+    assert.ok(match);
+    return match[1];
+  };
+  const run = async () => {
+    for (const statement of splitSql(readFileSync("migrations/015_profile_remove_prospects.sql", "utf8"))) await sql(statement);
+  };
+  const read = async (stage: string) =>
+    (await sql<{ value: string }>("select value from settings where stage = $1 and key = 'companyProfile'", [stage]))[0]?.value ?? "";
+
+  it("turns the profile migration 008 stored into today's seed, and is idempotent", async () => {
+    await sql("insert into settings (stage, key, value) values ('m015-seed', 'companyProfile', $1)", [stored()]);
+    await run();
+    const once = await read("m015-seed");
+    assert.deepEqual(parseCompanyProfile(once), initialCompanyProfile());
+    await run();
+    assert.equal(await read("m015-seed"), once);
+  });
+
+  it("removes only deal lines from a profile Trent edited, keeping his own changes", async () => {
+    const edited = JSON.parse(stored()) as Record<string, unknown> & { keywords: string[]; adminNotes: string; description: string };
+    edited.description += " Trent added this sentence.";
+    edited.keywords = [...edited.keywords, "Trent keyword"];
+    edited.adminNotes += "\n- Trent's own note.";
+    await sql("insert into settings (stage, key, value) values ('m015-edit', 'companyProfile', $1)", [JSON.stringify(edited)]);
+    await run();
+    const after = parseCompanyProfile(await read("m015-edit"));
+    assert.match(after.description, /Trent added this sentence\.$/);
+    assert.ok(after.keywords.includes("Trent keyword"));
+    assert.match(after.adminNotes, /- Trent's own note\.$/);
+    assert.doesNotMatch(JSON.stringify(after), /manhattan|hulhumal|thulusdhoo|vissna|visana|naeem|thompey|guest-house/i);
+    assert.equal(after.spas.length, 18);
+    assert.equal(after.contacts.length, 7);
+    assert.equal(after.contracts.length, 12);
+    assert.match(after.adminNotes, /Madifushi was a Mandara spa/);
+  });
+
+  it("leaves a profile with nothing to remove byte for byte as it was", async () => {
+    const clean = '{"description":"We operate spas.","spas":[],"people":[],"contacts":[],"contracts":[],"keywords":["DSR"],"adminNotes":""}';
+    await sql("insert into settings (stage, key, value) values ('m015-clean', 'companyProfile', $1)", [clean]);
+    await run();
+    assert.equal(await read("m015-clean"), clean);
   });
 });

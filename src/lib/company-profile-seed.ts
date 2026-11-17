@@ -9,7 +9,7 @@ const SEED: CompanyProfile = {
 
 Trent Munday, Director, acquired 100% of SPA Partners (South Asia) Limited, the BVI holding company that owns the operating company (99%, with the remaining 1% under a separate Maldives share sale). The seller is Mandara Spa Asia Limited, an affiliate of OneSpaWorld (OSW). The acquisition completed on 21 October 2026, when all documents were signed. The parent has exited except for licences to keep using the Mandara and Chavana brands.
 
-Ten spas are open. Meliá Whale Lagoon is still under contract but closed for renovation. Madifushi and several older names are former, not current. Manhattan Grand / Hulhumalé is in negotiation. The Thulusdhoo (VISSNA) deal is not proceeding. Adaaran Select Meedhupparu and Adaaran Prestige Water Villas are the same spa, not two sites. Barceló Nasandhura is a city hotel in Malé, not a resort island.
+Ten spas are open. Meliá Whale Lagoon is still under contract but closed for renovation. Madifushi and several older names are former, not current. Adaaran Select Meedhupparu and Adaaran Prestige Water Villas are the same spa, not two sites. Barceló Nasandhura is a city hotel in Malé, not a resort island.
 
 Staff rarely say "Mandara". A short resort name, "we" or "our", or spa, treatment, retail or contract language usually means this company. If the answer is not in company records, say so and offer a web search. Do not invent prices, menus, fees, or contract terms. Do not quote salaries, staff IDs, phone numbers, emails, or commercial terms such as fees, deposits, or revenue shares.`,
   spas: [
@@ -31,8 +31,6 @@ Staff rarely say "Mandara". A short resort name, "we" or "our", or spa, treatmen
     { name: "Club Med Kani", status: "former", aliases: ["Kani", "MDV01"] },
     { name: "Club Med Finolhu", status: "former", aliases: ["Finolhu", "MDV15"] },
     { name: "Hulhule Island Hotel", status: "former", aliases: ["Hulhule", "MDV17"] },
-    { name: "Manhattan Grand, Hulhumalé", status: "negotiation", aliases: ["Hulhumale", "Hulamale", "Manhattan Hulhumale", "Manhattan Grand"] },
-    { name: "Thulusdhoo", status: "declined", aliases: ["VISSNA", "Visana"] },
   ],
   people: [
     { name: "Trent Munday", role: "Director, Mandara Spa (Maldives) Pvt Ltd, and owner of SPA Partners (South Asia) Limited since the acquisition completed on 21 October 2026. Previously SVP of the region for the parent.", aliases: [] },
@@ -52,9 +50,6 @@ Staff rarely say "Mandara". A short resort name, "we" or "our", or spa, treatmen
     { name: "Malitha Abeysinghe", role: "Financial controller", organisation: "NOOE Maldives Kunaavashi", aliases: [] },
     { name: "Ramesh Bappoo", role: "Head of Hospitality Operations, South and South-East Asia, La Vie, from January 2026. A regional contact, not based at the property.", organisation: "La Vie", aliases: [] },
     { name: "Lisa Gerosa", role: "General Manager. Signed the Meliá Whale Lagoon closure amendment on 12 August 2026.", organisation: "Meliá Whale Lagoon Maldives", aliases: [] },
-    { name: "Ali Nahiz", role: "Chief Operation Officer", organisation: "World of Business Pvt Ltd, Manhattan Grand (in negotiation)", aliases: [] },
-    { name: "Naeem", role: "Described as an owner. Manhattan Grand is in negotiation and not signed.", organisation: "Manhattan Grand", aliases: [] },
-    { name: "Thompey", role: "Counterpart who received the November 2026 Thulusdhoo term sheet. The deal is not proceeding.", organisation: "Thulusdhoo", aliases: ["Tompe"] },
   ],
   contracts: [
     { name: "Cinnamon Dhonveli", partner: "Tranquility (Private) Ltd. The contract says Mandara Spa, and the spa is operated as Chavana.", status: "signed" },
@@ -68,8 +63,6 @@ Staff rarely say "Mandara". A short resort name, "we" or "our", or spa, treatmen
     { name: "NOOE Maldives Kunaavashi", partner: "OL Investments Pvt Ltd (La Vie / LAVIE)", status: "signed" },
     { name: "Barceló Nasandhura Malé", partner: "NPH Investment Pvt Ltd. Named as owner on the Ministry of Tourism list. The agreement text did not confirm the contracting party.", status: "signed" },
     { name: "Meliá Whale Lagoon", partner: "ASB Hotel Properties Maldives Private Limited. Novated on 8 December 2025 from Browns Ari Resort (Pvt) Limited. August 2026 closure amendment. Previously Barceló Whale Lagoon.", status: "signed" },
-    { name: "Manhattan Grand, Hulhumalé", partner: "Unsigned Spa Operation Agreement", status: "draft" },
-    { name: "Thulusdhoo VISSNA", partner: "Preliminary term sheet only. The owner is running the spa themselves.", status: "not proceeding" },
     { name: "Madifushi", partner: "No current agreement on file", status: "none" },
   ],
   keywords: [
@@ -128,9 +121,6 @@ Staff rarely say "Mandara". A short resort name, "we" or "our", or spa, treatmen
     "La Vie",
     "Barcelo",
     "Melia",
-    "VISSNA",
-    "Visana",
-    "Manhattan Grand",
     "NPH Investment",
     "ADS Resorts",
     "ASB Hotel Properties",
@@ -155,11 +145,8 @@ Staff rarely say "Mandara". A short resort name, "we" or "our", or spa, treatmen
 - No MDV code was found for Barceló Nasandhura Malé.
 - The 1 March 2027 Meliá Whale Lagoon reopen date is from Tenille's spa-configuration sheet. The closure amendment leaves the reopen date to the owner. The resort closed from 16 / 20 August 2026. Whether Lisa Gerosa is still in post is not confirmed.
 - Malitha Abeysinghe's itinerary title is Chief of Finance, which may differ from financial controller.
-- Naeem's full name and role are not confirmed.
-- Thompey's role is not confirmed.
 - The Barceló Nasandhura agreement extract is unreadable, so the contracting-party name is not confirmed.
 - No current general manager is on file for Cinnamon Dhonveli, Cinnamon Hakuraa Huraa, Ellaidhoo, Adaaran Club Rannalhi, Adaaran Select Hudhuranfushi, Adaaran Prestige Vadoo, or Barceló Nasandhura Malé.
-- A guest-house spa near Hakuraa Huraa was discussed in late October 2026 and declined. It is not a prospect.
 - Madifushi was a Mandara spa from about 2020 to about 2025 and is now Heal\\Me. It is a leftover DSR row, not a licensed spa in the acquisition documents. Atmosphere Kanifushi was Akiri Spa and is now Essens Wellness. Pearl Sands was a Chavana spa. Lily Beach still has leftover Tamara Spa branding. Club Med Kani, Club Med Finolhu, and Hulhule Island Hotel are former.`,
 };
 

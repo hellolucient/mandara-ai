@@ -54,3 +54,13 @@ export function shortUrl(url: string, max = 48): string {
     return url;
   }
 }
+
+/** Priority filter on the Prospects list. "" (the default) hides X (excluded) except under the All stage chip. "any" shows every priority. */
+export type PriorityFilter = "" | "any" | "AB" | "A" | "B" | "C" | "X";
+
+export function matchesPriority(priority: string, filter: PriorityFilter, stage: string): boolean {
+  if (filter === "") return stage === "all" || priority !== "X";
+  if (filter === "any") return true;
+  if (filter === "AB") return priority === "A" || priority === "B";
+  return priority === filter;
+}

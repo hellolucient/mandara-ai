@@ -12,7 +12,7 @@ import {
   type ProspectStatus,
   type SignalType,
 } from "@/lib/prospects-types";
-import { atollGroup } from "@/lib/prospects-format";
+import { atollGroup, matchesPriority, type PriorityFilter } from "@/lib/prospects-format";
 
 export type ProspectListItem = {
   id: string;
@@ -60,15 +60,18 @@ export function ProspectsBrowser({ prospects }: { prospects: ProspectListItem[] 
   const [stage, setStage] = useState<StageFilter>("active");
   const [atoll, setAtoll] = useState("");
   const [group, setGroup] = useState("");
-  const [priority, setPriority] = useState<"" | Priority | "AB">("");
+  const [priority, setPriority] = useState<PriorityFilter>("");
   const [sort, setSort] = useState<Sort>("priority");
 
+  // Stage counts follow the priority filter, so excluded (X) prospects are left out by default. All always counts everything.
+  const counted = useMemo(() => prospects.filter((p) => matchesPriority(p.priority, priority, "")), [prospects, priority]);
   const counts = useMemo(() => {
     const c = Object.fromEntries(PROSPECT_STATUSES.map((s) => [s, 0])) as Record<ProspectStatus, number>;
-    for (const p of prospects) c[p.status] += 1;
+    for (const p of counted) c[p.status] += 1;
     return c;
-  }, [prospects]);
-  const activeCount = prospects.length - counts.won - counts.lost;
+  }, [counted]);
+  const activeCount = counted.length - counts.won - counts.lost;
+  const excludedCount = useMemo(() => prospects.filter((p) => p.priority === "X").length, [prospects]);
 
   const atolls = useMemo(() => options(prospects.map((p) => atollGroup(p.atoll))), [prospects]);
   const groups = useMemo(() => options(prospects.map((p) => p.brandGroup)), [prospects]);
@@ -80,8 +83,7 @@ export function ProspectsBrowser({ prospects }: { prospects: ProspectListItem[] 
       if (stage !== "active" && stage !== "all" && p.status !== stage) return false;
       if (atoll && atollGroup(p.atoll) !== atoll) return false;
       if (group && p.brandGroup !== group) return false;
-      if (priority === "AB" && p.priority !== "A" && p.priority !== "B") return false;
-      if (priority && priority !== "AB" && p.priority !== priority) return false;
+      if (!matchesPriority(p.priority, priority, stage)) return false;
       if (q) {
         const hay = `${p.name} ${p.atoll} ${p.brandGroup} ${p.spaOperator} ${p.spaName} ${p.gmName}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -154,15 +156,16 @@ export function ProspectsBrowser({ prospects }: { prospects: ProspectListItem[] 
           <Select
             label="Priority"
             value={priority}
-            onChange={(v) => setPriority(v as typeof priority)}
+            onChange={(v) => setPriority(v as PriorityFilter)}
             options={[
+              ["any", "All, incl. excluded"],
               ["AB", "A and B"],
               ["A", "A · in play"],
               ["B", "B · possible"],
               ["C", "C · occupied"],
               ["X", "X · excluded"],
             ]}
-            all="Any priority"
+            all="Hide excluded (X)"
           />
           <Select label="Sort" value={sort} onChange={(v) => setSort(v as Sort)} options={SORTS.map((s): [string, string] => [s.value, s.label])} prefix="Sort: " />
         </div>
@@ -171,6 +174,15 @@ export function ProspectsBrowser({ prospects }: { prospects: ProspectListItem[] 
       <div className="mt-4 flex items-center justify-between text-[12.5px] text-muted-foreground">
         <span>
           {shown.length} of {prospects.length} prospects
+          {priority === "" && stage !== "all" && excludedCount > 0 ? (
+            <>
+              {" · "}
+              {excludedCount} excluded (X) hidden{" · "}
+              <button type="button" className="text-primary hover:underline" onClick={() => setPriority("any")}>
+                Show
+              </button>
+            </>
+          ) : null}
         </span>
         {filtered ? (
           <button

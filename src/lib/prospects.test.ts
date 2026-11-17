@@ -22,7 +22,7 @@ import {
   prospectSummary,
   setProspectStatus,
 } from "./prospects-store";
-import { atollGroup } from "./prospects-format";
+import { atollGroup, matchesPriority } from "./prospects-format";
 import { scrubContact, timingSortDate, validateProspectImport, validateSignal } from "./prospects-validate";
 
 const STAGE = "prospects-test";
@@ -289,5 +289,16 @@ describe("prospects: validation", () => {
     assert.equal(atollGroup("Raa Atoll, Ranfushi"), "Raa");
     assert.equal(atollGroup("Baa"), "Baa");
     assert.equal(atollGroup("Not settled in sources"), "");
+  });
+
+  it("hides excluded (X) prospects by default but keeps them under All and when asked", () => {
+    assert.equal(matchesPriority("X", "", "active"), false);
+    assert.equal(matchesPriority("X", "", "watching"), false);
+    assert.equal(matchesPriority("A", "", "active"), true);
+    assert.equal(matchesPriority("", "", "active"), true);
+    assert.equal(matchesPriority("X", "", "all"), true);
+    assert.equal(matchesPriority("X", "any", "active"), true);
+    assert.equal(matchesPriority("X", "X", "active"), true);
+    assert.equal(matchesPriority("C", "AB", "active"), false);
   });
 });
