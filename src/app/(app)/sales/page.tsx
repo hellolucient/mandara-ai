@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReportDisclosure } from "@/components/report-disclosure";
 import { SalesActions } from "@/components/sales-actions";
 import { Badge } from "@/components/ui/badge";
 import { addDays, businessToday, formatBusinessDate, money } from "@/lib/dates";
@@ -76,17 +77,19 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
             <table className="w-full text-sm">
               <thead className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Location</th>
-                  <th className="px-4 py-3 font-medium">Net sales</th>
-                  <th className="px-4 py-3 font-medium">Budget</th>
-                  <th className="px-4 py-3 font-medium">Treatments</th>
+                  <th className="py-3 pr-2 pl-3 font-medium sm:px-4">Location</th>
+                  <th className="px-2 py-3 text-right font-medium whitespace-nowrap sm:px-4">Net sales</th>
+                  <th className="px-2 py-3 text-right font-medium whitespace-nowrap sm:px-4">Budget</th>
+                  <th className="py-3 pr-3 pl-2 text-right font-medium whitespace-nowrap sm:px-4" title="Treatment guests">
+                    Guests
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {day.lines.map((line) => (
                   <tr key={line.locationId} className="border-b last:border-0">
-                    <td className="px-4 py-3">
-                      <div>{line.locationName}</div>
+                    <td className="w-full py-3 pr-2 pl-3 sm:px-4">
+                      <div className="break-words">{line.locationName}</div>
                       <div className="mt-2 h-1.5 rounded-full bg-muted">
                         <div
                           className="h-1.5 rounded-full bg-primary"
@@ -94,9 +97,13 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3">{line.netSales == null ? "Missing" : money(line.netSales, day.currency)}</td>
-                    <td className="px-4 py-3">{line.budget == null ? "Not stored" : money(line.budget, day.currency)}</td>
-                    <td className="px-4 py-3">{line.treatments ?? "—"}</td>
+                    <td className="px-2 py-3 text-right whitespace-nowrap tabular-nums sm:px-4">
+                      {line.netSales == null ? "Missing" : money(line.netSales, day.currency)}
+                    </td>
+                    <td className="px-2 py-3 text-right whitespace-nowrap tabular-nums sm:px-4">
+                      {line.budget == null ? <span className="text-muted-foreground" title="No budget stored">—</span> : money(line.budget, day.currency)}
+                    </td>
+                    <td className="py-3 pr-3 pl-2 text-right whitespace-nowrap tabular-nums sm:px-4">{line.treatments ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -114,12 +121,11 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
               </ul>
             </section>
           ) : null}
-          <section className="mt-6">
-            <h2 className="font-heading text-2xl">Management report</h2>
-            <pre className="mt-3 overflow-x-auto rounded-xl border bg-card p-4 font-sans text-sm leading-6 whitespace-pre-wrap">
+          <ReportDisclosure exportHref={`/print/sales?date=${day.businessDate}&print=1`}>
+            <pre className="overflow-x-auto font-sans text-sm leading-6 whitespace-pre-wrap">
               {stored?.report && stored.business_date === day.businessDate ? stored.report : reportFor(day, days)}
             </pre>
-          </section>
+          </ReportDisclosure>
         </>
       )}
     </main>

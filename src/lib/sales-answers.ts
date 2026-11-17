@@ -104,7 +104,7 @@ function locationAnswer(day: LoadedDay, ordered: LoadedDay[], name: string): str
   const bits = [
     `${line.locationName} on ${formatBusinessDate(day.businessDate)}: ${figure(line, day.currency)}.`,
     budgetPhrase(line, day.currency),
-    line.treatments != null ? `${line.treatments} treatments are recorded.` : "",
+    line.treatments != null ? `${line.treatments} treatment guest${line.treatments === 1 ? " is" : "s are"} recorded.` : "",
     priorLine ? changePhrase(line, priorLine, day.currency, week!.businessDate) : `There is no record for ${formatBusinessDate(addDays(day.businessDate, -7))}.`,
     sourceLine(day),
   ];
@@ -243,8 +243,8 @@ function datesBetween(start: string, end: string): string[] {
 
 function sourceLine(day: LoadedDay): string {
   if (day.source === "sample") return "Source: sample figures. These were not read from DSR.";
-  if (day.source === "import") return "Source: Steiners DSR, imported from the daily export. Net sales are total revenue, treatments are treatment guests, and the budget is that day's forecast.";
-  return "Source: Maldives daily DSR. Net sales are total revenue, treatments are treatment guests, and the budget is that day's forecast.";
+  if (day.source === "import") return "Source: Steiners DSR, imported from the daily export. Net sales are total revenue, guests are treatment guests, and the budget is that day's forecast.";
+  return "Source: Maldives daily DSR. Net sales are total revenue, guests are treatment guests, and the budget is that day's forecast.";
 }
 
 function lastMonthAnswer(ordered: LoadedDay[], today: string): string {
