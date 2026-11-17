@@ -8,7 +8,7 @@ export function ConversationList({
   items,
   activeId,
 }: {
-  items: Array<{ id: string; title: string }>;
+  items: Array<{ id: string; title: string; mode?: string }>;
   activeId: string;
 }) {
   const router = useRouter();
@@ -29,11 +29,16 @@ export function ConversationList({
               <Link
                 href={`/chat/${item.id}`}
                 className={cn(
-                  "min-w-0 flex-1 truncate px-4 py-2 text-sm",
+                  "min-w-0 flex-1 px-4 py-2 text-sm",
                   item.id === activeId ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/60",
                 )}
               >
-                {item.title}
+                <div className="flex items-center gap-2">
+                  <span className="truncate">{item.title}</span>
+                  {item.mode === "mandara" && (
+                    <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary">M</span>
+                  )}
+                </div>
               </Link>
               <button
                 type="button"

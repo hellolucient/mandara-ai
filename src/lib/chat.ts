@@ -9,7 +9,7 @@ import { companyPrompt, getCompanyProfile, menuTitles } from "@/lib/company-prof
 import { buildLexicon, routeQuestion, storedGapMessage } from "@/lib/mandara-context";
 import { complete, modelConfigured, type ModelMessage } from "@/lib/openrouter";
 import { needsReasoningModel } from "@/lib/question-complexity";
-import { shouldRouteToSales } from "@/lib/routing";
+import { classifySalesIntent } from "@/lib/sales-classifier";
 import { answerSales } from "@/lib/sales-answers";
 import { parseSalesQuestion } from "@/lib/sales-questions";
 import { loadDays, locationNames } from "@/lib/sales-store";
@@ -38,16 +38,16 @@ export type StoredMessage = {
 const HOUR_LIMIT = 30;
 
 export async function listConversations(member: Member) {
-  return sql<{ id: string; title: string; updated_at: string }>(
-    `select id, title, updated_at::text from conversations
+  return sql<{ id: string; title: string; mode: string; updated_at: string }>(
+    `select id, title, mode, updated_at::text from conversations
      where stage = $1 and owner_sub = $2 order by updated_at desc limit 40`,
     [member.stage, member.sub],
   );
 }
 
 export async function getConversation(member: Member, id: string) {
-  const rows = await sql<{ id: string; title: string }>(
-    "select id, title from conversations where id = $1 and stage = $2 and owner_sub = $3",
+  const rows = await sql<{ id: string; title: string; mode: string }>(
+    "select id, title, mode from conversations where id = $1 and stage = $2 and owner_sub = $3",
     [id, member.stage, member.sub],
   );
   if (!rows[0]) return null;
@@ -70,6 +70,7 @@ export async function deleteConversation(member: Member, id: string): Promise<bo
 export async function reply(input: {
   member: Member;
   conversationId: string;
+  conversationMode?: string;
   content: string;
   attachmentName?: string;
   attachmentText?: string;
@@ -87,17 +88,29 @@ export async function reply(input: {
   if (!content) throw new Error("Write a message first.");
   if (content.length > 6000) throw new Error("That message is too long.");
   let conversationId = input.conversationId;
+  let conversationMode = input.conversationMode === "mandara" ? "mandara" : "general";
+  
   if (conversationId) {
-    const owned = await sql(
-      "select id from conversations where id = $1 and stage = $2 and owner_sub = $3",
+    const owned = await sql<{ id: string; mode: string }>(
+      "select id, mode from conversations where id = $1 and stage = $2 and owner_sub = $3",
       [conversationId, input.member.stage, input.member.sub],
     );
     if (!owned[0]) throw new Error("That conversation is not in your workspace.");
+    // Update mode if changed
+    const currentMode = owned[0].mode || "general";
+    if (conversationMode !== currentMode) {
+      await sql(
+        "update conversations set mode = $2 where id = $1",
+        [conversationId, conversationMode],
+      );
+    } else {
+      conversationMode = currentMode;
+    }
   } else {
     conversationId = newId();
     await sql(
-      "insert into conversations (id, stage, owner_sub, title) values ($1, $2, $3, $4)",
-      [conversationId, input.member.stage, input.member.sub, titleFrom(content)],
+      "insert into conversations (id, stage, owner_sub, title, mode) values ($1, $2, $3, $4, $5)",
+      [conversationId, input.member.stage, input.member.sub, titleFrom(content), conversationMode],
     );
   }
   await sql(
@@ -105,7 +118,7 @@ export async function reply(input: {
      values ($1, $2, 'user', $3, $4)`,
     [newId(), conversationId, content, input.attachmentName ?? ""],
   );
-  const answer = await compose(input.member, conversationId, content, input.attachmentText ?? "");
+  const answer = await compose(input.member, conversationId, conversationMode, content, input.attachmentText ?? "");
   await sql(
     `insert into messages (id, conversation_id, role, content, citations, mode, model, images)
      values ($1, $2, 'assistant', $3, $4, $5, $6, $7)`,
@@ -119,6 +132,7 @@ export async function reply(input: {
 async function compose(
   member: Member,
   conversationId: string,
+  conversationMode: string,
   content: string,
   attachmentText: string,
 ): Promise<{ content: string; citations: Citation[]; mode: string; model: string; images: string[] }> {
@@ -142,8 +156,8 @@ async function compose(
     companyName: settings.companyName,
     menuTitles: menus,
   });
-  const route = routeQuestion(content, lexicon);
-  if (!attachmentText && shouldRouteToSales(content, names)) {
+  // In Mandara mode, check for sales questions first
+  if (conversationMode === "mandara" && !attachmentText) {
     const salesIntent = parseSalesQuestion(content, names);
     if (salesIntent) {
       const days = await loadDays(member.stage);
@@ -155,8 +169,14 @@ async function compose(
         images: [],
       };
     }
+    // Non-sales Mandara question: answer from company data only
+    return knowledgeAnswer(member, content, null, profile, names, settings.companyName);
   }
-  if (!attachmentText && route.lane === "company") {
+  
+  // In General mode, never route to sales
+  // Company knowledge questions still get answered from stored data
+  const route = routeQuestion(content, lexicon);
+  if (!attachmentText && route.lane === "company" && conversationMode === "general") {
     return knowledgeAnswer(member, content, route.place, profile, names, settings.companyName);
   }
   if (!modelConfigured()) {
@@ -183,12 +203,16 @@ async function compose(
   const memories = await getMemories(member.stage, member.sub);
   const memoryContext = formatMemoriesForPrompt(memories);
   
-  const needsWeb = route.web;
+  // Web search: only in General mode and only when the route indicates it's needed
+  const needsWeb = conversationMode === "general" && route.web;
   const webContext = needsWeb
     ? " Live web results are already attached to this turn. Use them for outside facts such as fares, prices, schedules, weather, and news. Name the publication once in plain words. Do not paste a URL. If they do not cover a changing figure, say you could not confirm it. Do not describe that gap as a missing company record."
     : "";
   const placeContext = route.place ? ` ${route.place} is one of our resorts. Use that only as context.` : "";
-  const systemPrompt = `You are Mandara AI, a general assistant for the staff of ${settings.companyName}.${placeContext}${webContext}${companyPrompt(profile, names)}
+  const mandaraModeContext = conversationMode === "mandara"
+    ? "\n\nYou are in Mandara mode: answer ONLY from Mandara's own data (company profile, stored documents, and sales records). If the information is not in our files, say so plainly and do not invent prices, menus, fees, or policies. Do not search the web or use general knowledge for Mandara-specific facts."
+    : "";
+  const systemPrompt = `You are Mandara AI, a general assistant for the staff of ${settings.companyName}.${placeContext}${webContext}${mandaraModeContext}${companyPrompt(profile, names)}
 
 For business analysis, calculations, and strategic questions:
 - Lead with the answer or key insight in the first sentence

@@ -35,15 +35,18 @@ const MODE: Record<string, string> = {
 
 export function ChatPanel({
   conversationId,
+  conversationMode,
   initialMessages,
   modelOn,
 }: {
   conversationId: string;
+  conversationMode?: string;
   initialMessages: Message[];
   modelOn: boolean;
 }) {
   const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
+  const [mode, setMode] = useState<string>(conversationMode || "general");
   const [draft, setDraft] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
@@ -56,6 +59,7 @@ export function ChatPanel({
     setError("");
     const form = new FormData();
     form.set("content", content);
+    form.set("mode", mode);
     if (conversationId) form.set("conversationId", conversationId);
     if (file) form.set("file", file);
     try {
@@ -82,6 +86,38 @@ export function ChatPanel({
 
   return (
     <div className="flex min-h-[calc(100vh-8rem)] flex-col md:min-h-screen">
+      <div className="border-b bg-background px-4 py-3 md:px-8">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-muted-foreground">Mode:</span>
+          <div className="flex gap-1 rounded-lg border p-1">
+            <button
+              onClick={() => setMode("general")}
+              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+                mode === "general"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              General
+            </button>
+            <button
+              onClick={() => setMode("mandara")}
+              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+                mode === "mandara"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Mandara
+            </button>
+          </div>
+          <span className="text-xs text-muted-foreground">
+            {mode === "general"
+              ? "Normal chat with web search when needed"
+              : "Answers only from Mandara data"}
+          </span>
+        </div>
+      </div>
       <div className="flex-1 space-y-6 overflow-y-auto px-4 py-6 md:px-8">
         {messages.length === 0 ? (
           <div className="mx-auto max-w-2xl pt-10">

@@ -94,6 +94,44 @@ describe("sales routing", () => {
     );
   });
 
+  it("handles 17 Nov 2026 production bugs (menu, math, modelling)", () => {
+    // REGRESSION: These went to stored sales instead of the model after classifier wasn't wired in
+    
+    // Menu/price question about treatments
+    assert.equal(
+      shouldRouteToSales("How much is a Balinese massage at the Vadoo spa?", LOCATIONS),
+      false,
+      "Menu/price questions should go to knowledge/model, not sales data"
+    );
+
+    // Hypothetical math with user-supplied numbers (different from existing test)
+    assert.equal(
+      shouldRouteToSales(
+        "If a spa did $8,360 in retail and $1,140 in add-ons over 10.4 days, what's the daily average and what would 30 days look like?",
+        LOCATIONS
+      ),
+      false,
+      "Hypothetical math problems with user numbers should go to model, not sales"
+    );
+
+    // Interactive model/calculator generation
+    assert.equal(
+      shouldRouteToSales(
+        "Build me an interactive model for a 100-villa resort spa: capture rate, average spend, occupancy.",
+        LOCATIONS
+      ),
+      false,
+      "Calculator/model generation requests should go to model, not sales"
+    );
+
+    // But actual sales queries should still route correctly
+    assert.equal(
+      shouldRouteToSales("What were our sales yesterday?", LOCATIONS),
+      true,
+      "Real sales queries with time references should still route to sales data"
+    );
+  });
+
   it("handles edge cases correctly", () => {
     assert.equal(shouldRouteToSales("", LOCATIONS), false);
     assert.equal(shouldRouteToSales("spa", LOCATIONS), false);
@@ -135,6 +173,18 @@ describe("web search decision", () => {
     assert.equal(shouldSearchWeb("What were total spa sales yesterday?"), false);
     assert.equal(shouldSearchWeb("What type of facials do we have?"), false);
     assert.equal(shouldSearchWeb("Give me a list of all our facials"), false);
+    
+    // REGRESSION: Bug #4 - Pure math word problems should not trigger web search
+    assert.equal(
+      shouldSearchWeb("If a spa did $8,360 in retail and $1,140 in add-ons over 10.4 days, what's the daily average and what would 30 days look like?"),
+      false,
+      "Math word problems with user-supplied numbers are self-contained, no web search needed"
+    );
+    assert.equal(
+      shouldSearchWeb("A spa does $9,500 net revenue a day. If retail is 12% of revenue and we lift it to 18%, what's the extra monthly revenue? Show the working."),
+      false,
+      "Calculation requests with 'show the working' are self-contained"
+    );
   });
 
   it("treats our resort names, short forms, and close misspellings as company context", () => {
