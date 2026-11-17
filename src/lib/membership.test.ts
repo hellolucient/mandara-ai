@@ -78,6 +78,37 @@ describe("decideMembership", () => {
     });
     assert.deepEqual(decision, { role: "admin", consumeInvite: false });
   });
+
+  it("requires email verification for owner bootstrap", () => {
+    const unverifiedOwner = decideMembership({
+      existingRole: null,
+      invitedRole: null,
+      emailVerified: false,
+      simulated: false,
+      owner: true,
+    });
+    assert.deepEqual(unverifiedOwner, { role: "staff", consumeInvite: false });
+
+    const verifiedOwner = decideMembership({
+      existingRole: null,
+      invitedRole: null,
+      emailVerified: true,
+      simulated: false,
+      owner: true,
+    });
+    assert.deepEqual(verifiedOwner, { role: "admin", consumeInvite: false });
+  });
+
+  it("allows simulated viewer to be admin regardless of email verification", () => {
+    const decision = decideMembership({
+      existingRole: null,
+      invitedRole: null,
+      emailVerified: false,
+      simulated: true,
+      owner: false,
+    });
+    assert.deepEqual(decision, { role: "admin", consumeInvite: false });
+  });
 });
 
 describe("isWorkspaceOwner", () => {

@@ -5,7 +5,6 @@ import pg from "pg";
 import { SCHEMA_MIGRATIONS, splitSql } from "@/lib/schema-source";
 
 let pool: pg.Pool | undefined;
-let relaxSsl = false;
 let local: Promise<PGlite> | undefined;
 let schemaReady: Promise<void> | undefined;
 
@@ -15,17 +14,7 @@ export async function sql<T = Record<string, unknown>>(
 ): Promise<T[]> {
   if (databaseUrl() !== "") {
     await ensureSchema();
-    try {
-      return (await getPool().query(text, params)).rows as T[];
-    } catch (error) {
-      if (!relaxSsl && isTlsError(error)) {
-        await pool?.end().catch(() => undefined);
-        pool = undefined;
-        relaxSsl = true;
-        return (await getPool().query(text, params)).rows as T[];
-      }
-      throw error;
-    }
+    return (await getPool().query(text, params)).rows as T[];
   }
   local ??= startLocal().catch((error: unknown) => {
     local = undefined;
@@ -51,14 +40,14 @@ function readEnv(name: "DATABASE_URL" | "DATABASE_URL_UNPOOLED"): string {
 
 function getPool(): pg.Pool {
   pool ??= new pg.Pool({
-    ...clientConfig(databaseUrl(), relaxSsl),
+    ...clientConfig(databaseUrl()),
     max: 1,
     idleTimeoutMillis: 20_000,
   });
   return pool;
 }
 
-function clientConfig(connectionString: string, forceRelaxedTls: boolean): pg.ClientConfig {
+function clientConfig(connectionString: string): pg.ClientConfig {
   let connection = connectionString;
   const localHost = /@(localhost|127\.0\.0\.1)(?::|\/|$)/.test(connection);
   if (
@@ -71,13 +60,7 @@ function clientConfig(connectionString: string, forceRelaxedTls: boolean): pg.Cl
   return {
     connectionString: connection,
     connectionTimeoutMillis: 12_000,
-    ssl: forceRelaxedTls ? { rejectUnauthorized: false } : undefined,
   };
-}
-
-function isTlsError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return /certificate|self-signed|unable to verify|ssl|tls/i.test(message);
 }
 
 async function ensureSchema(): Promise<void> {
@@ -117,17 +100,9 @@ async function applySchema(): Promise<void> {
 }
 
 async function openClient(): Promise<pg.Client> {
-  try {
-    const client = new pg.Client(clientConfig(directUrl(), relaxSsl));
-    await client.connect();
-    return client;
-  } catch (error) {
-    if (relaxSsl || !isTlsError(error)) throw error;
-    relaxSsl = true;
-    const client = new pg.Client(clientConfig(directUrl(), true));
-    await client.connect();
-    return client;
-  }
+  const client = new pg.Client(clientConfig(directUrl()));
+  await client.connect();
+  return client;
 }
 
 async function migrationBodies(): Promise<Array<{ name: string; sql: string }>> {

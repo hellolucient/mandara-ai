@@ -25,6 +25,9 @@ export async function requireMember(request: Request): Promise<Member | Response
   const identity = await getIdentity(request);
   if (!identity.verified) return json({ error: "Sign in to use Mandara AI." }, 401);
   if (identity.kind !== "person") return json({ error: "This action is for a signed-in person." }, 403);
+  if (!identity.emailVerified && !identity.simulated) {
+    return json({ error: "Verify your email address to use Mandara AI." }, 403);
+  }
   await ensureSeed(identity.stage);
   const member = await memberFromIdentity(identity);
   if (!member) return json({ error: "Sign in to use Mandara AI." }, 401);

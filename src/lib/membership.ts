@@ -11,6 +11,7 @@ export type MembershipDecision = {
  * Administrator is never implied by being first.
  * It is granted to the configured workspace owner, to the local simulated viewer,
  * or to a verified-email invite. An unverified email cannot claim an invite.
+ * Owner bootstrap requires email verification, except for simulated viewers in dev mode.
  */
 export function decideMembership(input: {
   existingRole: Role | null;
@@ -20,7 +21,10 @@ export function decideMembership(input: {
   owner: boolean;
 }): MembershipDecision {
   const invite = input.emailVerified ? input.invitedRole : null;
-  if (input.simulated || input.owner) {
+  if (input.simulated) {
+    return { role: "admin", consumeInvite: invite !== null };
+  }
+  if (input.owner && input.emailVerified) {
     return { role: "admin", consumeInvite: invite !== null };
   }
   if (invite) return { role: invite, consumeInvite: true };
