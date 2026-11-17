@@ -15,7 +15,7 @@ export default async function ChatPage() {
     <div className="md:flex md:min-h-screen">
       <ConversationList items={conversations} activeId="" />
       <div className="min-w-0 flex-1">
-        <ChatPanel conversationId="" initialMessages={[]} modelOn={modelConfigured()} />
+        <ChatPanel conversationId="" conversationMode="general" initialMessages={[]} modelOn={modelConfigured()} />
       </div>
     </div>
   );

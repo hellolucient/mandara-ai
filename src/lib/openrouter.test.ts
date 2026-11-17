@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { asksForPicture, gatewayBody, sourcesFromAnnotations } from "./openrouter";
+import { asksForPicture, gatewayBody, readModalityImages, sourcesFromAnnotations } from "./openrouter";
 
 describe("web sources", () => {
   it("keeps distinct http sources and drops anything else", () => {
@@ -39,5 +39,35 @@ describe("model routing", () => {
   it("recognises a request for a concept drawing", () => {
     assert.equal(asksForPicture("Can you create a concept drawing of that menu card, front and back?"), true);
     assert.equal(asksForPicture("Who is the chief executive of Nvidia?"), false);
+  });
+});
+
+describe("image generation", () => {
+  it("extracts base64 images from modality response", () => {
+    const images = readModalityImages([
+      { image_url: { url: "data:image/png;base64,iVBORw0KGgoAAAANS" } },
+      { image_url: { url: "data:image/jpeg;base64,/9j/4AAQSkZJRg" } },
+      { image_url: { url: "https://example.com/image.png" } },
+      { image_url: { url: "javascript:alert(1)" } },
+      { other: "field" },
+    ]);
+    assert.equal(images.length, 2);
+    assert.ok(images[0].startsWith("data:image/png;base64,"));
+    assert.ok(images[1].startsWith("data:image/jpeg;base64,"));
+  });
+
+  it("limits to two images", () => {
+    const images = readModalityImages([
+      { image_url: { url: "data:image/png;base64,a" } },
+      { image_url: { url: "data:image/png;base64,b" } },
+      { image_url: { url: "data:image/png;base64,c" } },
+    ]);
+    assert.equal(images.length, 2);
+  });
+
+  it("handles empty or invalid data", () => {
+    assert.deepEqual(readModalityImages(null), []);
+    assert.deepEqual(readModalityImages([]), []);
+    assert.deepEqual(readModalityImages([{ not: "an image" }]), []);
   });
 });

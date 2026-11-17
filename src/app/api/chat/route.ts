@@ -25,8 +25,8 @@ export async function POST(request: Request) {
 async function readPayload(request: Request) {
   const type = request.headers.get("content-type") ?? "";
   if (type.includes("application/json")) {
-    const body = (await request.json()) as { content?: string; conversationId?: string };
-    return { conversationId: body.conversationId ?? "", content: body.content ?? "" };
+    const body = (await request.json()) as { content?: string; conversationId?: string; mode?: string };
+    return { conversationId: body.conversationId ?? "", conversationMode: body.mode ?? "general", content: body.content ?? "" };
   }
   const form = await request.formData();
   const file = form.get("file");
@@ -40,6 +40,7 @@ async function readPayload(request: Request) {
   }
   return {
     conversationId: String(form.get("conversationId") ?? ""),
+    conversationMode: String(form.get("mode") ?? "general"),
     content: String(form.get("content") ?? ""),
     attachmentName,
     attachmentText,

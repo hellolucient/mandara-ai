@@ -1,4 +1,5 @@
 import { Shell, SignedOut } from "@/components/shell";
+import { hasAdministrator } from "@/lib/members";
 import { getSettings } from "@/lib/settings";
 import { currentMember } from "@/lib/session";
 
@@ -20,9 +21,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     );
   }
   if (!member) return <SignedOut />;
-  const settings = await getSettings(member.stage);
+  const [settings, needsOwner] = await Promise.all([
+    getSettings(member.stage),
+    member.role === "admin" ? Promise.resolve(false) : hasAdministrator(member.stage).then((found) => !found),
+  ]);
   return (
-    <Shell member={member} companyName={settings.companyName}>
+    <Shell member={member} companyName={settings.companyName} needsOwner={needsOwner}>
       {children}
     </Shell>
   );

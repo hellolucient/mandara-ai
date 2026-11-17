@@ -20,7 +20,12 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
     <div className="md:flex md:min-h-screen">
       <ConversationList items={conversations} activeId={id} />
       <div className="min-w-0 flex-1">
-        <ChatPanel conversationId={id} initialMessages={conversation.messages} modelOn={modelConfigured()} />
+        <ChatPanel
+          conversationId={id}
+          conversationMode={conversation.mode || "general"}
+          initialMessages={conversation.messages}
+          modelOn={modelConfigured()}
+        />
       </div>
     </div>
   );

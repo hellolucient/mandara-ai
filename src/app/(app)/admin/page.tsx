@@ -1,4 +1,5 @@
-import { InviteForm, RoleSelect, SettingsForm } from "@/components/admin-manager";
+import { CompanyProfileForm, InviteForm, RoleSelect, SettingsForm } from "@/components/admin-manager";
+import { getCompanyProfile, profileToForm } from "@/lib/company-profile";
 import { listInvites, listMembers } from "@/lib/members";
 import { integrationStatus } from "@/lib/secrets";
 import { currentMember } from "@/lib/session";
@@ -12,13 +13,15 @@ export default async function AdminPage() {
   const member = await currentMember();
   if (!member) redirect("/");
   if (member.role !== "admin") redirect("/chat");
-  const [settings, people, invites, usage, status] = await Promise.all([
+  const [settings, profile, people, invites, usage, status] = await Promise.all([
     getSettings(member.stage),
+    getCompanyProfile(member.stage),
     listMembers(member.stage),
     listInvites(member.stage),
     usageSummary(member.stage),
     Promise.resolve(integrationStatus()),
   ]);
+  const company = profileToForm(profile);
   const rows = [
     ["OpenRouter", status.openRouter],
     ["Schedule secret", status.cron],
@@ -26,6 +29,7 @@ export default async function AdminPage() {
     ["DSR username", status.dsrUsername],
     ["DSR password", status.dsrPassword],
     ["DSR page map", status.dsrMapReady],
+    ["Workspace owner", status.workspaceOwner],
   ] as const;
   return (
     <main className="mx-auto max-w-5xl space-y-8 px-4 py-6 md:px-8">
@@ -39,7 +43,7 @@ export default async function AdminPage() {
         <article className="rounded-xl border bg-card p-4">
           <h2 className="font-heading text-2xl">Workspace</h2>
           <div className="mt-4">
-            <SettingsForm companyName={settings.companyName} model={settings.model} currency={settings.currency} />
+            <SettingsForm companyName={settings.companyName} model={settings.model} imageModel={settings.imageModel} reasoningModel={settings.reasoningModel} currency={settings.currency} />
           </div>
         </article>
         <article className="rounded-xl border bg-card p-4">
@@ -63,6 +67,23 @@ export default async function AdminPage() {
         </article>
       </section>
       <section className="rounded-xl border bg-card p-4">
+        <h2 className="font-heading text-2xl">Company profile</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+          This starting profile is loaded only while the saved profile is still empty. Edit any field and save. Notes at the bottom stay in Admin and are not shown to the assistant.
+        </p>
+        <div className="mt-4">
+          <CompanyProfileForm
+            description={company.description}
+            spasText={company.spasText}
+            peopleText={company.peopleText}
+            contactsText={company.contactsText}
+            contractsText={company.contractsText}
+            keywordsText={company.keywordsText}
+            adminNotes={company.adminNotes}
+          />
+        </div>
+      </section>
+      <section className="rounded-xl border bg-card p-4">
         <h2 className="font-heading text-2xl">Connections</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           This list is what the server running now can see. Secrets saved in Cursor are available on the published workspace. A local preview does not receive them.
@@ -79,7 +100,7 @@ export default async function AdminPage() {
       <section className="rounded-xl border bg-card p-4">
         <h2 className="font-heading text-2xl">People</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          A role set by email applies the first time that person opens the workspace.
+          A role set by email applies when that person signs in with a verified email. An unverified address stays on staff.
         </p>
         <div className="mt-3">
           <InviteForm />
@@ -88,7 +109,7 @@ export default async function AdminPage() {
           <ul className="mt-3 text-sm text-muted-foreground">
             {invites.map((invite) => (
               <li key={invite.email}>
-                {invite.email} · {invite.role} · waiting for first sign-in
+                {invite.email} · {invite.role} · waiting for a verified sign-in
               </li>
             ))}
           </ul>

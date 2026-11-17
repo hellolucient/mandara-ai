@@ -45,7 +45,7 @@ Fixed infrastructure for this proof of concept is the published app and its Post
 
 Model spend happens only when someone uses open conversation, or when a document answer is rewritten by the model. Sales answers and the daily report do not call a model. A small team on a flash-class model is typically a few dollars a month. The admin page shows the cost the gateway reports. Prices change, and an estimate is labeled when the gateway does not report one.
 
-The default model id is `deepseek/deepseek-v4.1-flash`. Each question is answered by this model unless an administrator sets a different model id in the Admin page. The model supports tool calling for web search and picture generation. A request for a picture or concept drawing is sent to an image model and shown in the chat.
+The default model id is `deepseek/deepseek-v4.1-flash`. An administrator can set a specific model id without a code change. A request for a picture or concept drawing is sent to an image model and shown in the chat.
 
 ## DSR
 
@@ -83,7 +83,7 @@ Managers can also import a CSV with the columns `business_date,location,net_sale
 | Import sales, run the agent | no | yes | yes |
 | People, model, company name | no | no | yes |
 
-The first person to open a workspace becomes the administrator.
+The administrator is the person whose sign-in id matches `WORKSPACE_OWNER_SUB`, or someone an administrator invited by a verified email. Opening the workspace first does not grant that role, and an unverified email never receives an invited role.
 
 ## Publish
 
@@ -95,6 +95,7 @@ Publish as **private**, or **team** if that choice is offered, so only invited p
 - A schedule secret, `CRON_SECRET`, if the daily run should fire without someone pressing the button.
 - The real DSR address and a read-only login: `DSR_BASE_URL`, `DSR_USERNAME`, `DSR_PASSWORD`. After those exist, the live pages still have to be inspected once so `config/dsr-map.json` can be filled from the real screens.
 - The company documents that should replace the samples. Upload them in Knowledge.
-- The names of the people who should be managers. They can be set by email in Admin before those people sign in.
+- The workspace owner's sign-in id, stored as `WORKSPACE_OWNER_SUB` (for example `user:123`). The app shows that id when the workspace has no administrator.
+- The names of the people who should be managers. They can be set by email in Admin before those people sign in. The role applies only after that email is verified.
 
 Do not paste passwords or API keys into the chat.
