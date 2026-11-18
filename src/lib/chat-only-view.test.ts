@@ -198,6 +198,8 @@ describe("chat-only view: sales routing", () => {
     assert.match(chat, /knowledgeAnswer\(/);
     assert.match(chat, /\[price\]/);
     assert.match(chat, /```promo/);
+    assert.match(chat, /do not output a promo block yet/);
+    assert.match(chat, /even if the ideas already appeared earlier/);
     assert.match(storedGapMessage(null), /have not invented/);
     assert.match(storedGapMessage("Vadoo"), /Vadoo/);
   });
