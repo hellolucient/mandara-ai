@@ -1,4 +1,6 @@
 import { ChatPanel } from "@/components/chat-panel";
+import { ChatOnlyPage } from "@/components/chat-app/chat-only-page";
+import { usesChatOnlyView } from "@/lib/access";
 import { ConversationList } from "@/components/conversation-list";
 import { listConversations } from "@/lib/chat";
 import { modelConfigured } from "@/lib/openrouter";
@@ -19,6 +21,7 @@ export default async function ChatPage({
   const q = typeof params.q === "string" ? params.q.slice(0, 2000) : "";
   const mode = params.mode === "mandara" || params.mode === "general" ? params.mode : "general";
   const conversations = await listConversations(member);
+  if (usesChatOnlyView(member)) return <ChatOnlyPage member={member} conversations={conversations} initialDraft={q} />;
   return (
     <div className="md:flex md:min-h-screen">
       <ConversationList items={conversations} activeId="" />

@@ -10,6 +10,17 @@ import { Calculator } from "@/components/calculator";
 import type { CalculatorSpec } from "@/lib/calculator-spec";
 
 type Citation = { documentId: string; title: string; excerpt: string; sample: boolean; url?: string };
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  attachment_name: string;
+  citations: string;
+  mode: string;
+  model?: string;
+  images?: string;
+};
+
 type Message = {
   id: string;
   role: "user" | "assistant";
@@ -21,11 +32,11 @@ type Message = {
   images?: string;
 };
 
-const PHOTO_ACCEPT = "image/*,image/heic,image/heif,.heic,.heif,.jpg,.jpeg,.png,.webp";
-const FILE_ACCEPT = ".pdf,.docx,.txt,.md,.csv,text/plain,application/pdf";
+export const PHOTO_ACCEPT = "image/*,image/heic,image/heif,.heic,.heif,.jpg,.jpeg,.png,.webp";
+export const FILE_ACCEPT = ".pdf,.docx,.txt,.md,.csv,text/plain,application/pdf";
 const ATTACHMENT_MAX_BYTES = 2_000_000;
 
-const MODE: Record<string, string> = {
+export const MODE: Record<string, string> = {
   sales: "From stored sales records",
   knowledge: "From company documents",
   general: "General assistant",
@@ -315,12 +326,12 @@ function ThinkingIndicator() {
   );
 }
 
-function isImageFile(file: File): boolean {
+export function isImageFile(file: File): boolean {
   if (file.type.toLowerCase().startsWith("image/")) return true;
   return /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name);
 }
 
-async function prepareAttachment(file: File): Promise<File> {
+export async function prepareAttachment(file: File): Promise<File> {
   if (!isImageFile(file)) {
     if (file.size > ATTACHMENT_MAX_BYTES) throw new Error("Attachments are limited to 2 MB.");
     return file;
@@ -372,7 +383,7 @@ function canvasBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob | 
   return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
 }
 
-function Prose({ text }: { text: string }) {
+export function Prose({ text, className }: { text: string; className?: string }) {
   const calculatorMatch = text.match(/```calculator\s*\n([\s\S]*?)\n```/);
   let calculatorSpec: CalculatorSpec | null = null;
   let textWithoutCalculator = text;
@@ -388,13 +399,13 @@ function Prose({ text }: { text: string }) {
 
   return (
     <>
-      <MarkdownMessage text={textWithoutCalculator} />
+      <MarkdownMessage text={textWithoutCalculator} className={className} />
       {calculatorSpec && <Calculator spec={calculatorSpec} />}
     </>
   );
 }
 
-function UserAttachments({ name, raw, liveSrc }: { name: string; raw?: string; liveSrc?: string }) {
+export function UserAttachments({ name, raw, liveSrc }: { name: string; raw?: string; liveSrc?: string }) {
   const src = liveSrc || storedUserImage(raw);
   if (!src && !name) return null;
   return (
@@ -422,7 +433,7 @@ function storedUserImage(raw?: string): string {
   }
 }
 
-function Pictures({ raw }: { raw?: string }) {
+export function Pictures({ raw }: { raw?: string }) {
   let sources: string[] = [];
   try {
     const parsed = JSON.parse(raw || "[]") as unknown;
@@ -442,7 +453,7 @@ function Pictures({ raw }: { raw?: string }) {
   );
 }
 
-function hasWebSource(raw: string): boolean {
+export function hasWebSource(raw: string): boolean {
   try {
     const parsed = JSON.parse(raw) as Array<{ url?: string }>;
     return Array.isArray(parsed) && parsed.some((item) => Boolean(safeHttpUrl(item?.url)));
@@ -451,7 +462,7 @@ function hasWebSource(raw: string): boolean {
   }
 }
 
-function Citations({ raw }: { raw: string }) {
+export function Citations({ raw }: { raw: string }) {
   let citations: Citation[] = [];
   try {
     const parsed = JSON.parse(raw) as Citation[];

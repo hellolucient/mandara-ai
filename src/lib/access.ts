@@ -39,11 +39,19 @@ export function chatOnlyApiAllowed(pathname: string): boolean {
 }
 
 export function pageAllowed(subject: AccessSubject, pathname: string): boolean {
-  if (subject.chatOnly && subject.role !== "admin") return chatOnlyPageAllowed(pathname);
+  if (usesChatOnlyView(subject)) return chatOnlyPageAllowed(pathname);
   return true;
 }
 
 export function apiAllowed(subject: AccessSubject, pathname: string): boolean {
-  if (subject.chatOnly && subject.role !== "admin") return chatOnlyApiAllowed(pathname);
+  if (usesChatOnlyView(subject)) return chatOnlyApiAllowed(pathname);
   return true;
+}
+
+/**
+ * True when the person gets the full-screen chat-only experience (no dashboard, no admin navigation).
+ * Admin always keeps the dashboard, even if the chat-only switch is on.
+ */
+export function usesChatOnlyView(subject: AccessSubject): boolean {
+  return Boolean(subject.chatOnly) && subject.role !== "admin";
 }

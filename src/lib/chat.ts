@@ -12,7 +12,7 @@ import { modelForAttachment } from "@/lib/chat-images";
 import { complete, modelConfigured, type ModelMessage } from "@/lib/openrouter";
 import { needsReasoningModel } from "@/lib/question-complexity";
 import { answerSales } from "@/lib/sales-answers";
-import { parseSalesQuestion } from "@/lib/sales-questions";
+import { parseSalesQuestion, storedSalesIntent } from "@/lib/sales-questions";
 import { loadDays, locationNames } from "@/lib/sales-store";
 import { getSettings } from "@/lib/settings";
 
@@ -66,6 +66,23 @@ export async function deleteConversation(member: Member, id: string): Promise<bo
     [id, member.stage, member.sub],
   );
   return rows.length > 0;
+}
+
+/** Rename one of the person's own conversations. Returns false when it is not theirs. */
+export async function renameConversation(member: Member, id: string, title: string): Promise<boolean> {
+  const clean = cleanTitle(title);
+  if (!clean) return false;
+  const rows = await sql(
+    "update conversations set title = $4 where id = $1 and stage = $2 and owner_sub = $3 returning id",
+    [id, member.stage, member.sub, clean],
+  );
+  return rows.length > 0;
+}
+
+/** A conversation title as stored: single line, trimmed, at most 80 characters. */
+export function cleanTitle(title: string): string {
+  const flat = String(title ?? "").replace(/\s+/g, " ").trim();
+  return flat.length > 80 ? `${flat.slice(0, 79)}…` : flat;
 }
 
 export async function reply(input: {
@@ -175,9 +192,10 @@ async function compose(
     companyName: settings.companyName,
     menuTitles: menus,
   });
-  // In Mandara mode, check for sales questions first
-  if (conversationMode === "mandara" && !attachmentText && !attachmentImage) {
-    const salesIntent = parseSalesQuestion(content, names);
+  // Sales questions answer from stored figures in both modes. General mode (the only mode in the chat-only view)
+  // uses the stricter check, so writing tasks, ideas and what-ifs that mention sales still reach the model.
+  if (!attachmentText && !attachmentImage) {
+    const salesIntent = conversationMode === "mandara" ? parseSalesQuestion(content, names) : storedSalesIntent(content, names);
     if (salesIntent) {
       const days = await loadDays(member.stage);
       return {
@@ -188,6 +206,8 @@ async function compose(
         images: [],
       };
     }
+  }
+  if (conversationMode === "mandara" && !attachmentText && !attachmentImage) {
     // Non-sales Mandara question: answer from company data only
     return knowledgeAnswer(member, content, null, profile, names, settings.companyName);
   }

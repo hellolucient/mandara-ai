@@ -99,16 +99,28 @@ function budgetAnswer(day: LoadedDay): string {
 function locationAnswer(day: LoadedDay, ordered: LoadedDay[], name: string): string {
   const line = day.lines.find((item) => item.locationName.toLowerCase() === name.toLowerCase());
   if (!line) return `${name} is not on the sales record for ${formatBusinessDate(day.businessDate)}.`;
-  const week = ordered.find((item) => item.businessDate === addDays(day.businessDate, -7));
+  const weekDate = addDays(day.businessDate, -7);
+  const week = ordered.find((item) => item.businessDate === weekDate);
   const priorLine = week?.lines.find((item) => item.locationName === line.locationName) ?? null;
+  const shortWeek = formatBusinessDate(weekDate).replace(/ \d{4}$/, "");
+  const split =
+    line.treatmentSales != null && line.retailSales != null
+      ? `Treatments ${money(line.treatmentSales, day.currency)} · Retail ${money(line.retailSales, day.currency)}`
+      : "";
+  const lastWeek =
+    priorLine && line.netSales != null && priorLine.netSales != null && priorLine.netSales !== 0
+      ? `Same day last week (${shortWeek}): ${money(priorLine.netSales, day.currency)}, ${percent(((line.netSales - priorLine.netSales) / priorLine.netSales) * 100)}`
+      : `Same day last week (${shortWeek}): ${changePhrase(line, priorLine, day.currency, weekDate)}`;
   const bits = [
-    `${line.locationName} on ${formatBusinessDate(day.businessDate)}: ${figure(line, day.currency)}.`,
-    budgetPhrase(line, day.currency),
-    line.treatments != null ? `${line.treatments} treatment guest${line.treatments === 1 ? " is" : "s are"} recorded.` : "",
-    priorLine ? changePhrase(line, priorLine, day.currency, week!.businessDate) : `There is no record for ${formatBusinessDate(addDays(day.businessDate, -7))}.`,
+    `**${line.locationName} · ${formatBusinessDate(day.businessDate)}**`,
+    `Net sales: ${figure(line, day.currency)}`,
+    line.treatments != null ? `Treatment guests: ${line.treatments}` : "",
+    split,
+    line.budget == null ? "Budget: none on file for this spa" : `Budget: ${budgetPhrase(line, day.currency)}`,
+    lastWeek,
     sourceLine(day),
   ];
-  return bits.filter(Boolean).join(" ");
+  return bits.filter(Boolean).join("\n");
 }
 
 function weekAnswer(day: LoadedDay, ordered: LoadedDay[]): string {

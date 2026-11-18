@@ -2,7 +2,7 @@ import { Shell, SignedOut } from "@/components/shell";
 import { hasAdministrator } from "@/lib/members";
 import { getSettings } from "@/lib/settings";
 import { authMode, currentMember } from "@/lib/session";
-import { pageAllowed } from "@/lib/access";
+import { pageAllowed, usesChatOnlyView } from "@/lib/access";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -31,6 +31,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
   if (local && "mustChangePassword" in member && member.mustChangePassword) redirect("/account/password");
   if (!pageAllowed(member, path)) redirect("/chat");
+  // Chat-only people get the full-screen chat view: no dashboard shell, tabs or admin navigation.
+  if (usesChatOnlyView(member)) return <>{children}</>;
   const [settings, needsOwner] = await Promise.all([
     getSettings(member.stage),
     member.role === "admin" ? Promise.resolve(false) : hasAdministrator(member.stage).then((found) => !found),

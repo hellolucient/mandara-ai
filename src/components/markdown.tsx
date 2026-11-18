@@ -72,10 +72,10 @@ const components: Components = {
   },
 };
 
-export function MarkdownMessage({ text }: { text: string }) {
+export function MarkdownMessage({ text, className = "space-y-3 text-sm leading-6" }: { text: string; className?: string }) {
   if (!text) return null;
   return (
-    <div className="space-y-3 text-sm leading-6">
+    <div className={className}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]} urlTransform={safeUrl} components={components}>
         {text}
       </ReactMarkdown>
