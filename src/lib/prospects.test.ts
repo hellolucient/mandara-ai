@@ -141,6 +141,8 @@ describe("prospects: who can see them", () => {
       "src/app/(app)/prospects/page.tsx",
       "src/app/(app)/prospects/[id]/page.tsx",
       "src/lib/prospects-access.ts",
+      // Administrator-only whole-workspace export for moving hosts.
+      "src/lib/data-export.ts",
       ...ROUTES,
     ]);
     const offenders: string[] = [];
