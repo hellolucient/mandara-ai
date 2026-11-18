@@ -69,4 +69,13 @@ describe("sales question parsing", () => {
     assert.ok(mtd);
     assert.equal(mtd.kind, "mtd");
   });
+
+  it("routes a treatment and retail breakdown, including where-we-are-at budget, as a mix question", () => {
+    const question =
+      "I need a breakdown of treatment sales yesterday and retail sales yesterday and then compare them to where we're at budget";
+    assert.deepEqual(parseSalesQuestion(question, LOCATIONS), { kind: "mix", yesterday: true, mtd: true });
+    assert.deepEqual(parseSalesQuestion("What were total spa sales yesterday?", LOCATIONS), { kind: "total" });
+    assert.deepEqual(parseSalesQuestion("Show me treatment sales yesterday", LOCATIONS), { kind: "mix", yesterday: true, mtd: false });
+    assert.deepEqual(parseSalesQuestion("Retail sales this month versus budget", LOCATIONS), { kind: "mix", yesterday: false, mtd: true });
+  });
 });

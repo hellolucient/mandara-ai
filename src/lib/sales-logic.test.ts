@@ -132,4 +132,69 @@ describe("sales questions", () => {
     assert.ok(chunks.length > 1);
     assert.match(chunks.at(-1) ?? "", /Omega/);
   });
+
+  it("answers a treatment and retail breakdown with totals and month-to-date, and leaves a plain total question unchanged", () => {
+    const question =
+      "I need a breakdown of treatment sales yesterday and retail sales yesterday and then compare them to where we're at budget";
+    const names = ["Dhonveli", "Vadoo", "Hakuraa Huraa"];
+    const intent = parseSalesQuestion(question, names);
+    assert.deepEqual(intent, { kind: "mix", yesterday: true, mtd: true });
+
+    const day = (
+      date: string,
+      lines: Array<[string, number | null, number | null, number | null, number | null]>,
+    ) => ({
+      businessDate: date,
+      source: "import" as const,
+      currency: "USD",
+      complete: true,
+      note: "",
+      lines: lines.map(([name, netSales, treatmentSales, retailSales, budget]) => ({
+        locationId: name.toLowerCase().replace(/ /g, "-"),
+        locationName: name,
+        netSales,
+        treatments: 1,
+        budget,
+        treatmentSales,
+        retailSales,
+      })),
+    });
+    const days = [
+      day("2026-11-16", [
+        ["Dhonveli", 1000, 900, 100, 1100],
+        ["Vadoo", 656, 600, 56, 600],
+        ["Hakuraa Huraa", 2000, null, null, 1800],
+      ]),
+      day("2026-11-17", [
+        ["Dhonveli", 1235.51, 1157.79, 77.72, 1338.87],
+        ["Vadoo", 800, 720, 80, 700],
+        ["Hakuraa Huraa", 2000, null, null, 1900],
+      ]),
+    ];
+
+    const text = answerSales(intent!, days, "2026-11-18");
+    assert.match(text, /\| Spa \| Treatment \| Retail \| Total \| vs budget \|/);
+    assert.match(text, /\| Dhonveli \| \$1,157\.79 \| \$77\.72 \| \$1,235\.51 \| −\$103\.36 \|/);
+    assert.match(text, /\| Vadoo \| \$720\.00 \| \$80\.00 \| \$800\.00 \| \+\$100\.00 \|/);
+    assert.match(text, /\| Hakuraa Huraa \| — \| — \| \$2,000\.00 \| \+\$100\.00 \|/);
+    assert.match(text, /\| Total \| \$1,877\.79 \| \$157\.72 \| \$4,035\.51 \| \+\$96\.64 \|/);
+    assert.match(text, /Budget is only held as a total, not split into treatment and retail/);
+    assert.match(text, /Month to date through 17 Nov 2026/);
+    assert.match(text, /\| Dhonveli \| \$2,057\.79 \| \$177\.72 \| \$2,235\.51 \| −\$203\.36 \|/);
+    assert.match(text, /\| Vadoo \| \$1,320\.00 \| \$136\.00 \| \$1,456\.00 \| \+\$156\.00 \|/);
+    assert.match(text, /\| Hakuraa Huraa \| — \| — \| \$4,000\.00 \| \+\$300\.00 \|/);
+    assert.match(text, /\| Total \| \$3,377\.79 \| \$313\.72 \| \$7,691\.51 \| \+\$252\.64 \|/);
+    assert.match(text, /A dash means that figure is not stored/);
+
+    const plain = parseSalesQuestion("What were total spa sales yesterday?", names);
+    assert.equal(plain?.kind, "total");
+    const totalText = answerSales(plain!, days, "2026-11-18");
+    assert.match(totalText, /Sales for 17 Nov 2026/);
+    assert.match(totalText, /Dhonveli: \$1,236/);
+    assert.doesNotMatch(totalText, /\| Spa \| Treatment \|/);
+
+    const yesterdayOnly = parseSalesQuestion("Show me treatment sales and retail sales yesterday", names);
+    assert.deepEqual(yesterdayOnly, { kind: "mix", yesterday: true, mtd: false });
+    assert.doesNotMatch(answerSales(yesterdayOnly!, days, "2026-11-18"), /Month to date/);
+  });
 });

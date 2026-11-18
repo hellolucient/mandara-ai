@@ -15,6 +15,7 @@ export function answerSales(intent: SalesIntent, days: LoadedDay[], today: strin
   if (intent.kind === "comparison") return comparisonAnswer(ordered, intent.period, today);
   if (intent.kind === "mtd") return mtdAnswer(ordered, day?.businessDate ?? target);
   if (intent.kind === "location-month") return locationMonthAnswer(ordered, intent.name, target);
+  if (intent.kind === "mix") return mixAnswer(ordered, today, intent);
   
   // Single-day queries need yesterday's data
   if (!day) {
@@ -55,6 +56,159 @@ export function reportFor(day: LoadedDay, ordered: LoadedDay[]): string {
     mtdAnswer(month, day.businessDate),
   ];
   return parts.filter((part) => part !== "").join("\n");
+}
+
+
+function mixAnswer(ordered: LoadedDay[], today: string, intent: { yesterday: boolean; mtd: boolean }): string {
+  const target = addDays(today, -1);
+  const day = ordered.find((item) => item.businessDate === target) ?? null;
+  const parts: string[] = [];
+  if (intent.yesterday) {
+    if (!day) {
+      const latest = ordered.at(-1);
+      parts.push(
+        latest
+          ? `There is no sales record for ${formatBusinessDate(target)}. The latest stored date is ${formatBusinessDate(latest.businessDate)}. Nothing was estimated.`
+          : "There are no sales records stored yet. Nothing was estimated.",
+      );
+    } else {
+      parts.push(mixDaySection(day, "Treatment and retail sales"));
+    }
+  }
+  const through = day?.businessDate ?? target;
+  if (intent.mtd) parts.push(mixMtdSection(ordered, through, !intent.yesterday));
+  return parts.filter(Boolean).join("\n\n");
+}
+
+function mixDaySection(day: LoadedDay, heading: string): string {
+  const rows = day.lines.map((line) => ({
+    name: line.locationName,
+    treatment: line.treatmentSales ?? null,
+    retail: line.retailSales ?? null,
+    total: line.netSales,
+    budget: line.budget,
+  }));
+  const missingSplit = rows.some((row) => row.treatment == null || row.retail == null);
+  const lines = [
+    `${heading} for ${formatBusinessDate(day.businessDate)}.`,
+    sourceLine(day),
+    "Budget is only held as a total, not split into treatment and retail.",
+    "",
+    mixTable(rows, day.currency),
+  ];
+  if (missingSplit) lines.push("A dash means that figure is not stored.");
+  return lines.join("\n");
+}
+
+function mixMtdSection(days: LoadedDay[], through: string, includePreamble: boolean): string {
+  const month = through.slice(0, 7);
+  const inMonth = days.filter((day) => day.businessDate.slice(0, 7) === month && day.businessDate <= through);
+  if (inMonth.length === 0) return `No month-to-date sales are stored through ${formatBusinessDate(through)}.`;
+  const currency = inMonth[0].currency;
+  const names: string[] = [];
+  const seen = new Set<string>();
+  for (const day of inMonth) {
+    for (const line of day.lines) {
+      if (!seen.has(line.locationName)) {
+        seen.add(line.locationName);
+        names.push(line.locationName);
+      }
+    }
+  }
+  const rows = names.map((name) => {
+    let treatment: number | null = null;
+    let retail: number | null = null;
+    let total: number | null = null;
+    let budget: number | null = null;
+    for (const day of inMonth) {
+      const line = day.lines.find((item) => item.locationName === name);
+      if (!line) continue;
+      if (line.treatmentSales != null) treatment = (treatment ?? 0) + line.treatmentSales;
+      if (line.retailSales != null) retail = (retail ?? 0) + line.retailSales;
+      if (line.netSales != null) total = (total ?? 0) + line.netSales;
+      if (line.budget != null) budget = (budget ?? 0) + line.budget;
+    }
+    return { name, treatment, retail, total, budget };
+  });
+  const presentDates = new Set(inMonth.map((day) => day.businessDate));
+  const missingDates: string[] = [];
+  const [year, monthNumber] = month.split("-").map(Number);
+  const last = Number(through.slice(-2));
+  for (let day = 1; day <= last; day += 1) {
+    const iso = `${year}-${String(monthNumber).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    if (!presentDates.has(iso)) missingDates.push(formatBusinessDate(iso));
+  }
+  const missingSplit = rows.some((row) => row.treatment == null || row.retail == null);
+  const lines = [
+    `Month to date through ${formatBusinessDate(through)}, actual versus the stored month-to-date budget.`,
+    ...(includePreamble ? [sourceLine(inMonth[inMonth.length - 1]), "Budget is only held as a total, not split into treatment and retail."] : []),
+    "",
+    mixTable(rows, currency),
+  ];
+  if (missingSplit) lines.push("A dash means that figure is not stored. Treatment and retail totals only include days with a stored split.");
+  if (missingDates.length) lines.push(`No record for ${missingDates.join(", ")}. Those dates are not estimated.`);
+  return lines.join("\n");
+}
+
+type MixRow = { name: string; treatment: number | null; retail: number | null; total: number | null; budget: number | null };
+
+function mixTable(rows: MixRow[], currency: string): string {
+  const header = "| Spa | Treatment | Retail | Total | vs budget |";
+  const rule = "| --- | ---: | ---: | ---: | ---: |";
+  const body = rows.map((row) => mixTableRow(row.name, row, currency));
+  const totals: MixRow = {
+    name: "Total",
+    treatment: sumKnown(rows.map((row) => row.treatment)),
+    retail: sumKnown(rows.map((row) => row.retail)),
+    total: sumKnown(rows.map((row) => row.total)),
+    budget: sumKnown(rows.map((row) => row.budget)),
+  };
+  // vs budget on the total row only uses spas that have both a total and a budget.
+  const comparable = rows.filter((row) => row.total != null && row.budget != null);
+  const comparableSales = sumKnown(comparable.map((row) => row.total));
+  const comparableBudget = sumKnown(comparable.map((row) => row.budget));
+  const totalLine = `| Total | ${cellMoney(totals.treatment, currency)} | ${cellMoney(totals.retail, currency)} | ${cellMoney(totals.total, currency)} | ${varianceCell(comparableSales, comparableBudget, currency)} |`;
+  return [header, rule, ...body, totalLine].join("\n");
+}
+
+function mixTableRow(name: string, row: MixRow, currency: string): string {
+  return `| ${name} | ${cellMoney(row.treatment, currency)} | ${cellMoney(row.retail, currency)} | ${cellMoney(row.total, currency)} | ${varianceCell(row.total, row.budget, currency)} |`;
+}
+
+function cellMoney(value: number | null, currency: string): string {
+  return value == null ? "—" : moneyExact(value, currency);
+}
+
+function varianceCell(sales: number | null, budget: number | null, currency: string): string {
+  if (sales == null || budget == null) return "—";
+  const gap = sales - budget;
+  if (gap === 0) return moneyExact(0, currency);
+  const amount = moneyExact(Math.abs(gap), currency);
+  return gap > 0 ? `+${amount}` : `−${amount}`;
+}
+
+function moneyExact(value: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return `${currency} ${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+}
+
+function sumKnown(values: Array<number | null>): number | null {
+  let total = 0;
+  let seen = false;
+  for (const value of values) {
+    if (value == null) continue;
+    total += value;
+    seen = true;
+  }
+  return seen ? total : null;
 }
 
 function totalAnswer(day: LoadedDay, target: string): string {

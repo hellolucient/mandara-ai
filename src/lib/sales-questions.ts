@@ -33,6 +33,9 @@ export function parseSalesQuestion(text: string, locationNames: string[]): Sales
     }
     return { kind: "last-month" };
   }
+  // Treatment/retail breakdowns, including "where we're at" month-to-date, before the plain total/MTD answers.
+  const mix = salesMixIntent(question);
+  if (mix && !location) return mix;
   if (/\bthis month\b/i.test(question) && !/\bmonth-to-date\b|\bmonth to date\b|\bmtd\b/i.test(question)) {
     if (/\b(which|highest|lowest|best|worst|top|compare|rank)\b/i.test(question)) {
       return { kind: "comparison", period: "this-month" };
@@ -87,6 +90,26 @@ export function findLocation(text: string, locationNames: string[]): string | un
     if (words.some((word) => new RegExp(`\\b${word}\\b`).test(folded))) return name;
   }
   return undefined;
+}
+
+
+function isSalesMixQuestion(question: string): boolean {
+  const treatmentSales = /\btreatment(?:s)?\s+sales\b|\bsales\s+(?:from\s+|of\s+)?treatments?\b/i.test(question);
+  const retail = /\bretail(?:\s+sales)?\b/i.test(question);
+  return treatmentSales || retail;
+}
+
+function hasMtdLanguage(question: string): boolean {
+  if (/\b(where we(?:'re| are) at|month[ -]?to[ -]?date|\bmtd\b|\bthis month\b|\bthe month\b)/i.test(question)) return true;
+  return /\bmonth\b/i.test(question) && !/\b(?:last|next) month\b/i.test(question);
+}
+
+/** Treatment and/or retail sales: a split table, plus month-to-date when the question asks where we stand. */
+export function salesMixIntent(question: string): Extract<SalesIntent, { kind: "mix" }> | null {
+  if (!isSalesMixQuestion(question)) return null;
+  const mtd = hasMtdLanguage(question);
+  const yesterday = /\byesterday\b/i.test(question) || !mtd;
+  return { kind: "mix", yesterday, mtd };
 }
 
 /**

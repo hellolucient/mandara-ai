@@ -23,6 +23,7 @@ export type LoadedDay = {
 
 export type SalesIntent =
   | { kind: "total" }
+  | { kind: "mix"; yesterday: boolean; mtd: boolean }
   | { kind: "best-worst" }
   | { kind: "below-budget" }
   | { kind: "mtd" }
