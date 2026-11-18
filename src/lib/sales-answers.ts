@@ -215,8 +215,8 @@ function sumKnown(values: Array<number | null>): number | null {
   return seen ? total : null;
 }
 
-function totalAnswer(day: LoadedDay, target: string): string {
-  return [`Sales for ${formatBusinessDate(target)}.`, sourceLine(day), totalSentence(day), ...day.lines.map((line) => lineSentence(line, day.currency))].join("\n");
+function totalAnswer(day: LoadedDay, _target: string): string {
+  return mixDaySection(day, "Treatment and retail sales");
 }
 
 function rankAnswer(day: LoadedDay): string {

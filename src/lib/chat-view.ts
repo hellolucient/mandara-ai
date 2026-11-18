@@ -105,7 +105,7 @@ export function chatSuggestions(tab: ChatTab = "mandara"): Suggestion[] {
     ];
   }
   return [
-    { id: "sales", title: "Yesterday's sales", hint: "Totals for every spa", prompt: "What were total spa sales yesterday?" },
+    { id: "sales", title: "Yesterday's sales", hint: "Treatment, retail and vs budget", prompt: "What were total spa sales yesterday?" },
     { id: "compare", title: "Compare the spas", hint: "Who is leading this month", prompt: "Which spas have the highest sales this month?" },
     { id: "hakuraa", title: "Hakuraa yesterday", hint: "One spa, one day", prompt: "How did Hakuraa do yesterday?" },
     { id: "budget", title: "Below budget", hint: "Spas that need attention", prompt: "Which spas were below budget yesterday?" },

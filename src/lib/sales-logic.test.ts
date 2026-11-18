@@ -15,10 +15,13 @@ describe("sales questions", () => {
     const intent = parseSalesQuestion("What were total spa sales yesterday?", names);
     assert.equal(intent?.kind, "total");
     const text = answerSales(intent!, days, today);
+    assert.match(text, /\| Spa \| Treatment \| Retail \| Total \| vs budget \|/);
+    assert.match(text, /Treatment and retail sales for 12 Nov 2026/);
     assert.match(text, /\$11,000/);
     assert.match(text, /Baa Atoll Spa/);
     assert.match(text, /sample figures/);
     assert.doesNotMatch(text, /\$13,100/);
+    assert.doesNotMatch(text, /Month to date/);
   });
 
   it("does not mark a location below budget when no budget is stored", () => {
@@ -133,7 +136,7 @@ describe("sales questions", () => {
     assert.match(chunks.at(-1) ?? "", /Omega/);
   });
 
-  it("answers a treatment and retail breakdown with totals and month-to-date, and leaves a plain total question unchanged", () => {
+  it("answers a treatment and retail breakdown with totals and month-to-date, and uses that table by default for a plain yesterday question", () => {
     const question =
       "I need a breakdown of treatment sales yesterday and retail sales yesterday and then compare them to where we're at budget";
     const names = ["Dhonveli", "Vadoo", "Hakuraa Huraa"];
@@ -189,9 +192,11 @@ describe("sales questions", () => {
     const plain = parseSalesQuestion("What were total spa sales yesterday?", names);
     assert.equal(plain?.kind, "total");
     const totalText = answerSales(plain!, days, "2026-11-18");
-    assert.match(totalText, /Sales for 17 Nov 2026/);
-    assert.match(totalText, /Dhonveli: \$1,236/);
-    assert.doesNotMatch(totalText, /\| Spa \| Treatment \|/);
+    assert.match(totalText, /Treatment and retail sales for 17 Nov 2026/);
+    assert.match(totalText, /\| Spa \| Treatment \| Retail \| Total \| vs budget \|/);
+    assert.match(totalText, /\| Dhonveli \| \$1,157\.79 \| \$77\.72 \| \$1,235\.51 \| −\$103\.36 \|/);
+    assert.match(totalText, /\| Total \| \$1,877\.79 \| \$157\.72 \| \$4,035\.51 \| \+\$96\.64 \|/);
+    assert.doesNotMatch(totalText, /Month to date/);
 
     const yesterdayOnly = parseSalesQuestion("Show me treatment sales and retail sales yesterday", names);
     assert.deepEqual(yesterdayOnly, { kind: "mix", yesterday: true, mtd: false });
