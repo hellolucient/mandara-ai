@@ -439,7 +439,7 @@ function HistoryRow({ item, active, onNavigate }: { item: HistoryItem; active: b
         className="flex min-h-11 min-w-0 flex-1 items-center rounded-xl py-2 pr-10 pl-3 text-[14.5px] leading-5"
         aria-current={active ? "page" : undefined}
       >
-        <span className="truncate">{title}</span>
+        <span className="min-w-0 flex-1 truncate">{title}</span>
         {item.mode === "mandara" ? (
           <span className="history-badge ml-2 shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-medium tracking-wide" title="Mandara chat">
             M
