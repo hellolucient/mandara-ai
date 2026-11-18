@@ -212,11 +212,18 @@ export function storedGapMessage(place: string | null): string {
   return `Nothing stored for the company covers that${where}, so I have not invented a price, menu, or policy. Reply "search the web" if you want a public source.`;
 }
 
+export type CreativeTaskContext = { priorImage?: boolean };
+
+/** Visual brief added to a print or "just the card" picture request. */
+export const PRINTABLE_CARD_BRIEF =
+  "Flat, front-on, edge-to-edge printable artwork of the promo card only. No reception counter, no scene, no props, no furniture, no perspective or environmental background. The card fills the frame. Portrait card ratio. Keep the existing card text and the [price] placeholder. Mandara spa branding, warm and polished for a Maldives resort.";
+
 /**
- * Drafting and idea work in Mandara mode: write, rewrite, suggest, promo cards, and
- * follow-ups like "a card for each of these ideas". Facts about the company are not this.
+ * Drafting and idea work in Mandara mode: write, rewrite, suggest, promo cards,
+ * pictures, and follow-ups that refine a picture already made. Facts about the
+ * company are not this.
  */
-export function isCreativeMandaraTask(question: string): boolean {
+export function isCreativeMandaraTask(question: string, context: CreativeTaskContext = {}): boolean {
   const folded = fold(question);
   if (!folded) return false;
   if (isStoredSalesQuestion(folded) && !/\b(write|draft|compose|rewrite|caption|card|cards)\b/.test(folded)) return false;
@@ -225,7 +232,52 @@ export function isCreativeMandaraTask(question: string): boolean {
   if (/\b(promo card|promotional card|instagram|social media)\b/.test(folded)) return true;
   if (/\b(suggest|brainstorm|come up with|ideas for|idea for)\b/.test(folded)) return true;
   if (/\b(these|those|the above|each of (them|these|those)|the ideas)\b/.test(folded) && /\b(create|make|write|draft|design|card|cards|promo)\b/.test(folded)) return true;
+  if (isImageRefineOrPrintTask(folded)) return true;
+  if (context.priorImage && isShortImageFollowUp(folded)) return true;
   return false;
+}
+
+/** Print, flatten, or "a version of that picture" requests, from the message alone. */
+export function isImageRefineOrPrintTask(question: string): boolean {
+  const folded = fold(question);
+  if (!folded) return false;
+  const visual = /\b(card|cards|promo|poster|graphic|picture|image|images|artwork|photo)\b/.test(folded);
+  if (visual && /\b(print|printable|print out|to print|for print)\b/.test(folded)) return true;
+  if (/\b(just the card|just want the card|only the card|the card only|card only not)\b/.test(folded)) return true;
+  if (visual && /\b(flat|flatten|flattened|front on|edge to edge)\b/.test(folded)) return true;
+  if (/\b(not (the card )?(placed |sitting |shown )?(on a )?(counter|desk|table|scene)|without (the )?(counter|scene|background|props)|no (counter|scene|background|props))\b/.test(folded)) return true;
+  if (/\b((the|that|this) (image|picture|photo) you (gave|made|created|generated|drew)|the image you gave|version of (it|that|the|this)|another version)\b/.test(folded)) return true;
+  if (/\b(change|tweak|adjust|refine|redo|revise|edit|crop|remove)\b/.test(folded) && /\b(image|picture|photo|card|cards|poster|graphic|artwork|counter|background|scene)\b/.test(folded)) return true;
+  return false;
+}
+
+/** Short follow-ups that only make sense once a picture has already been made. */
+export function isShortImageFollowUp(question: string): boolean {
+  const folded = fold(question);
+  if (!folded) return false;
+  if (isImageRefineOrPrintTask(folded)) return true;
+  if (/\b(just the card|only the card|the card only|just the image|only the image)\b/.test(folded)) return true;
+  if (/\b(flat|flatten|flattened|front on|edge to edge|printable|to print)\b/.test(folded)) return true;
+  if (/\b(try again|another go|redo it|do it again|once more)\b/.test(folded)) return true;
+  if (/\b(make it|change it|tweak it|adjust it|remove the|without the|not on|not the)\b/.test(folded)) return true;
+  return false;
+}
+
+/**
+ * Visual prompt for a new or refined picture, using earlier conversation
+ * requests plus the current change. Printable-card asks get a flat, front-on brief.
+ */
+export function buildPicturePrompt(current: string, priorTurns: string[] = []): { prompt: string; aspectRatio: string } {
+  const folded = fold(current);
+  const printable = isImageRefineOrPrintTask(folded) && (
+    /\b(print|printable|print out|to print|for print|just the card|just want the card|only the card|the card only|flat|flatten|flattened|front on|edge to edge|counter)\b/.test(folded)
+  );
+  const prior = priorTurns.map((turn) => turn.replace(/\s+/g, " ").trim()).filter(Boolean).join("\n");
+  const parts = printable
+    ? [PRINTABLE_CARD_BRIEF, prior ? `Previous picture request and card text:\n${prior}` : "", `Requested change: ${current.trim()}`]
+    : [prior ? `Previous picture description:\n${prior}` : "", current.trim()];
+  const prompt = parts.filter(Boolean).join("\n\n").slice(0, 2000);
+  return { prompt, aspectRatio: printable ? "2:3" : "3:2" };
 }
 
 function isGreeting(text: string): boolean {

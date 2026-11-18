@@ -40,6 +40,16 @@ describe("model routing", () => {
     assert.equal(asksForPicture("Can you create a concept drawing of that menu card, front and back?"), true);
     assert.equal(asksForPicture("Who is the chief executive of Nvidia?"), false);
   });
+
+  it("treats a print-the-card follow-up as a picture request", () => {
+    const printFollowUp =
+      "that's the general idea, but i just want the card///not the card placed on a counter. so i can print the image you gave me and then i can place it in the spa";
+    assert.equal(asksForPicture(printFollowUp), true);
+    assert.equal(asksForPicture("just the card, not placed on a counter, so I can print the image"), true);
+    assert.equal(asksForPicture("make it flatter"), false);
+    assert.equal(asksForPicture("make it flatter", { priorImage: true }), true);
+    assert.equal(asksForPicture("How did Hakuraa do yesterday?", { priorImage: true }), false);
+  });
 });
 
 describe("image generation", () => {

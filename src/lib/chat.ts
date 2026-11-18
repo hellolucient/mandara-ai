@@ -207,7 +207,15 @@ async function compose(
       };
     }
   }
-  if (conversationMode === "mandara" && !attachmentText && !attachmentImage && !isCreativeMandaraTask(content)) {
+  const history = await sql<StoredMessage & { has_images: boolean }>(
+    `select id, role, content, attachment_name, citations, mode, model, created_at::text,
+            (images is not null and images <> '' and images <> '[]') as has_images
+     from messages where conversation_id = $1 order by created_at desc limit 10`,
+    [conversationId],
+  );
+  const priorImage = history.some((message) => message.role === "assistant" && Boolean(message.has_images));
+  const creativeTask = isCreativeMandaraTask(content, { priorImage });
+  if (conversationMode === "mandara" && !attachmentText && !attachmentImage && !creativeTask) {
     // Factual Mandara questions stay on stored company data. Creative work falls through to the model.
     return knowledgeAnswer(member, content, null, profile, names, settings.companyName);
   }
@@ -234,12 +242,6 @@ async function compose(
     useReasoning,
     hasImage: Boolean(attachmentImage),
   });
-  const history = await sql<StoredMessage>(
-    `select id, role, content, attachment_name, citations, mode, model, created_at::text
-     from messages where conversation_id = $1 order by created_at desc limit 10`,
-    [conversationId],
-  );
-  
   // Load user memories
   const memories = await getMemories(member.stage, member.sub);
   const memoryContext = formatMemoriesForPrompt(memories);
@@ -255,8 +257,8 @@ async function compose(
   const placeContext = route.place ? ` ${route.place} is one of our resorts. Use that only as context.` : "";
   const mandaraModeContext = conversationMode !== "mandara"
     ? "\n\nYou are in General mode: a normal assistant with access to general knowledge and web search. The company profile below is background context to help you understand Mandara, but you should answer questions using your general knowledge, web search results, and reasoning. Do not refuse to answer because something is not in the company profile. Build models, run calculations, create content, and answer general questions as a capable assistant would."
-    : isCreativeMandaraTask(content)
-      ? "\n\nYou are in Mandara mode for a creative or drafting task. Use the conversation so far: when they say these, those, or the above, work from the earlier messages rather than searching the company profile again. You may write promo cards, emails, captions, ideas and rewrites, using the company profile for brand names and spas. Never invent a specific price, offer or date that was not given; write a clear placeholder such as [price]. If they only asked for ideas, list the ideas in writing and do not output a promo block yet. If they ask for promo cards, including a follow-up such as a card for each of these ideas, always output a fenced promo block in this exact form, even if the ideas already appeared earlier:\n```promo\n[{\"headline\":\"Name\",\"line\":\"Short supporting line\",\"offer\":\"[price]\",\"brand\":\"Mandara\"}]\n```\nOne object per card. Offer to create a picture of a card if they want one, and call create_picture only then. For factual claims about Mandara (sales, contracts, prices, the spa list, the team), stay with stored data or say you do not have it."
+    : creativeTask
+      ? "\n\nYou are in Mandara mode for a creative or drafting task. Use the conversation so far: when they say these, those, or the above, work from the earlier messages rather than searching the company profile again. You may write promo cards, emails, captions, ideas and rewrites, using the company profile for brand names and spas. Never invent a specific price, offer or date that was not given; write a clear placeholder such as [price]. If they only asked for ideas, list the ideas in writing and do not output a promo block yet. If they ask for promo cards, including a follow-up such as a card for each of these ideas, always output a fenced promo block in this exact form, even if the ideas already appeared earlier:\n```promo\n[{\"headline\":\"Name\",\"line\":\"Short supporting line\",\"offer\":\"[price]\",\"brand\":\"Mandara\"}]\n```\nOne object per card. Offer to create a picture of a card if they want one, and call create_picture only then. If they ask to change, refine, reprint, flatten, or get a version of a picture already made, call create_picture. Build the prompt from the previous picture description plus the requested change. If they want it to print, or ask for a printable, flat, or just-the-card version, the picture must be a flat, front-on, edge-to-edge artwork of the card only: no reception counter, scene, props or perspective, portrait card ratio, keep the card text and the [price] placeholder, and use Mandara branding. Never say you cannot generate or provide image files; image generation is available. For factual claims about Mandara (sales, contracts, prices, the spa list, the team), stay with stored data or say you do not have it."
       : "\n\nYou are in Mandara mode: answer ONLY from Mandara's own data (company profile, stored documents, and sales records). If the information is not in our files, say so plainly and do not invent prices, menus, fees, or policies. Do not search the web or use general knowledge for Mandara-specific facts.";
   const systemPrompt = `You are Mandara AI, a general assistant for the staff of ${settings.companyName}.${placeContext}${webContext}${mandaraModeContext}${companyPrompt(profile, names, { includeContracts: canSeeContracts(member.role) })}
 
@@ -290,7 +292,7 @@ For casual questions (translations, captions, simple explanations):
 General rules:
 - When research is needed, cite sources as clickable links
 - For health or wellness claims, state evidence strength (strong/moderate/low/insufficient) in a small table if relevant
-- When someone wants a picture, call create_picture
+- When someone wants a picture, or a change to a picture already made, call create_picture. Never claim that you cannot generate or provide image files
 - Do not invent Mandara sales figures, menus, treatment prices, or company policy
 - Mandara's spas are in resorts across the Maldives. Guest-facing writing (welcome notes, cards, messages, captions) should suit a Maldives resort: warm, polished English. Never use greetings or phrases from other places, such as Bula, Aloha, Sawasdee, Namaste or Om Swastiastu. Add Dhivehi only if asked, and then keep it light and well known (for example "Assalaamu alaikum" as a greeting or "Shukuriyaa" for thank you); never invent Dhivehi
 - Never say an outside-world question is missing from a company record. Answer it from the web results or from general knowledge
@@ -306,6 +308,9 @@ General rules:
   for (const message of history.reverse()) {
     let text = message.content.slice(0, 4000);
     if (message.attachment_name) text += `\n\nAttached file name: ${message.attachment_name}`;
+    if (message.role === "assistant" && Boolean(message.has_images)) {
+      text += "\n\n[This reply included a generated picture.]";
+    }
     messages.push({ role: message.role, content: text });
   }
   if (attachmentText) {

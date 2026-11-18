@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import { apiAllowed, canSeeContracts, pageAllowed, usesChatOnlyView } from "./access";
 import { canSeeProspects } from "./prospects-access";
 import { askPlaceholder } from "./ask-placeholder";
-import { isCreativeMandaraTask, storedGapMessage } from "./mandara-context";
+import { buildPicturePrompt, isCreativeMandaraTask, PRINTABLE_CARD_BRIEF, storedGapMessage } from "./mandara-context";
 import {
   chatDisclaimer,
   chatSuggestions,
@@ -193,8 +193,28 @@ describe("chat-only view: sales routing", () => {
     assert.equal(isCreativeMandaraTask("What is the price of a Balinese massage at Vadoo?"), false);
     assert.equal(isCreativeMandaraTask("How many spas do we have?"), false);
     assert.equal(isCreativeMandaraTask("How did Hakuraa do yesterday?"), false);
+    const printFollowUp =
+      "that's the general idea, but i just want the card///not the card placed on a counter. so i can print the image you gave me and then i can place it in the spa";
+    assert.equal(isCreativeMandaraTask(printFollowUp), true);
+    assert.equal(isCreativeMandaraTask("just the card, not on the counter, so I can print it"), true);
+    assert.equal(isCreativeMandaraTask("make it flatter"), false);
+    assert.equal(isCreativeMandaraTask("make it flatter", { priorImage: true }), true);
+    assert.equal(isCreativeMandaraTask("What is the price of a Balinese massage at Vadoo?", { priorImage: true }), false);
+    const printable = buildPicturePrompt(printFollowUp, [
+      "Create a promo card for a couples massage sitting on a spa reception counter, with spa images and [price].",
+    ]);
+    assert.match(printable.prompt, /flat, front-on, edge-to-edge/i);
+    assert.match(printable.prompt, /no reception counter/i);
+    assert.match(printable.prompt, /\[price\]/);
+    assert.match(printable.prompt, /Mandara/);
+    assert.match(printable.prompt, /just want the card/i);
+    assert.equal(printable.aspectRatio, "2:3");
+    assert.match(PRINTABLE_CARD_BRIEF, /portrait card ratio/i);
     const chat = readFileSync("src/lib/chat.ts", "utf8");
-    assert.match(chat, /!isCreativeMandaraTask\(content\)/);
+    assert.match(chat, /!creativeTask/);
+    assert.match(chat, /priorImage/);
+    assert.match(chat, /Never say you cannot generate or provide image files/);
+    assert.match(chat, /just-the-card version/);
     assert.match(chat, /knowledgeAnswer\(/);
     assert.match(chat, /\[price\]/);
     assert.match(chat, /```promo/);

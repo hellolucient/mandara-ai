@@ -1,3 +1,5 @@
+import { buildPicturePrompt, isImageRefineOrPrintTask, isShortImageFollowUp } from "@/lib/mandara-context";
+
 export type ModelContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
@@ -61,9 +63,33 @@ export function modelConfigured(): boolean {
   return Boolean(process.env.OPENROUTER_API_KEY?.trim());
 }
 
-export function asksForPicture(text: string): boolean {
-  return /\b(draw|sketch|illustrat|mock-?up|concept (drawing|image|card|design)|picture of|image of)\b/i.test(text)
-    || /\b(create|make|design|show)\b[\s\S]{0,48}\b(drawing|picture|image|mock-?up|concept)\b/i.test(text);
+export function asksForPicture(text: string, context: { priorImage?: boolean } = {}): boolean {
+  if (/\b(draw|sketch|illustrat|mock-?up|concept (drawing|image|card|design)|picture of|image of)\b/i.test(text)
+    || /\b(create|make|design|show)\b[\s\S]{0,48}\b(drawing|picture|image|mock-?up|concept)\b/i.test(text)) {
+    return true;
+  }
+  if (isImageRefineOrPrintTask(text)) return true;
+  if (context.priorImage && isShortImageFollowUp(text)) return true;
+  return false;
+}
+
+function historyTexts(messages: ModelMessage[]): string[] {
+  const texts: string[] = [];
+  for (const message of messages) {
+    if (message.role === "system") continue;
+    const text = textFromContent(message.content).trim();
+    if (text) texts.push(text);
+  }
+  // The current user message is last; keep earlier turns only.
+  return texts.slice(0, -1).slice(-6);
+}
+
+function conversationHasPicture(messages: ModelMessage[]): boolean {
+  return messages.some((message) => {
+    if (message.role === "system") return false;
+    const text = textFromContent(message.content);
+    return /\[This reply included a generated picture\.\]/.test(text) || /\ba picture was generated\b/i.test(text);
+  });
 }
 
 export function gatewayBody(model: string, messages: ModelMessage[], web: boolean, pictures: boolean) {
@@ -84,8 +110,10 @@ export function gatewayBody(model: string, messages: ModelMessage[], web: boolea
 
 export async function complete(model: string, messages: ModelMessage[], web = false, pictures = false, imageModel?: string): Promise<Completion> {
   const lastUser = textFromContent([...messages].reverse().find((message) => message.role === "user")?.content ?? "");
-  const drawNow = pictures && asksForPicture(lastUser);
-  const directPicture = drawNow ? createPicture(lastUser.slice(0, 2000), "3:2", imageModel ?? IMAGE_MODEL_DEFAULT) : Promise.resolve(null);
+  const priorImage = conversationHasPicture(messages);
+  const drawNow = pictures && asksForPicture(lastUser, { priorImage });
+  const picture = drawNow ? buildPicturePrompt(lastUser, historyTexts(messages)) : null;
+  const directPicture = picture ? createPicture(picture.prompt, picture.aspectRatio, imageModel ?? IMAGE_MODEL_DEFAULT) : Promise.resolve(null);
   try {
     return await finish(model, messages, web, pictures && !drawNow, directPicture, drawNow);
   } catch (error) {
