@@ -4,7 +4,9 @@ import { describe, it } from "node:test";
 import { apiAllowed, canSeeContracts, pageAllowed, usesChatOnlyView } from "./access";
 import { canSeeProspects } from "./prospects-access";
 import { askPlaceholder } from "./ask-placeholder";
+import { isCreativeMandaraTask, storedGapMessage } from "./mandara-context";
 import {
+  chatDisclaimer,
   chatSuggestions,
   chatTab,
   firstName,
@@ -184,6 +186,21 @@ describe("chat-only view: sales routing", () => {
     const chat = readFileSync("src/lib/chat.ts", "utf8");
     assert.match(chat, /conversationMode === "mandara" \? parseSalesQuestion\(content, names\) : storedSalesIntent\(content, names\)/);
   });
+
+  it("lets a creative follow-up through and still declines a fact with no stored data", () => {
+    assert.equal(isCreativeMandaraTask("pls create a nice little promo card for each of these ideas"), true);
+    assert.equal(isCreativeMandaraTask("Suggest three seasonal spa promotions for December."), true);
+    assert.equal(isCreativeMandaraTask("What is the price of a Balinese massage at Vadoo?"), false);
+    assert.equal(isCreativeMandaraTask("How many spas do we have?"), false);
+    assert.equal(isCreativeMandaraTask("How did Hakuraa do yesterday?"), false);
+    const chat = readFileSync("src/lib/chat.ts", "utf8");
+    assert.match(chat, /!isCreativeMandaraTask\(content\)/);
+    assert.match(chat, /knowledgeAnswer\(/);
+    assert.match(chat, /\[price\]/);
+    assert.match(chat, /```promo/);
+    assert.match(storedGapMessage(null), /have not invented/);
+    assert.match(storedGapMessage("Vadoo"), /Vadoo/);
+  });
 });
 
 describe("chat-only view: helpers", () => {
@@ -209,6 +226,11 @@ describe("chat-only view: helpers", () => {
       ],
     );
     assert.deepEqual(groupConversations([], now), []);
+  });
+
+  it("changes the composer footnote in General", () => {
+    assert.equal(chatDisclaimer("mandara"), "Mandara AI can make mistakes. Check important figures against the DSR.");
+    assert.equal(chatDisclaimer("general"), "Mandara AI can make mistakes.");
   });
 
   it("greets by first name and time of day", () => {

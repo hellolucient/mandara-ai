@@ -88,7 +88,7 @@ export function PasswordForm({ required }: { required: boolean }) {
     const response = await fetch("/api/auth/password", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ current: form.get("current"), next }),
+      body: JSON.stringify({ current: required ? "" : form.get("current"), next }),
     }).catch(() => null);
     const body = (await response?.json().catch(() => ({}))) as { ok?: boolean; error?: string } | undefined;
     setBusy(false);
@@ -104,10 +104,12 @@ export function PasswordForm({ required }: { required: boolean }) {
     "mt-1.5 h-12 w-full rounded-xl border border-border bg-white/80 px-4 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
   return (
     <form onSubmit={submit} className="space-y-4">
-      <label className="block">
-        <span className="text-sm font-medium">{required ? "Temporary password" : "Current password"}</span>
-        <input name="current" type="password" autoComplete="current-password" required className={field} />
-      </label>
+      {!required ? (
+        <label className="block">
+          <span className="text-sm font-medium">Current password</span>
+          <input name="current" type="password" autoComplete="current-password" required className={field} />
+        </label>
+      ) : null}
       <label className="block">
         <span className="text-sm font-medium">New password</span>
         <input name="next" type="password" autoComplete="new-password" minLength={10} required className={field} />

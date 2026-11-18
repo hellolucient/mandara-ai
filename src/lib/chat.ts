@@ -7,7 +7,7 @@ import type { Member } from "@/lib/members";
 import { extractMemoryContent, formatMemoriesForPrompt, getMemories, saveMemory, shouldSaveMemory } from "@/lib/memory";
 import { canSeeContracts } from "@/lib/access";
 import { companyPrompt, getCompanyProfile, menuTitles } from "@/lib/company-profile";
-import { buildLexicon, routeQuestion, storedGapMessage } from "@/lib/mandara-context";
+import { buildLexicon, isCreativeMandaraTask, routeQuestion, storedGapMessage } from "@/lib/mandara-context";
 import { modelForAttachment } from "@/lib/chat-images";
 import { complete, modelConfigured, type ModelMessage } from "@/lib/openrouter";
 import { needsReasoningModel } from "@/lib/question-complexity";
@@ -207,8 +207,8 @@ async function compose(
       };
     }
   }
-  if (conversationMode === "mandara" && !attachmentText && !attachmentImage) {
-    // Non-sales Mandara question: answer from company data only
+  if (conversationMode === "mandara" && !attachmentText && !attachmentImage && !isCreativeMandaraTask(content)) {
+    // Factual Mandara questions stay on stored company data. Creative work falls through to the model.
     return knowledgeAnswer(member, content, null, profile, names, settings.companyName);
   }
   
@@ -253,9 +253,11 @@ async function compose(
     ? " Live web results are already attached to this turn. Use them for outside facts such as fares, prices, schedules, weather, and news. Name the publication once in plain words. Do not paste a URL. If they do not cover a changing figure, say you could not confirm it. Do not describe that gap as a missing company record."
     : "";
   const placeContext = route.place ? ` ${route.place} is one of our resorts. Use that only as context.` : "";
-  const mandaraModeContext = conversationMode === "mandara"
-    ? "\n\nYou are in Mandara mode: answer ONLY from Mandara's own data (company profile, stored documents, and sales records). If the information is not in our files, say so plainly and do not invent prices, menus, fees, or policies. Do not search the web or use general knowledge for Mandara-specific facts."
-    : "\n\nYou are in General mode: a normal assistant with access to general knowledge and web search. The company profile below is background context to help you understand Mandara, but you should answer questions using your general knowledge, web search results, and reasoning. Do not refuse to answer because something is not in the company profile. Build models, run calculations, create content, and answer general questions as a capable assistant would.";
+  const mandaraModeContext = conversationMode !== "mandara"
+    ? "\n\nYou are in General mode: a normal assistant with access to general knowledge and web search. The company profile below is background context to help you understand Mandara, but you should answer questions using your general knowledge, web search results, and reasoning. Do not refuse to answer because something is not in the company profile. Build models, run calculations, create content, and answer general questions as a capable assistant would."
+    : isCreativeMandaraTask(content)
+      ? "\n\nYou are in Mandara mode for a creative or drafting task. Use the conversation so far: when they say these, those, or the above, work from the earlier messages rather than searching the company profile again. You may write promo cards, emails, captions, ideas and rewrites, using the company profile for brand names and spas. Never invent a specific price, offer or date that was not given; write a clear placeholder such as [price]. If they ask for promo cards, after a short intro output a fenced promo block in this exact form:\n```promo\n[{\"headline\":\"Name\",\"line\":\"Short supporting line\",\"offer\":\"[price]\",\"brand\":\"Mandara\"}]\n```\nOne object per card. Offer to create a picture of a card if they want one, and call create_picture only then. For factual claims about Mandara (sales, contracts, prices, the spa list, the team), stay with stored data or say you do not have it."
+      : "\n\nYou are in Mandara mode: answer ONLY from Mandara's own data (company profile, stored documents, and sales records). If the information is not in our files, say so plainly and do not invent prices, menus, fees, or policies. Do not search the web or use general knowledge for Mandara-specific facts.";
   const systemPrompt = `You are Mandara AI, a general assistant for the staff of ${settings.companyName}.${placeContext}${webContext}${mandaraModeContext}${companyPrompt(profile, names, { includeContracts: canSeeContracts(member.role) })}
 
 For business analysis, calculations, and strategic questions:

@@ -16,6 +16,8 @@ import {
 export const SESSION_DAYS = 30;
 export const MAX_FAILED_LOGINS = 8;
 export const LOCK_MINUTES = 15;
+/** After a temporary-password sign-in, the person can set a new password without re-entering the temporary one, for this long. */
+export const TEMP_PASSWORD_CHANGE_MINUTES = 30;
 export const SESSION_COOKIE = "__Host-mandara_session";
 
 export function appStage(): "production" | "preview" {
@@ -99,8 +101,9 @@ export async function login(stageName: string, username: string, password: strin
   await sql("update app_users set failed_logins = 0, locked_until = null, last_login_at = now() where id = $1", [user.id]);
   const token = newSessionToken();
   await sql(
-    `insert into app_sessions (token_hash, stage, user_id, expires_at) values ($1, $2, $3, now() + ($4 || ' days')::interval)`,
-    [await tokenHash(token), stageName, user.id, String(SESSION_DAYS)],
+    `insert into app_sessions (token_hash, stage, user_id, expires_at, from_temp_password)
+     values ($1, $2, $3, now() + ($4 || ' days')::interval, $5)`,
+    [await tokenHash(token), stageName, user.id, String(SESSION_DAYS), user.must_change_password],
   );
   // Opportunistic clean-up of expired sessions.
   await sql("delete from app_sessions where expires_at < now()");
@@ -284,17 +287,34 @@ export async function changeOwnPassword(
   next: string,
   keepToken: string,
 ): Promise<string | null> {
-  const rows = await sql<{ username: string; password_hash: string }>("select username, password_hash from app_users where id = $1", [userId]);
+  const rows = await sql<{ username: string; password_hash: string; must_change_password: boolean }>(
+    "select username, password_hash, must_change_password from app_users where id = $1",
+    [userId],
+  );
   const user = rows[0];
   if (!user) return "Sign in again.";
-  if (!(await verifyPassword(current, user.password_hash))) return "Your current password was not right.";
+  const hash = await tokenHash(keepToken);
+  const sessions = await sql<{ from_temp_password: boolean; fresh: boolean }>(
+    `select from_temp_password, (created_at > now() - ($2 || ' minutes')::interval) as fresh
+     from app_sessions where token_hash = $1 and user_id = $3`,
+    [hash, String(TEMP_PASSWORD_CHANGE_MINUTES), userId],
+  );
+  const session = sessions[0];
+  const skipCurrent = Boolean(user.must_change_password && session?.from_temp_password && session?.fresh);
+  if (!skipCurrent) {
+    if (user.must_change_password && session?.from_temp_password && session && !session.fresh) {
+      return "That sign-in has expired. Sign in again to choose a new password.";
+    }
+    if (!current) return "Enter your current password.";
+    if (!(await verifyPassword(current, user.password_hash))) return "Your current password was not right.";
+  }
   const weak = passwordProblem(next, user.username);
   if (weak) return weak;
-  if (current === next) return "Choose a new password, not the current one.";
+  if (await verifyPassword(next, user.password_hash)) return "Choose a new password, not the current one.";
   await sql(
     "update app_users set password_hash = $2, must_change_password = false, password_changed_at = now(), updated_at = now() where id = $1",
     [userId, await hashPassword(next)],
   );
-  await sql("delete from app_sessions where user_id = $1 and token_hash <> $2", [userId, await tokenHash(keepToken)]);
+  await sql("delete from app_sessions where user_id = $1 and token_hash <> $2", [userId, hash]);
   return null;
 }

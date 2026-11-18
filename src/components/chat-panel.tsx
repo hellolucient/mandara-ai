@@ -7,6 +7,8 @@ import { MarkdownMessage } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Calculator } from "@/components/calculator";
+import { PromoCards } from "@/components/promo-cards";
+import { parsePromoCards } from "@/lib/promo-cards";
 import type { CalculatorSpec } from "@/lib/calculator-spec";
 
 type Citation = { documentId: string; title: string; excerpt: string; sample: boolean; url?: string };
@@ -386,20 +388,23 @@ function canvasBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob | 
 export function Prose({ text, className }: { text: string; className?: string }) {
   const calculatorMatch = text.match(/```calculator\s*\n([\s\S]*?)\n```/);
   let calculatorSpec: CalculatorSpec | null = null;
-  let textWithoutCalculator = text;
+  let remainder = text;
 
   if (calculatorMatch) {
     try {
       calculatorSpec = JSON.parse(calculatorMatch[1]) as CalculatorSpec;
-      textWithoutCalculator = text.replace(/```calculator\s*\n[\s\S]*?\n```/, "").trim();
+      remainder = remainder.replace(/```calculator\s*\n[\s\S]*?\n```/, "").trim();
     } catch {
       calculatorSpec = null;
     }
   }
 
+  const promo = parsePromoCards(remainder);
+
   return (
     <>
-      <MarkdownMessage text={textWithoutCalculator} className={className} />
+      <MarkdownMessage text={promo.body} className={className} />
+      {promo.cards.length > 0 ? <PromoCards cards={promo.cards} /> : null}
       {calculatorSpec && <Calculator spec={calculatorSpec} />}
     </>
   );

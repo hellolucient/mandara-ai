@@ -212,6 +212,22 @@ export function storedGapMessage(place: string | null): string {
   return `Nothing stored for the company covers that${where}, so I have not invented a price, menu, or policy. Reply "search the web" if you want a public source.`;
 }
 
+/**
+ * Drafting and idea work in Mandara mode: write, rewrite, suggest, promo cards, and
+ * follow-ups like "a card for each of these ideas". Facts about the company are not this.
+ */
+export function isCreativeMandaraTask(question: string): boolean {
+  const folded = fold(question);
+  if (!folded) return false;
+  if (isStoredSalesQuestion(folded) && !/\b(write|draft|compose|rewrite|caption|card|cards)\b/.test(folded)) return false;
+  if (/\b(write|draft|compose|rewrite|rephrase|paraphrase|translate|caption)\b/.test(folded)) return true;
+  if (/\b(create|make|design|draw)\b/.test(folded) && /\b(card|cards|promo|poster|graphic|picture|image|caption|email|letter|message|post)\b/.test(folded)) return true;
+  if (/\b(promo card|promotional card|instagram|social media)\b/.test(folded)) return true;
+  if (/\b(suggest|brainstorm|come up with|ideas for|idea for)\b/.test(folded)) return true;
+  if (/\b(these|those|the above|each of (them|these|those)|the ideas)\b/.test(folded) && /\b(create|make|write|draft|design|card|cards|promo)\b/.test(folded)) return true;
+  return false;
+}
+
 function isGreeting(text: string): boolean {
   const trimmed = text.trim();
   if (trimmed.length < 10) return true;

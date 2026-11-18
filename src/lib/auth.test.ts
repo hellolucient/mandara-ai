@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { apiAllowed, canSeeContracts, pageAllowed, roleLabel } from "./access";
 import {
@@ -116,10 +117,49 @@ describe("auth: sign-in, sessions and administration (local database)", () => {
     assert.equal(member?.role, "manager");
     assert.equal(member?.chatOnly, true);
     assert.equal(member?.mustChangePassword, true);
-    assert.equal(await changeOwnPassword(member!.userId, "wrong", "a-new-long-password", signedIn.token), "Your current password was not right.");
-    assert.equal(await changeOwnPassword(member!.userId, temp.password, "a-new-long-password", signedIn.token), null);
+    assert.equal(await changeOwnPassword(member!.userId, "", "a-new-long-password", signedIn.token), null);
     assert.equal((await memberFromSession(stage, signedIn.token))?.mustChangePassword, false);
     assert.equal((await login(stage, "tenille", temp.password)).ok, false, "the temporary password stops working");
+  });
+
+  it("skips the current password only for a fresh temporary-password sign-in", async () => {
+    const made = await createUser(stage, { username: "demo-pw", name: "Demo", role: "staff", chatOnly: true });
+    assert.ok(made.ok);
+    if (!made.ok) return;
+    const first = await login(stage, "demo-pw", made.password);
+    assert.ok(first.ok && first.mustChangePassword);
+    if (!first.ok) return;
+    const member = await memberFromSession(stage, first.token);
+    assert.ok(member);
+    assert.equal(await changeOwnPassword(member.userId, "wrong-guess", "first-own-password", first.token), null, "the session is proof; a guessed current password is ignored");
+    const voluntary = await login(stage, "demo-pw", "first-own-password");
+    assert.ok(voluntary.ok && !voluntary.mustChangePassword);
+    if (!voluntary.ok) return;
+    const again = await memberFromSession(stage, voluntary.token);
+    assert.ok(again);
+    assert.equal(await changeOwnPassword(again.userId, "", "second-own-password", voluntary.token), "Enter your current password.");
+    assert.equal(await changeOwnPassword(again.userId, "wrong-guess", "second-own-password", voluntary.token), "Your current password was not right.");
+    assert.equal(await changeOwnPassword(again.userId, "first-own-password", "second-own-password", voluntary.token), null);
+
+    const reset = await resetPassword(stage, made.id);
+    assert.ok(reset.ok);
+    if (!reset.ok) return;
+    const stale = await login(stage, "demo-pw", reset.password);
+    assert.ok(stale.ok);
+    if (!stale.ok) return;
+    const waiting = await memberFromSession(stage, stale.token);
+    assert.ok(waiting);
+    await sql("update app_sessions set created_at = now() - interval '2 hours' where user_id = $1", [waiting.userId]);
+    assert.equal(await changeOwnPassword(waiting.userId, "", "after-expiry-password", stale.token), "That sign-in has expired. Sign in again to choose a new password.");
+  });
+
+  it("does not show a temporary-password field on the forced first-sign-in form", () => {
+    const form = readFileSync("src/components/auth/login-form.tsx", "utf8");
+    assert.match(form, /required \? "" : form\.get\("current"\)/);
+    assert.match(form, /\{!required \? \(/);
+    assert.doesNotMatch(form, /required \? "Temporary password"/);
+    const page = readFileSync("src/app/account/password/page.tsx", "utf8");
+    assert.match(page, /Choose your own password to finish signing in/);
   });
 
   it("stores only a hash of the session token and signs out", async () => {

@@ -85,6 +85,12 @@ export function chatTab(value: unknown): ChatTab {
   return value === "mandara" ? "mandara" : "general";
 }
 
+export function chatDisclaimer(tab: ChatTab): string {
+  return tab === "general"
+    ? "Mandara AI can make mistakes."
+    : "Mandara AI can make mistakes. Check important figures against the DSR.";
+}
+
 /**
  * Starter cards on the empty chat screen, per tab. Every one sends straight away, so the Mandara cards are
  * worded to land on stored figures and the General cards are everyday tasks.

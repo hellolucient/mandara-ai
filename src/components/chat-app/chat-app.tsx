@@ -47,6 +47,7 @@ import {
 } from "@/components/chat-panel";
 import { askPlaceholder } from "@/lib/ask-placeholder";
 import {
+  chatDisclaimer,
   chatSuggestions,
   groupConversations,
   salesAnswerMarkdown,
@@ -828,7 +829,7 @@ function Conversation({
             </div>
           </div>
           <p className="mt-2 hidden text-center text-[11.5px] text-muted-foreground md:block">
-            Mandara AI can make mistakes. Check important figures against the DSR.
+            {chatDisclaimer(tab)}
           </p>
         </form>
       </div>
