@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { VerifiedIdentity } from "../../cursor/identity";
 import { sql } from "@/lib/db";
 import { decideMembership, isWorkspaceOwner, type Role } from "@/lib/membership";
@@ -37,11 +38,19 @@ export async function memberFromIdentity(identity: VerifiedIdentity): Promise<Me
   const email = trustedEmail || existing[0]?.email || "";
   const name = identity.name.trim() || email || "Staff member";
 
+  const unchanged =
+    Boolean(existing[0]) &&
+    existing[0].email === email &&
+    existing[0].name === name &&
+    existing[0].role === decision.role;
+
   if (existing[0]) {
-    await sql(
-      "update members set email = $3, name = $4, role = $5, updated_at = now() where stage = $1 and sub = $2",
-      [stage, identity.sub, email, name, decision.role],
-    );
+    if (!unchanged) {
+      await sql(
+        "update members set email = $3, name = $4, role = $5, updated_at = now() where stage = $1 and sub = $2",
+        [stage, identity.sub, email, name, decision.role],
+      );
+    }
   } else {
     await sql(
       "insert into members (stage, sub, email, name, role) values ($1, $2, $3, $4, $5) on conflict (stage, sub) do nothing",
@@ -51,6 +60,17 @@ export async function memberFromIdentity(identity: VerifiedIdentity): Promise<Me
 
   if (decision.consumeInvite && trustedEmail) {
     await sql("delete from role_invites where stage = $1 and lower(email) = $2", [stage, trustedEmail]);
+  }
+
+  if (unchanged) {
+    return {
+      stage,
+      sub: identity.sub,
+      email,
+      name,
+      role: decision.role,
+      simulated: identity.simulated,
+    };
   }
 
   const stored = await sql<MemberRow>(
@@ -68,13 +88,13 @@ export async function memberFromIdentity(identity: VerifiedIdentity): Promise<Me
   };
 }
 
-export async function hasAdministrator(stage: string): Promise<boolean> {
+export const hasAdministrator = cache(async (stage: string): Promise<boolean> => {
   const rows = await sql<{ n: number }>(
     "select count(*)::int as n from members where stage = $1 and role = 'admin'",
     [stage],
   );
   return (rows[0]?.n ?? 0) > 0;
-}
+});
 
 export async function listMembers(stage: string): Promise<MemberRow[]> {
   return sql<MemberRow>(

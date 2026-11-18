@@ -103,44 +103,41 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
   const fromDate = monthStart < fourteenDaysAgo ? monthStart : fourteenDaysAgo;
   const [year, month] = currentMonth.split("-").map(Number);
 
-  // Get all location names from recent data
-  const locations = await sql<{ location_id: string; location_name: string }>(
-    `select distinct location_id, location_name
-     from sales_lines l
-     join sales_days d on d.id = l.day_id
-     where d.stage = $1
-     order by location_name`,
-    [stage],
-  );
-
-  // Get budgets for current month
-  const budgets = await sql<{ location_id: string; amount: number }>(
-    `select location_id, amount
-     from budgets
-     where stage = $1 and year = $2 and month = $3`,
-    [stage, year, month],
-  );
+  const [locations, budgets, salesData] = await Promise.all([
+    sql<{ location_id: string; location_name: string }>(
+      `select distinct location_id, location_name
+       from sales_lines l
+       join sales_days d on d.id = l.day_id
+       where d.stage = $1
+       order by location_name`,
+      [stage],
+    ),
+    sql<{ location_id: string; amount: number }>(
+      `select location_id, amount
+       from budgets
+       where stage = $1 and year = $2 and month = $3`,
+      [stage, year, month],
+    ),
+    sql<{
+      location_id: string;
+      business_date: string;
+      net_sales: number | null;
+      retail_sales: number | null;
+    }>(
+      `select l.location_id,
+              to_char(d.business_date, 'YYYY-MM-DD') as business_date,
+              l.net_sales,
+              l.retail_sales
+       from sales_lines l
+       join sales_days d on d.id = l.day_id
+       where d.stage = $1
+         and d.business_date >= $2
+       order by l.location_id, d.business_date`,
+      [stage, fromDate],
+    ),
+  ]);
   const budgetMap = new Map(budgets.map((b) => [b.location_id, num(b.amount)]));
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-
-  // Get sales data for last 14 days and MTD
-  const salesData = await sql<{
-    location_id: string;
-    business_date: string;
-    net_sales: number | null;
-    retail_sales: number | null;
-  }>(
-    `select l.location_id,
-            to_char(d.business_date, 'YYYY-MM-DD') as business_date,
-            l.net_sales,
-            l.retail_sales
-     from sales_lines l
-     join sales_days d on d.id = l.day_id
-     where d.stage = $1
-       and d.business_date >= $2
-     order by l.location_id, d.business_date`,
-    [stage, fromDate],
-  );
   for (const row of salesData) {
     row.net_sales = num(row.net_sales);
     row.retail_sales = num(row.retail_sales);

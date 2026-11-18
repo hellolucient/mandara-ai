@@ -15,6 +15,7 @@ import { WorldClocks } from "@/components/world-clocks";
 import { Sparkline } from "@/components/sparkline";
 import { currentMember } from "@/lib/session";
 import { calculateHomeKPIs, getSpaSummaries, type HomeKPIs, type SpaSummary } from "@/lib/home-kpis";
+import { AskTile } from "@/components/ask-tile";
 import { ProspectsCard } from "@/components/prospects/home-card";
 import { canSeeProspects } from "@/lib/prospects-access";
 import { prospectSummary } from "@/lib/prospects-store";
@@ -29,8 +30,6 @@ const APP_LINKS: Array<{ label: string; hint: string; url: string; icon: LucideI
   { label: "OneDrive", hint: "Files", url: "https://www.office.com/onedrive", icon: Cloud },
   { label: "Office", hint: "Microsoft 365", url: "https://www.office.com", icon: LayoutGrid },
 ];
-
-const SUGGESTIONS = ["How did we do yesterday?", "Which spas are below budget?", "Month to date by spa"];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -220,63 +219,6 @@ function EmptyOverview() {
         </Link>
       </div>
     </section>
-  );
-}
-
-/* ---------- Ask + apps ---------- */
-
-function AskTile() {
-  return (
-    <div className="mt-4 flex flex-1 flex-col justify-between rounded-2xl border border-black/[0.06] bg-card p-5 shadow-[0_1px_2px_rgba(20,40,35,0.04)] md:p-6 dark:border-white/10">
-      <form action="/chat" method="get">
-        <div className="flex items-center gap-2 rounded-xl border border-input bg-background p-1.5 pl-3.5 transition-shadow focus-within:border-primary/40 focus-within:shadow-[0_0_0_4px_rgba(40,90,85,0.08)]">
-          <Sparkles aria-hidden="true" className="size-[18px] shrink-0 text-primary/70" strokeWidth={1.5} />
-          <input
-            type="text"
-            name="q"
-            placeholder="How did Hakuraa do yesterday?"
-            className="min-w-0 flex-1 bg-transparent py-2 text-[15px] placeholder:text-muted-foreground/70 focus:outline-none"
-          />
-          <button
-            type="submit"
-            aria-label="Start conversation"
-            className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <ArrowRight className="size-4" strokeWidth={1.75} />
-          </button>
-        </div>
-        <div className="mt-3 flex items-center gap-3">
-          <div role="radiogroup" aria-label="Mode" className="inline-flex rounded-full bg-secondary p-0.5 text-[12.5px]">
-            {[
-              { value: "mandara", label: "Mandara", checked: true },
-              { value: "general", label: "General", checked: false },
-            ].map((mode) => (
-              <label key={mode.value} className="cursor-pointer">
-                <input type="radio" name="mode" value={mode.value} defaultChecked={mode.checked} className="peer sr-only" />
-                <span className="block rounded-full px-3 py-1 text-muted-foreground transition-colors peer-checked:bg-card peer-checked:text-foreground peer-checked:shadow-[0_1px_2px_rgba(20,40,35,0.12)] peer-focus-visible:ring-2 peer-focus-visible:ring-ring/40">
-                  {mode.label}
-                </span>
-              </label>
-            ))}
-          </div>
-          <span className="hidden text-[12px] text-muted-foreground/80 sm:inline">Mandara answers from company records</span>
-        </div>
-      </form>
-      <div className="mt-5 border-t border-black/[0.05] pt-4 dark:border-white/[0.06]">
-        <p className="text-[11px] font-medium tracking-[0.18em] text-muted-foreground uppercase">Try</p>
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          {SUGGESTIONS.map((question) => (
-            <Link
-              key={question}
-              href={`/chat?q=${encodeURIComponent(question)}&mode=mandara`}
-              className="rounded-full border border-black/[0.07] bg-background px-3 py-1.5 text-[12.5px] text-foreground/80 transition-colors hover:border-primary/25 hover:text-primary dark:border-white/10"
-            >
-              {question}
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }
 

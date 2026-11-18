@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { sql } from "@/lib/db";
 
 export type Settings = {
@@ -20,7 +21,7 @@ const DEFAULTS: Settings = {
 
 const ALLOWED = new Set(["companyName", "model", "imageModel", "reasoningModel", "visionModel", "currency"]);
 
-export async function getSettings(stage: string): Promise<Settings> {
+async function readSettings(stage: string): Promise<Settings> {
   const rows = await sql<{ key: string; value: string }>(
     "select key, value from settings where stage = $1",
     [stage],
@@ -36,6 +37,8 @@ export async function getSettings(stage: string): Promise<Settings> {
   }
   return settings;
 }
+
+export const getSettings = cache(readSettings);
 
 export async function updateSettings(stage: string, patch: Record<string, string>): Promise<Settings> {
   for (const [key, value] of Object.entries(patch)) {
@@ -53,5 +56,5 @@ export async function updateSettings(stage: string, patch: Record<string, string
       [stage, key, clean],
     );
   }
-  return getSettings(stage);
+  return readSettings(stage);
 }

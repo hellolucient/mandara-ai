@@ -16,11 +16,10 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   const member = await currentMember();
   if (!member) redirect("/");
   const query = await searchParams;
-  const days = await loadDays(member.stage);
   const today = businessToday();
   const requested = query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : addDays(today, -1);
+  const [days, stored] = await Promise.all([loadDays(member.stage), latestReport(member.stage)]);
   const day = days.find((item) => item.businessDate === requested) ?? days.at(-1) ?? null;
-  const stored = await latestReport(member.stage);
   const headline = day ? dayHeadline(day, days) : null;
   const max = day ? Math.max(...day.lines.map((line) => line.netSales ?? 0), 1) : 1;
 
