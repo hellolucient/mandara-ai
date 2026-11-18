@@ -126,3 +126,125 @@ export function storedSalesIntent(text: string, locationNames: string[]): SalesI
   if (/\b(if|suppose|imagine|assuming|scenario|hypothetical)\b|let'?s say|what if/.test(lower)) return null;
   return parseSalesQuestion(text, locationNames);
 }
+
+function isMonthLevel(intent: SalesIntent): boolean {
+  return intent.kind === "mtd" || intent.kind === "this-month" || intent.kind === "location-month" || (intent.kind === "mix" && intent.mtd && !intent.yesterday);
+}
+
+function isDayLevel(intent: SalesIntent): boolean {
+  return (
+    intent.kind === "total" ||
+    intent.kind === "best-worst" ||
+    intent.kind === "below-budget" ||
+    intent.kind === "attention" ||
+    intent.kind === "overview" ||
+    intent.kind === "location" ||
+    (intent.kind === "mix" && intent.yesterday) ||
+    (intent.kind === "comparison" && intent.period === "yesterday")
+  );
+}
+
+function looksLikeCreativeOrKnowledgeFollowUp(text: string): boolean {
+  const folded = text.toLowerCase();
+  if (/\b(write|draft|compose|rewrite|rephrase|translate|caption|email|letter|promo card|picture|image|photo)\b/.test(folded)) return true;
+  if (/\b(company profile|operating agreement|sop|handbook|company policy|our policy|insurance)\b/.test(folded)) return true;
+  if (/^(thanks|thank you|ok|okay|cheers|got it|cool)[\s!.]*$/i.test(text.trim())) return true;
+  return false;
+}
+
+function asksForSplit(text: string): boolean {
+  return isSalesMixQuestion(text);
+}
+
+function asksForDayBefore(text: string): boolean {
+  return /\b((the )?day before( that)?|previous day)\b/i.test(text);
+}
+
+/**
+ * A short follow-up that modifies a previous stored-sales answer: include retail,
+ * add MTD, just one spa, the day before, and similar. Generic or creative
+ * follow-ups return false, so they stay on the normal path.
+ */
+export function isSalesFollowUp(text: string, locationNames: string[]): boolean {
+  const question = text.trim();
+  if (!question || looksLikeCreativeOrKnowledgeFollowUp(question)) return false;
+  if (asksForSplit(question)) return true;
+  if (/\b(include|add|show|split|with|plus|and)\b/i.test(question) && /\b(retail|treatments?|budget|guests?|mtd|month[ -]?to[ -]?date)\b/i.test(question)) return true;
+  if (/\b(retail|treatments?|budget|guests?)\b/i.test(question) && /\b(too|as well|also|please|pls)\b/i.test(question)) return true;
+  const short = question.length <= 80;
+  if (short && /\b(mtd|month[ -]?to[ -]?date|this month|where we(?:'re| are) at|guests?|budget)\b/i.test(question)) return true;
+  if (asksForDayBefore(question)) return true;
+  if (short && /\b(and |what about |how about )?(last week|previous week|yesterday|last month)\b/i.test(question)) return true;
+  return isLocationFollowUp(question, locationNames);
+}
+
+/** True when the message is really just naming a spa, such as "just Vadoo". */
+function isLocationFollowUp(question: string, locationNames: string[]): boolean {
+  const location = findLocation(question, locationNames);
+  if (!location) return false;
+  const leftover = fold(question)
+    .replace(fold(location), " ")
+    .replace(/\b(just|only|and|what about|how about|for|please|pls|show me|show)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  return leftover.length === 0;
+}
+
+function withDayOffset(intent: SalesIntent, extra: number): SalesIntent {
+  const dayOffset = (intent.dayOffset ?? 0) + extra;
+  return dayOffset ? { ...intent, dayOffset } : { ...intent };
+}
+
+/**
+ * Combine a sales follow-up with the previous sales question, keeping the
+ * earlier date and scope and applying the new request (retail split, a spa,
+ * another day, and so on).
+ */
+export function mergeSalesFollowUp(followUp: string, previousQuestion: string, locationNames: string[]): SalesIntent | null {
+  if (!isSalesFollowUp(followUp, locationNames)) return null;
+  const previous = parseSalesQuestion(previousQuestion, locationNames);
+  const combined = `${previousQuestion} ${followUp}`.trim();
+  const dayBefore = asksForDayBefore(followUp);
+  const offset = dayBefore ? -1 : 0;
+
+  if (asksForSplit(followUp) || asksForSplit(combined)) {
+    const prevMix = previous?.kind === "mix" ? previous : null;
+    const mtd = Boolean(prevMix?.mtd || hasMtdLanguage(followUp) || (previous && isMonthLevel(previous)));
+    let yesterday: boolean;
+    if (prevMix) yesterday = prevMix.yesterday || /\byesterday\b/i.test(followUp) || !mtd;
+    else if (previous && isMonthLevel(previous) && !/\byesterday\b/i.test(followUp) && !/\byesterday\b/i.test(previousQuestion)) yesterday = false;
+    else yesterday = !mtd || Boolean(previous && isDayLevel(previous)) || /\byesterday\b/i.test(followUp) || /\byesterday\b/i.test(previousQuestion);
+    if (!yesterday && !mtd) yesterday = true;
+    const intent: SalesIntent = { kind: "mix", yesterday, mtd };
+    return offset ? withDayOffset(intent, offset) : intent;
+  }
+
+  const fromCombined = parseSalesQuestion(combined, locationNames);
+  const fromFollowUp = parseSalesQuestion(followUp, locationNames);
+  // Prefer the follow-up's period when it names a new one, otherwise keep the
+  // combined parse so a spa or sales term from the previous question is kept.
+  let intent = fromFollowUp && fromFollowUp.kind !== "overview" && fromFollowUp.kind !== "total"
+    ? fromFollowUp
+    : fromCombined ?? fromFollowUp ?? previous;
+  if (!intent) {
+    const location = findLocation(followUp, locationNames) ?? findLocation(previousQuestion, locationNames);
+    if (location) intent = previous && isMonthLevel(previous) ? { kind: "location-month", name: location } : { kind: "location", name: location };
+    else if (/\bguests?\b/i.test(followUp)) intent = previous ?? { kind: "overview" };
+  }
+  if (!intent) return null;
+  return offset ? withDayOffset(intent, offset) : intent;
+}
+
+/** Resolve a sales intent, including a follow-up after a stored-sales answer. */
+export function resolveSalesIntent(
+  content: string,
+  locationNames: string[],
+  context: { previousAssistantWasSales?: boolean; previousUserQuestion?: string; strict?: boolean } = {},
+): SalesIntent | null {
+  const direct = context.strict ? storedSalesIntent(content, locationNames) : parseSalesQuestion(content, locationNames);
+  if (direct) return direct;
+  if (context.previousAssistantWasSales && context.previousUserQuestion) {
+    return mergeSalesFollowUp(content, context.previousUserQuestion, locationNames);
+  }
+  return null;
+}

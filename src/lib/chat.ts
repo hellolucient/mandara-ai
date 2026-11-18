@@ -12,7 +12,7 @@ import { modelForAttachment } from "@/lib/chat-images";
 import { complete, modelConfigured, type ModelMessage } from "@/lib/openrouter";
 import { needsReasoningModel } from "@/lib/question-complexity";
 import { answerSales } from "@/lib/sales-answers";
-import { parseSalesQuestion, storedSalesIntent } from "@/lib/sales-questions";
+import { resolveSalesIntent } from "@/lib/sales-questions";
 import { loadDays, locationNames } from "@/lib/sales-store";
 import { getSettings } from "@/lib/settings";
 
@@ -194,8 +194,22 @@ async function compose(
   });
   // Sales questions answer from stored figures in both modes. General mode (the only mode in the chat-only view)
   // uses the stricter check, so writing tasks, ideas and what-ifs that mention sales still reach the model.
+  // After a stored-sales answer, short follow-ups (include retail, just one spa, the day before) stay on this path.
+  const history = await sql<StoredMessage & { has_images: boolean }>(
+    `select id, role, content, attachment_name, citations, mode, model, created_at::text,
+            (images is not null and images <> '' and images <> '[]') as has_images
+     from messages where conversation_id = $1 order by created_at desc limit 10`,
+    [conversationId],
+  );
   if (!attachmentText && !attachmentImage) {
-    const salesIntent = conversationMode === "mandara" ? parseSalesQuestion(content, names) : storedSalesIntent(content, names);
+    const priorTurns = history[0]?.role === "user" ? history.slice(1) : history;
+    const previousAssistant = priorTurns.find((message) => message.role === "assistant");
+    const previousUser = priorTurns.find((message) => message.role === "user");
+    const salesIntent = resolveSalesIntent(content, names, {
+      previousAssistantWasSales: previousAssistant?.mode === "sales",
+      previousUserQuestion: previousUser?.content,
+      strict: conversationMode !== "mandara",
+    });
     if (salesIntent) {
       const days = await loadDays(member.stage);
       return {
@@ -207,12 +221,6 @@ async function compose(
       };
     }
   }
-  const history = await sql<StoredMessage & { has_images: boolean }>(
-    `select id, role, content, attachment_name, citations, mode, model, created_at::text,
-            (images is not null and images <> '' and images <> '[]') as has_images
-     from messages where conversation_id = $1 order by created_at desc limit 10`,
-    [conversationId],
-  );
   const priorImage = history.some((message) => message.role === "assistant" && Boolean(message.has_images));
   const creativeTask = isCreativeMandaraTask(content, { priorImage });
   if (conversationMode === "mandara" && !attachmentText && !attachmentImage && !creativeTask) {

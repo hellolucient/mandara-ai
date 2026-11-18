@@ -21,7 +21,7 @@ export type LoadedDay = {
   lines: SalesLine[];
 };
 
-export type SalesIntent =
+type SalesIntentKind =
   | { kind: "total" }
   | { kind: "mix"; yesterday: boolean; mtd: boolean }
   | { kind: "best-worst" }
@@ -36,6 +36,9 @@ export type SalesIntent =
   | { kind: "this-month" }
   | { kind: "named-month"; month: string }
   | { kind: "comparison"; period: "last-month" | "this-month" | "week" | "yesterday" };
+
+/** dayOffset shifts a single-day answer from yesterday: -1 is the day before. */
+export type SalesIntent = SalesIntentKind & { dayOffset?: number };
 
 export type ExtractRow = {
   location: string;

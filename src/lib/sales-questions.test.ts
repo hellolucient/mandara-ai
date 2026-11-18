@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseSalesQuestion } from "./sales-questions.js";
+import { parseSalesQuestion, resolveSalesIntent } from "./sales-questions.js";
+import { answerSales } from "./sales-answers.js";
 
 const LOCATIONS = ["Vadoo", "Hakuraa", "Dhonveli"];
 
@@ -77,5 +78,90 @@ describe("sales question parsing", () => {
     assert.deepEqual(parseSalesQuestion("What were total spa sales yesterday?", LOCATIONS), { kind: "total" });
     assert.deepEqual(parseSalesQuestion("Show me treatment sales yesterday", LOCATIONS), { kind: "mix", yesterday: true, mtd: false });
     assert.deepEqual(parseSalesQuestion("Retail sales this month versus budget", LOCATIONS), { kind: "mix", yesterday: false, mtd: true });
+  });
+
+  it("reruns a stored totals answer when the follow-up asks to include retail", () => {
+    const previous = "What were total spa sales yesterday?";
+    assert.deepEqual(parseSalesQuestion(previous, LOCATIONS), { kind: "total" });
+    assert.equal(parseSalesQuestion("pls include retail too", LOCATIONS), null);
+    assert.deepEqual(
+      resolveSalesIntent("pls include retail too", LOCATIONS, {
+        previousAssistantWasSales: true,
+        previousUserQuestion: previous,
+      }),
+      { kind: "mix", yesterday: true, mtd: false },
+    );
+    const days = [
+      {
+        businessDate: "2026-11-16",
+        source: "import" as const,
+        currency: "USD",
+        complete: true,
+        note: "",
+        lines: [
+          {
+            locationId: "vadoo",
+            locationName: "Vadoo",
+            netSales: 700,
+            treatments: 8,
+            budget: 600,
+            treatmentSales: 640,
+            retailSales: 60,
+          },
+        ],
+      },
+      {
+        businessDate: "2026-11-17",
+        source: "import" as const,
+        currency: "USD",
+        complete: true,
+        note: "",
+        lines: [
+          {
+            locationId: "vadoo",
+            locationName: "Vadoo",
+            netSales: 800,
+            treatments: 9,
+            budget: 700,
+            treatmentSales: 720,
+            retailSales: 80,
+          },
+        ],
+      },
+    ];
+    const text = answerSales(
+      resolveSalesIntent("pls include retail too", LOCATIONS, {
+        previousAssistantWasSales: true,
+        previousUserQuestion: previous,
+      })!,
+      days,
+      "2026-11-18",
+    );
+    assert.match(text, /Treatment and retail sales for 17 Nov 2026/);
+    assert.match(text, /\| Spa \| Treatment \| Retail \| Total \| vs budget \|/);
+    assert.match(text, /\| Vadoo \| \$720\.00 \| \$80\.00 \| \$800\.00 \| \+\$100\.00 \|/);
+    assert.doesNotMatch(text, /company profile/i);
+  });
+
+  it("leaves a non-sales follow-up on the normal path after a totals answer", () => {
+    const previous = "What were total spa sales yesterday?";
+    const context = { previousAssistantWasSales: true, previousUserQuestion: previous };
+    assert.equal(resolveSalesIntent("What does the company profile say about retail?", LOCATIONS, context), null);
+    assert.equal(resolveSalesIntent("write a caption about this", LOCATIONS, context), null);
+    assert.equal(resolveSalesIntent("thanks", LOCATIONS, context), null);
+    assert.equal(resolveSalesIntent("What treatments are available at the Dhonveli spa?", LOCATIONS, context), null);
+    assert.equal(resolveSalesIntent("pls include retail too", LOCATIONS, { previousAssistantWasSales: false, previousUserQuestion: previous }), null);
+    assert.deepEqual(
+      resolveSalesIntent("just Vadoo", LOCATIONS, context),
+      { kind: "location", name: "Vadoo" },
+    );
+    assert.deepEqual(
+      resolveSalesIntent("what about last week", LOCATIONS, context),
+      { kind: "week" },
+    );
+    assert.deepEqual(
+      resolveSalesIntent("and the day before", LOCATIONS, context),
+      { kind: "total", dayOffset: -1 },
+    );
   });
 });

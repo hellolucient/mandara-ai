@@ -3,9 +3,13 @@ import type { LoadedDay, SalesIntent, SalesLine, SalesSource } from "@/lib/sales
 
 const DROP_ATTENTION = -25;
 
+function salesDayTarget(today: string, intent: { dayOffset?: number }): string {
+  return addDays(today, -1 + (intent.dayOffset ?? 0));
+}
+
 export function answerSales(intent: SalesIntent, days: LoadedDay[], today: string): string {
   const ordered = [...days].sort((a, b) => a.businessDate.localeCompare(b.businessDate));
-  const target = addDays(today, -1);
+  const target = salesDayTarget(today, intent);
   const day = ordered.find((item) => item.businessDate === target) ?? null;
   
   // Period-based queries don't need yesterday's data
@@ -59,8 +63,8 @@ export function reportFor(day: LoadedDay, ordered: LoadedDay[]): string {
 }
 
 
-function mixAnswer(ordered: LoadedDay[], today: string, intent: { yesterday: boolean; mtd: boolean }): string {
-  const target = addDays(today, -1);
+function mixAnswer(ordered: LoadedDay[], today: string, intent: { yesterday: boolean; mtd: boolean; dayOffset?: number }): string {
+  const target = salesDayTarget(today, intent);
   const day = ordered.find((item) => item.businessDate === target) ?? null;
   const parts: string[] = [];
   if (intent.yesterday) {

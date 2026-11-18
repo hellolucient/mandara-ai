@@ -184,7 +184,9 @@ describe("chat-only view: sales routing", () => {
 
   it("checks sales before the General-mode model in chat", () => {
     const chat = readFileSync("src/lib/chat.ts", "utf8");
-    assert.match(chat, /conversationMode === "mandara" \? parseSalesQuestion\(content, names\) : storedSalesIntent\(content, names\)/);
+    assert.match(chat, /resolveSalesIntent\(content, names/);
+    assert.match(chat, /previousAssistantWasSales: previousAssistant\?\.mode === "sales"/);
+    assert.match(chat, /strict: conversationMode !== "mandara"/);
   });
 
   it("lets a creative follow-up through and still declines a fact with no stored data", () => {
