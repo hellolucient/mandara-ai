@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   ArrowUp,
+  CloudSun,
+  Languages,
+  TrendingDown,
+  Store,
   ChartColumn,
   Check,
   Copy,
@@ -41,39 +45,54 @@ import {
   UserAttachments,
   type ChatMessage,
 } from "@/components/chat-panel";
-import { groupConversations, salesAnswerMarkdown, splitSalesSource, type HistoryItem, type Suggestion } from "@/lib/chat-view";
+import { askPlaceholder } from "@/lib/ask-placeholder";
+import {
+  chatSuggestions,
+  groupConversations,
+  salesAnswerMarkdown,
+  splitSalesSource,
+  type ChatTab,
+  type HistoryItem,
+} from "@/lib/chat-view";
 
 const SUGGESTION_ICONS: Record<string, LucideIcon> = {
   sales: TrendingUp,
   compare: ChartColumn,
+  hakuraa: Store,
+  budget: TrendingDown,
   guest: MessageSquareHeart,
+  translate: Languages,
   ideas: Lightbulb,
+  weather: CloudSun,
 };
 
 export type ChatAppUser = { name: string; initials: string; roleLabel: string };
 
 export function ChatApp({
   conversationId,
+  conversationMode,
   conversations,
   initialMessages,
   user,
   greeting,
-  suggestions,
   modelOn,
   localAuth,
   initialDraft = "",
 }: {
   conversationId: string;
+  conversationMode: ChatTab;
   conversations: HistoryItem[];
   initialMessages: ChatMessage[];
   user: ChatAppUser;
   greeting: string;
-  suggestions: Suggestion[];
   modelOn: boolean;
   localAuth: boolean;
   initialDraft?: string;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Like the main Chat tab: each chat belongs to Mandara or General, and switching applies to the next message.
+  const [tab, setTab] = useState<ChatTab>(conversationMode);
+  useEffect(() => setTab(conversationMode), [conversationId, conversationMode]);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -116,6 +135,7 @@ export function ChatApp({
         aria-hidden={collapsed}
       >
         <Sidebar
+          tab={tab}
           activeId={conversationId}
           conversations={conversations}
           user={user}
@@ -145,6 +165,7 @@ export function ChatApp({
           aria-label="Chats"
         >
           <Sidebar
+            tab={tab}
             activeId={conversationId}
             conversations={conversations}
             user={user}
@@ -160,15 +181,17 @@ export function ChatApp({
       <main className="flex min-w-0 flex-1 flex-col">
         <TopBar
           collapsed={collapsed}
+          tab={tab}
+          onTab={setTab}
           onOpenDrawer={() => setDrawerOpen(true)}
           onExpand={toggleCollapsed}
         />
         <Conversation
           key={conversationId || "new"}
           conversationId={conversationId}
+          tab={tab}
           initialMessages={initialMessages}
           greeting={greeting}
-          suggestions={suggestions}
           modelOn={modelOn}
           initialDraft={initialDraft}
         />
@@ -185,9 +208,21 @@ function Logo({ size = 28 }: { size?: number }) {
   );
 }
 
-function TopBar({ collapsed, onOpenDrawer, onExpand }: { collapsed: boolean; onOpenDrawer: () => void; onExpand: () => void }) {
+function TopBar({
+  collapsed,
+  tab,
+  onTab,
+  onOpenDrawer,
+  onExpand,
+}: {
+  collapsed: boolean;
+  tab: ChatTab;
+  onTab: (tab: ChatTab) => void;
+  onOpenDrawer: () => void;
+  onExpand: () => void;
+}) {
   return (
-    <header className="chat-topbar relative z-10 flex h-14 shrink-0 items-center gap-1 px-2 md:h-14 md:px-3">
+    <header className="chat-topbar relative z-10 flex h-14 shrink-0 items-center gap-1 px-2 md:h-16 md:px-3">
       <button type="button" className="icon-btn md:hidden" aria-label="Open menu" onClick={onOpenDrawer}>
         <Menu className="size-[22px]" strokeWidth={1.75} />
       </button>
@@ -196,24 +231,57 @@ function TopBar({ collapsed, onOpenDrawer, onExpand }: { collapsed: boolean; onO
           <button type="button" className="icon-btn" aria-label="Open sidebar" onClick={onExpand}>
             <PanelLeftOpen className="size-5" strokeWidth={1.75} />
           </button>
-          <Link href="/chat" className="icon-btn" aria-label="New chat">
+          <Link href={`/chat?mode=${tab}`} className="icon-btn" aria-label="New chat">
             <SquarePen className="size-5" strokeWidth={1.75} />
           </Link>
         </div>
       ) : null}
-      <div className="pointer-events-none absolute inset-x-0 flex justify-center md:static md:inset-auto md:ml-2 md:justify-start">
-        <p className="font-heading text-[19px] leading-none tracking-[-0.01em] text-primary">
-          Mandara <span className="text-muted-foreground/80">AI</span>
-        </p>
+      <div className="pointer-events-none absolute inset-x-0 flex justify-center">
+        <TabSwitch tab={tab} onTab={onTab} />
       </div>
-      <Link href="/chat" className="icon-btn ml-auto md:hidden" aria-label="New chat">
+      <Link href={`/chat?mode=${tab}`} className="icon-btn ml-auto md:hidden" aria-label="New chat">
         <SquarePen className="size-[21px]" strokeWidth={1.75} />
       </Link>
     </header>
   );
 }
 
+const TABS: Array<{ id: ChatTab; label: string }> = [
+  { id: "mandara", label: "Mandara" },
+  { id: "general", label: "General" },
+];
+
+/** Quiet segmented control. Each segment is a full 44px tap target; the light pill slides under the active one. */
+function TabSwitch({ tab, onTab }: { tab: ChatTab; onTab: (tab: ChatTab) => void }) {
+  const index = TABS.findIndex((item) => item.id === tab);
+  return (
+    <div role="tablist" aria-label="Chat mode" className="tab-switch pointer-events-auto relative grid grid-cols-2 rounded-full p-[3px]">
+      <span
+        aria-hidden="true"
+        className="tab-switch-pill absolute top-[3px] bottom-[3px] left-[3px] rounded-full transition-transform duration-200 ease-out"
+        style={{ width: "calc(50% - 3px)", transform: `translateX(${index * 100}%)` }}
+      />
+      {TABS.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          role="tab"
+          aria-selected={item.id === tab}
+          onClick={() => onTab(item.id)}
+          className={cn(
+            "relative z-10 h-[34px] min-w-[86px] rounded-full px-4 text-[13.5px] leading-none tracking-[0.01em] transition-colors duration-150 before:absolute before:-inset-y-[5px] before:inset-x-0 before:content-['']",
+            item.id === tab ? "font-medium text-primary" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Sidebar({
+  tab,
   activeId,
   conversations,
   user,
@@ -223,6 +291,7 @@ function Sidebar({
   closeIcon: CloseIcon,
   onNavigate,
 }: {
+  tab: ChatTab;
   activeId: string;
   conversations: HistoryItem[];
   user: ChatAppUser;
@@ -250,7 +319,7 @@ function Sidebar({
 
       <div className="px-3 pb-2">
         <Link
-          href="/chat"
+          href={`/chat?mode=${tab}`}
           onClick={onNavigate}
           className="new-chat-btn flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-[15px] font-medium"
         >
@@ -371,6 +440,11 @@ function HistoryRow({ item, active, onNavigate }: { item: HistoryItem; active: b
         aria-current={active ? "page" : undefined}
       >
         <span className="truncate">{title}</span>
+        {item.mode === "mandara" ? (
+          <span className="history-badge ml-2 shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-medium tracking-wide" title="Mandara chat">
+            M
+          </span>
+        ) : null}
       </Link>
       <button
         type="button"
@@ -486,16 +560,16 @@ function AccountMenu({ user, localAuth }: { user: ChatAppUser; localAuth: boolea
 
 function Conversation({
   conversationId,
+  tab,
   initialMessages,
   greeting,
-  suggestions,
   modelOn,
   initialDraft,
 }: {
   conversationId: string;
+  tab: ChatTab;
   initialMessages: ChatMessage[];
   greeting: string;
-  suggestions: Suggestion[];
   modelOn: boolean;
   initialDraft: string;
 }) {
@@ -596,7 +670,7 @@ function Conversation({
       content,
       attachment_name: attached?.name ?? "",
       citations: "[]",
-      mode: "general",
+      mode: tab,
       images: "[]",
     };
     setMessages((current) => [...current, optimistic]);
@@ -606,7 +680,7 @@ function Conversation({
     if (fileRef.current) fileRef.current.value = "";
     const form = new FormData();
     form.set("content", content);
-    form.set("mode", "general");
+    form.set("mode", tab);
     if (conversationId) form.set("conversationId", conversationId);
     if (attached) form.set("file", attached);
     try {
@@ -647,7 +721,7 @@ function Conversation({
     <div className="flex min-h-0 flex-1 flex-col">
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
         {empty ? (
-          <EmptyState greeting={greeting} suggestions={suggestions} onPick={(prompt) => void send(prompt)} />
+          <EmptyState greeting={greeting} tab={tab} onPick={(prompt) => void send(prompt)} />
         ) : (
           <div className="mx-auto w-full max-w-[720px] px-4 pt-4 pb-6 md:px-6 md:pt-8">
             <div className="space-y-7">
@@ -711,8 +785,8 @@ function Conversation({
                   void send(draft);
                 }
               }}
-              placeholder="Message Mandara AI"
-              aria-label="Message Mandara AI"
+              placeholder={askPlaceholder(tab)}
+              aria-label={tab === "mandara" ? "Ask about Mandara" : "Ask anything"}
               enterKeyHint="send"
               className="block max-h-[200px] w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-base leading-6 outline-none placeholder:text-muted-foreground/75"
             />
@@ -762,13 +836,16 @@ function Conversation({
   );
 }
 
-function EmptyState({ greeting, suggestions, onPick }: { greeting: string; suggestions: Suggestion[]; onPick: (prompt: string) => void }) {
+function EmptyState({ greeting, tab, onPick }: { greeting: string; tab: ChatTab; onPick: (prompt: string) => void }) {
+  const suggestions = chatSuggestions(tab);
   return (
     <div className="mx-auto flex min-h-full w-full max-w-[720px] flex-col justify-center px-4 py-8 md:px-6">
       <div className="empty-hero flex flex-col items-center text-center">
         <Logo size={56} />
         <h1 className="mt-5 font-heading text-[30px] leading-[1.15] tracking-[-0.015em] text-primary md:text-[40px]">{greeting}</h1>
-        <p className="mt-2 text-[15px] text-muted-foreground md:text-base">How can I help today?</p>
+        <p className="mt-2 text-[15px] text-muted-foreground md:text-base">
+          {tab === "mandara" ? "Ask about sales, spas and Mandara." : "Ask me anything."}
+        </p>
       </div>
       <div className="mt-8 grid grid-cols-2 gap-2.5 md:mt-10 md:gap-3">
         {suggestions.map((item) => {

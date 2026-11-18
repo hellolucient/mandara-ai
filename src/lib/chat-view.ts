@@ -79,17 +79,30 @@ export function initials(name: string): string {
 }
 
 export type Suggestion = { id: string; title: string; hint: string; prompt: string };
+export type ChatTab = "mandara" | "general";
+
+export function chatTab(value: unknown): ChatTab {
+  return value === "mandara" ? "mandara" : "general";
+}
 
 /**
- * Starter cards on the empty chat screen. Every one sends straight away, so the sales ones are worded
- * to land on stored figures and the others are clearly writing or idea tasks.
+ * Starter cards on the empty chat screen, per tab. Every one sends straight away, so the Mandara cards are
+ * worded to land on stored figures and the General cards are everyday tasks.
  */
-export function chatSuggestions(): Suggestion[] {
+export function chatSuggestions(tab: ChatTab = "mandara"): Suggestion[] {
+  if (tab === "general") {
+    return [
+      { id: "guest", title: "Guest message", hint: "Warm, Maldives-ready", prompt: "Write a short, warm welcome message for a guest arriving at the spa tomorrow." },
+      { id: "translate", title: "Translate", hint: "A guest note into French", prompt: "Translate into French: Your treatment starts at 4pm. Please arrive 10 minutes early and enjoy a welcome tea." },
+      { id: "ideas", title: "Spa ideas", hint: "Seasonal promotions", prompt: "Suggest three seasonal spa promotions for December." },
+      { id: "weather", title: "Weather in Malé", hint: "The week ahead", prompt: "What's the weather forecast for Malé this week?" },
+    ];
+  }
   return [
     { id: "sales", title: "Yesterday's sales", hint: "Totals for every spa", prompt: "What were total spa sales yesterday?" },
     { id: "compare", title: "Compare the spas", hint: "Who is leading this month", prompt: "Which spas have the highest sales this month?" },
-    { id: "guest", title: "Write a guest message", hint: "Warm, on-brand wording", prompt: "Write a short, warm welcome message for a guest arriving at the spa tomorrow." },
-    { id: "ideas", title: "Spa ideas", hint: "Seasonal promotions", prompt: "Suggest three seasonal spa promotions for December." },
+    { id: "hakuraa", title: "Hakuraa yesterday", hint: "One spa, one day", prompt: "How did Hakuraa do yesterday?" },
+    { id: "budget", title: "Below budget", hint: "Spas that need attention", prompt: "Which spas were below budget yesterday?" },
   ];
 }
 

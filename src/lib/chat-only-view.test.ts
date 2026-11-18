@@ -5,6 +5,7 @@ import { apiAllowed, canSeeContracts, pageAllowed, usesChatOnlyView } from "./ac
 import { canSeeProspects } from "./prospects-access";
 import {
   chatSuggestions,
+  chatTab,
   firstName,
   greeting,
   groupConversations,
@@ -14,6 +15,7 @@ import {
 } from "./chat-view";
 import { cleanTitle } from "./chat";
 import { findLocation, parseSalesQuestion, storedSalesIntent } from "./sales-questions";
+import { answerSales } from "./sales-answers";
 
 const STORED = ["Dhonveli", "Hakuraa Huraa", "Rannalhi", "Meedhupparu", "Vadoo", "Kunaavashi"];
 
@@ -105,12 +107,42 @@ describe("chat-only view: sales routing", () => {
     }
   });
 
-  it("routes every sales suggestion card to stored figures and leaves the writing cards to the model", () => {
-    const [sales, compare, guest, ideas] = chatSuggestions();
-    assert.deepEqual(storedSalesIntent(sales.prompt, STORED), { kind: "total" });
-    assert.deepEqual(storedSalesIntent(compare.prompt, STORED), { kind: "comparison", period: "this-month" });
-    assert.equal(storedSalesIntent(guest.prompt, STORED), null);
-    assert.equal(storedSalesIntent(ideas.prompt, STORED), null);
+  it("routes every Mandara card to stored figures and leaves every General card to the model", () => {
+    const [sales, compare, hakuraa, budget] = chatSuggestions("mandara");
+    assert.deepEqual(parseSalesQuestion(sales.prompt, STORED), { kind: "total" });
+    assert.deepEqual(parseSalesQuestion(compare.prompt, STORED), { kind: "comparison", period: "this-month" });
+    assert.deepEqual(parseSalesQuestion(hakuraa.prompt, STORED), { kind: "location", name: "Hakuraa Huraa" });
+    assert.deepEqual(parseSalesQuestion(budget.prompt, STORED), { kind: "below-budget" });
+    for (const card of chatSuggestions("general")) assert.equal(storedSalesIntent(card.prompt, STORED), null, card.id);
+  });
+
+  it("answers one spa's month to date from stored figures", () => {
+    assert.deepEqual(parseSalesQuestion("How is Vadoo doing this month?", STORED), { kind: "location-month", name: "Vadoo" });
+    assert.deepEqual(parseSalesQuestion("Hakuraa sales month to date", STORED), { kind: "location-month", name: "Hakuraa Huraa" });
+    assert.deepEqual(parseSalesQuestion("Which spas have the highest sales this month?", STORED), { kind: "comparison", period: "this-month" });
+    const day = (date: string, vadoo: number, hakuraa: number) => ({
+      businessDate: date,
+      source: "import" as const,
+      currency: "USD",
+      complete: true,
+      note: "",
+      lines: [
+        { locationId: "vadoo", locationName: "Vadoo", netSales: vadoo, treatments: 5, budget: 500 },
+        { locationId: "hakuraa-huraa", locationName: "Hakuraa Huraa", netSales: hakuraa, treatments: 20, budget: null },
+      ],
+    });
+    const text = answerSales({ kind: "location-month", name: "Vadoo" }, [day("2026-11-01", 600, 2000), day("2026-11-02", 400, 2100), day("2026-10-31", 9999, 1)], "2026-11-03");
+    assert.match(text, /Vadoo · month to date \(1 Nov – 2 Nov 2026\)/);
+    assert.match(text, /Net sales: \$1,000 over 2 recorded days/);
+    assert.match(text, /Treatment guests: 10/);
+    assert.match(text, /Budget pace: \$1,000 against \$1,000/);
+    assert.match(text, /Rank: 2 of 2 spas/);
+  });
+
+  it("tells the model to keep guest writing Maldivian, with no Bula or Aloha", () => {
+    const chat = readFileSync("src/lib/chat.ts", "utf8");
+    assert.match(chat, /Maldives resort/);
+    assert.match(chat, /Never use greetings or phrases from other places, such as Bula, Aloha/);
   });
 
   it("does not hijack tasks that only mention sales", () => {
@@ -127,6 +159,13 @@ describe("chat-only view: sales routing", () => {
   it("reads month to date with or without hyphens", () => {
     assert.deepEqual(parseSalesQuestion("Compare spa sales month to date", STORED), { kind: "mtd" });
     assert.deepEqual(parseSalesQuestion("sales month-to-date", STORED), { kind: "mtd" });
+  });
+
+  it("defaults unknown tabs to General", () => {
+    assert.equal(chatTab("mandara"), "mandara");
+    assert.equal(chatTab("general"), "general");
+    assert.equal(chatTab(undefined), "general");
+    assert.equal(chatTab("prospects"), "general");
   });
 
   it("checks sales before the General-mode model in chat", () => {

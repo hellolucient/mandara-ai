@@ -29,6 +29,7 @@ export type SalesIntent =
   | { kind: "week" }
   | { kind: "attention" }
   | { kind: "location"; name: string }
+  | { kind: "location-month"; name: string }
   | { kind: "overview" }
   | { kind: "last-month" }
   | { kind: "this-month" }

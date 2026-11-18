@@ -14,6 +14,7 @@ export function answerSales(intent: SalesIntent, days: LoadedDay[], today: strin
   if (intent.kind === "named-month") return namedMonthAnswer(ordered, intent.month, today);
   if (intent.kind === "comparison") return comparisonAnswer(ordered, intent.period, today);
   if (intent.kind === "mtd") return mtdAnswer(ordered, day?.businessDate ?? target);
+  if (intent.kind === "location-month") return locationMonthAnswer(ordered, intent.name, target);
   
   // Single-day queries need yesterday's data
   if (!day) {
@@ -121,6 +122,51 @@ function locationAnswer(day: LoadedDay, ordered: LoadedDay[], name: string): str
     sourceLine(day),
   ];
   return bits.filter(Boolean).join("\n");
+}
+
+/** One spa, month to date: net sales, guests, budget pace where both exist, and its rank among the spas. */
+function locationMonthAnswer(ordered: LoadedDay[], name: string, through: string): string {
+  const monthKey = through.slice(0, 7);
+  const inMonth = ordered.filter((day) => day.businessDate.startsWith(monthKey) && day.businessDate <= through);
+  if (inMonth.length === 0) return `No sales records are stored for this month yet.`;
+  const currency = inMonth[0].currency;
+  const key = name.toLowerCase();
+  let sales = 0;
+  let guests = 0;
+  let days = 0;
+  let paced = 0;
+  let budget = 0;
+  const totals = new Map<string, number>();
+  for (const day of inMonth) {
+    for (const line of day.lines) {
+      if (line.netSales != null) totals.set(line.locationName, (totals.get(line.locationName) ?? 0) + line.netSales);
+      if (line.locationName.toLowerCase() !== key || line.netSales == null) continue;
+      sales += line.netSales;
+      guests += line.treatments ?? 0;
+      days += 1;
+      if (line.budget != null) {
+        paced += line.netSales;
+        budget += line.budget;
+      }
+    }
+  }
+  const first = inMonth[0].businessDate;
+  const last = inMonth[inMonth.length - 1].businessDate;
+  if (days === 0) return `${name} has no sales figures stored for ${formatBusinessDate(first)} to ${formatBusinessDate(last)}.`;
+  const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+  const rank = ranked.findIndex(([spa]) => spa.toLowerCase() === key) + 1;
+  const lines = [
+    `**${name} · month to date (${formatBusinessDate(first).replace(/ \d{4}$/, "")} – ${formatBusinessDate(last)})**`,
+    `Net sales: ${money(sales, currency)} over ${days} recorded day${days === 1 ? "" : "s"}`,
+    `Average per day: ${money(sales / days, currency)}`,
+    guests ? `Treatment guests: ${guests}` : "",
+    budget > 0
+      ? `Budget pace: ${money(paced, currency)} against ${money(budget, currency)} on days with a budget, ${percent(((paced - budget) / budget) * 100)}`
+      : "Budget: none on file for this spa",
+    rank ? `Rank: ${rank} of ${ranked.length} spas this month` : "",
+    sourceLine(inMonth[inMonth.length - 1]),
+  ];
+  return lines.filter(Boolean).join("\n");
 }
 
 function weekAnswer(day: LoadedDay, ordered: LoadedDay[]): string {

@@ -21,7 +21,11 @@ export function parseSalesQuestion(text: string, locationNames: string[]): Sales
   const hasMonthWithContext = /\b(last month|this month|january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(question) && /\b(how much|revenue|sales|make|made|earn|total)\b/i.test(question);
   const salesish = hasSalesTerm || hasSalesPattern || hasTimeWithContext || hasComparison || hasMonthWithContext;
   if (!salesish && !location) return null;
-  if (location && !salesish && !/\b(perform|performing|did|how did|sales|revenue)\b/i.test(question)) return null;
+  if (location && !salesish && !/\b(perform|performing|did|how did|doing|going|tracking|sales|revenue)\b/i.test(question)) return null;
+  // One spa over the month so far: "How is Vadoo doing this month?", "Hakuraa sales month to date".
+  if (location && /\b(this month|month-to-date|month to date|mtd)\b/i.test(question) && !/\b(which|compare|rank|best|worst|highest|lowest)\b/i.test(question)) {
+    return { kind: "location-month", name: location };
+  }
   // Period detection (more specific first)
   if (/\blast month\b/i.test(question)) {
     if (/\b(which|highest|lowest|best|worst|top|compare|rank)\b/i.test(question)) {

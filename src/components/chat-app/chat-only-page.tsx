@@ -1,7 +1,7 @@
 import { ChatApp } from "@/components/chat-app/chat-app";
 import type { ChatMessage } from "@/components/chat-panel";
 import { roleLabel } from "@/lib/access";
-import { chatSuggestions, greeting, initials } from "@/lib/chat-view";
+import { chatTab, greeting, initials } from "@/lib/chat-view";
 import type { Member } from "@/lib/members";
 import { modelConfigured } from "@/lib/openrouter";
 import { authMode } from "@/lib/session";
@@ -11,12 +11,14 @@ export function ChatOnlyPage({
   member,
   conversations,
   conversationId = "",
+  conversationMode = "general",
   messages = [],
   initialDraft = "",
 }: {
   member: Member;
   conversations: Array<{ id: string; title: string; updated_at?: string; mode?: string }>;
   conversationId?: string;
+  conversationMode?: string;
   messages?: ChatMessage[];
   initialDraft?: string;
 }) {
@@ -24,11 +26,11 @@ export function ChatOnlyPage({
   return (
     <ChatApp
       conversationId={conversationId}
+      conversationMode={chatTab(conversationMode)}
       conversations={conversations}
       initialMessages={messages}
       user={{ name, initials: initials(name), roleLabel: roleLabel(member.role) }}
       greeting={greeting(member.name ?? "", new Date())}
-      suggestions={chatSuggestions()}
       modelOn={modelConfigured()}
       localAuth={authMode() === "local"}
       initialDraft={initialDraft}

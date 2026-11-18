@@ -19,7 +19,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   ]);
   if (!conversation) notFound();
   if (usesChatOnlyView(member)) {
-    return <ChatOnlyPage member={member} conversations={conversations} conversationId={id} messages={conversation.messages} />;
+    return <ChatOnlyPage member={member} conversations={conversations} conversationId={id} conversationMode={conversation.mode || "general"} messages={conversation.messages} />;
   }
   return (
     <div className="md:flex md:min-h-screen">

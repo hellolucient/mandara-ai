@@ -21,7 +21,7 @@ export default async function ChatPage({
   const q = typeof params.q === "string" ? params.q.slice(0, 2000) : "";
   const mode = params.mode === "mandara" || params.mode === "general" ? params.mode : "general";
   const conversations = await listConversations(member);
-  if (usesChatOnlyView(member)) return <ChatOnlyPage member={member} conversations={conversations} initialDraft={q} />;
+  if (usesChatOnlyView(member)) return <ChatOnlyPage member={member} conversations={conversations} conversationMode={mode} initialDraft={q} />;
   return (
     <div className="md:flex md:min-h-screen">
       <ConversationList items={conversations} activeId="" />
