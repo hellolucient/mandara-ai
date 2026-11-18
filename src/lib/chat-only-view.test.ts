@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { apiAllowed, canSeeContracts, pageAllowed, usesChatOnlyView } from "./access";
 import { canSeeProspects } from "./prospects-access";
+import { askPlaceholder } from "./ask-placeholder";
 import {
   chatSuggestions,
   chatTab,
@@ -166,6 +167,17 @@ describe("chat-only view: sales routing", () => {
     assert.equal(chatTab("general"), "general");
     assert.equal(chatTab(undefined), "general");
     assert.equal(chatTab("prospects"), "general");
+  });
+
+  it("opens a fresh empty chat when the other tab is chosen, and keeps the new placeholders", () => {
+    const view = readFileSync("src/components/chat-app/chat-app.tsx", "utf8");
+    // The inactive tab is a link to /chat?mode=… so the current conversation is left and no message is sent.
+    assert.ok(view.includes("href={`/chat?mode=${item.id}`}"), "inactive tab links to a new empty chat");
+    assert.doesNotMatch(view, /onTab=\{setTab\}/);
+    assert.doesNotMatch(view, /onClick=\{\(\) => onTab\(item\.id\)\}/);
+    assert.match(view, /placeholder=\{askPlaceholder\(tab\)\}/);
+    assert.equal(askPlaceholder("mandara"), "What would you like to know about Mandara today?");
+    assert.equal(askPlaceholder("general"), "What's on your mind?");
   });
 
   it("checks sales before the General-mode model in chat", () => {

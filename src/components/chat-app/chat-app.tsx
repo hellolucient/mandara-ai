@@ -90,9 +90,8 @@ export function ChatApp({
   initialDraft?: string;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  // Like the main Chat tab: each chat belongs to Mandara or General, and switching applies to the next message.
-  const [tab, setTab] = useState<ChatTab>(conversationMode);
-  useEffect(() => setTab(conversationMode), [conversationId, conversationMode]);
+  // Switching Mandara | General opens a fresh empty chat in that tab. Past chats stay in the sidebar.
+  const tab = conversationMode;
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -182,7 +181,6 @@ export function ChatApp({
         <TopBar
           collapsed={collapsed}
           tab={tab}
-          onTab={setTab}
           onOpenDrawer={() => setDrawerOpen(true)}
           onExpand={toggleCollapsed}
         />
@@ -211,13 +209,11 @@ function Logo({ size = 28 }: { size?: number }) {
 function TopBar({
   collapsed,
   tab,
-  onTab,
   onOpenDrawer,
   onExpand,
 }: {
   collapsed: boolean;
   tab: ChatTab;
-  onTab: (tab: ChatTab) => void;
   onOpenDrawer: () => void;
   onExpand: () => void;
 }) {
@@ -237,7 +233,7 @@ function TopBar({
         </div>
       ) : null}
       <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-        <TabSwitch tab={tab} onTab={onTab} />
+        <TabSwitch tab={tab} />
       </div>
       <Link href={`/chat?mode=${tab}`} className="icon-btn ml-auto md:hidden" aria-label="New chat">
         <SquarePen className="size-[21px]" strokeWidth={1.75} />
@@ -251,8 +247,8 @@ const TABS: Array<{ id: ChatTab; label: string }> = [
   { id: "general", label: "General" },
 ];
 
-/** Quiet segmented control. Each segment is a full 44px tap target; the light pill slides under the active one. */
-function TabSwitch({ tab, onTab }: { tab: ChatTab; onTab: (tab: ChatTab) => void }) {
+/** Quiet segmented control. The other tab is a link to a new empty chat in that mode; the active tab stays put. */
+function TabSwitch({ tab }: { tab: ChatTab }) {
   const index = TABS.findIndex((item) => item.id === tab);
   return (
     <div role="tablist" aria-label="Chat mode" className="tab-switch pointer-events-auto relative grid grid-cols-2 rounded-full p-[3px]">
@@ -261,21 +257,25 @@ function TabSwitch({ tab, onTab }: { tab: ChatTab; onTab: (tab: ChatTab) => void
         className="tab-switch-pill absolute top-[3px] bottom-[3px] left-[3px] rounded-full transition-transform duration-200 ease-out"
         style={{ width: "calc(50% - 3px)", transform: `translateX(${index * 100}%)` }}
       />
-      {TABS.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          role="tab"
-          aria-selected={item.id === tab}
-          onClick={() => onTab(item.id)}
-          className={cn(
-            "relative z-10 h-[34px] min-w-[86px] rounded-full px-4 text-[13.5px] leading-none tracking-[0.01em] transition-colors duration-150 before:absolute before:-inset-y-[5px] before:inset-x-0 before:content-['']",
-            item.id === tab ? "font-medium text-primary" : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {item.label}
-        </button>
-      ))}
+      {TABS.map((item) => {
+        const selected = item.id === tab;
+        const className = cn(
+          "relative z-10 inline-flex h-[34px] min-w-[86px] items-center justify-center rounded-full px-4 text-[13.5px] leading-none tracking-[0.01em] transition-colors duration-150 before:absolute before:-inset-y-[5px] before:inset-x-0 before:content-['']",
+          selected ? "font-medium text-primary" : "text-muted-foreground hover:text-foreground",
+        );
+        if (selected) {
+          return (
+            <button key={item.id} type="button" role="tab" aria-selected="true" className={className}>
+              {item.label}
+            </button>
+          );
+        }
+        return (
+          <Link key={item.id} href={`/chat?mode=${item.id}`} role="tab" aria-selected={false} className={className}>
+            {item.label}
+          </Link>
+        );
+      })}
     </div>
   );
 }
