@@ -1,7 +1,10 @@
 import { Shell, SignedOut } from "@/components/shell";
 import { hasAdministrator } from "@/lib/members";
 import { getSettings } from "@/lib/settings";
-import { currentMember } from "@/lib/session";
+import { authMode, currentMember } from "@/lib/session";
+import { pageAllowed } from "@/lib/access";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -20,13 +23,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </main>
     );
   }
-  if (!member) return <SignedOut />;
+  const local = authMode() === "local";
+  const path = (await headers()).get("x-mandara-path") || "/";
+  if (!member) {
+    if (local) redirect(path === "/" ? "/login" : `/login?next=${encodeURIComponent(path)}`);
+    return <SignedOut />;
+  }
+  if (local && "mustChangePassword" in member && member.mustChangePassword) redirect("/account/password");
+  if (!pageAllowed(member, path)) redirect("/chat");
   const [settings, needsOwner] = await Promise.all([
     getSettings(member.stage),
     member.role === "admin" ? Promise.resolve(false) : hasAdministrator(member.stage).then((found) => !found),
   ]);
   return (
-    <Shell member={member} companyName={settings.companyName} needsOwner={needsOwner}>
+    <Shell member={member} companyName={settings.companyName} needsOwner={needsOwner && !local} localAuth={local}>
       {children}
     </Shell>
   );

@@ -13,6 +13,10 @@ export type Member = {
   name: string;
   role: Role;
   simulated: boolean;
+  /** Limited to Chat (Mandara sign-in only). */
+  chatOnly?: boolean;
+  /** Reserved: a Spa person's own location, for "only their own spa" later. */
+  spaLocationId?: string;
 };
 
 type MemberRow = { sub: string; email: string; name: string; role: Role };

@@ -1,4 +1,7 @@
 import {
+  LEAD_STATUSES,
+  LEAD_STATUS_LABELS,
+  type LeadStatus,
   PRIORITIES,
   PROSPECT_STATUSES,
   SIGNAL_TYPES,
@@ -85,6 +88,47 @@ export function isSignalType(value: unknown): value is SignalType {
   return typeof value === "string" && (SIGNAL_TYPES as readonly string[]).includes(value);
 }
 
+/**
+ * The workbook Status column: accepts the label ("Warm lead"), the key ("warm") or close variants.
+ * Returns undefined when the field is absent (older files), "" when blank, and null when unrecognised.
+ */
+export function leadStatus(value: unknown): LeadStatus | "" | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return "";
+  if (typeof value !== "string") return null;
+  const norm = value.trim().toLowerCase().replace(/[\s_-]+/g, " ").replace(/[^a-z ]/g, "").trim();
+  if (!norm) return "";
+  for (const key of LEAD_STATUSES) {
+    if (norm === key.replace(/_/g, " ") || norm === LEAD_STATUS_LABELS[key].toLowerCase()) return key;
+  }
+  const aliases: Record<string, LeadStatus> = {
+    "warm leads": "warm",
+    "warm lead via jessel": "warm",
+    "contact chased": "chasing",
+    "being chased": "chasing",
+    "chasing contact": "chasing",
+    possibles: "possible",
+    "long shots": "long_shot",
+    longshot: "long_shot",
+    out: "out",
+    "out for now": "out",
+    "watch": "watch",
+    "watch only": "watch",
+    "not going ahead": "not_proceeding",
+    "not proceeding": "not_proceeding",
+    off: "not_proceeding",
+  };
+  return aliases[norm] ?? null;
+}
+
+/** JC notes keep contact details on purpose: prospects are administrator-only and this field never reaches the chat model. */
+function plainText(value: unknown, max: number): string | undefined {
+  if (value === undefined) return undefined;
+  if (value == null) return "";
+  const raw = typeof value === "string" ? value : typeof value === "number" ? String(value) : "";
+  return raw.trim().slice(0, max);
+}
+
 function priority(value: unknown): Priority {
   const p = typeof value === "string" ? value.trim().toUpperCase() : "";
   return (PRIORITIES as readonly string[]).includes(p) ? (p as Priority) : "";
@@ -115,6 +159,10 @@ export function validateProspect(raw: unknown): { ok: true; value: ProspectInput
   const noteDate = note ? isoDate(note.date) : null;
   const noteBody = note ? text(note.body, 4000) : "";
   const sources = Array.isArray(r.sources) ? r.sources.map(safeUrl).filter(Boolean).slice(0, 25) : [];
+  const rawLead = r.status !== undefined ? r.status : r.leadStatus;
+  const lead = leadStatus(rawLead);
+  if (lead === null) return { ok: false, error: `${name}: status "${String(rawLead).slice(0, 60)}" is not a known lead status.` };
+  const jcNotes = plainText(r.jcNotes, 8000);
   return {
     ok: true,
     value: {
@@ -148,6 +196,8 @@ export function validateProspect(raw: unknown): { ok: true; value: ProspectInput
       confidence: text(r.confidence, 1000),
       intelDate: isoDate(r.intelDate),
       sources: [...new Set(sources)],
+      ...(lead !== undefined ? { leadStatus: lead } : {}),
+      ...(jcNotes !== undefined ? { jcNotes } : {}),
       statusOnCreate: isStatus(r.statusOnCreate) ? r.statusOnCreate : null,
       initialNote: noteDate && noteBody ? { date: noteDate, body: noteBody } : null,
     },

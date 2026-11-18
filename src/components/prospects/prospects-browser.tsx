@@ -6,6 +6,9 @@ import { ChevronRight, Radar, Search, X } from "lucide-react";
 import { cn } from "cn";
 import { PriorityBadge, StatusDot, StatusPill, SignalTypeTag } from "@/components/prospects/badges";
 import {
+  LEAD_STATUSES,
+  LEAD_STATUS_LABELS,
+  type LeadStatus,
   PROSPECT_STATUSES,
   STATUS_LABELS,
   type Priority,
@@ -24,6 +27,7 @@ export type ProspectListItem = {
   spaName: string;
   priority: Priority;
   status: ProspectStatus;
+  leadStatus?: LeadStatus | "";
   timing: string;
   timingDate: string | null;
   estFee: number | null;
@@ -62,6 +66,13 @@ export function ProspectsBrowser({ prospects }: { prospects: ProspectListItem[] 
   const [group, setGroup] = useState("");
   const [priority, setPriority] = useState<PriorityFilter>("");
   const [sort, setSort] = useState<Sort>("priority");
+  const [lead, setLead] = useState<"" | "none" | LeadStatus>("");
+  const leadOptions = useMemo((): Array<[string, string]> => {
+    const present = new Set(prospects.map((p) => p.leadStatus || ""));
+    const list: Array<[string, string]> = LEAD_STATUSES.filter((s) => present.has(s)).map((s) => [s, LEAD_STATUS_LABELS[s]]);
+    if (list.length && present.has("")) list.push(["none", "No status yet"]);
+    return list;
+  }, [prospects]);
 
   // Stage counts follow the priority filter, so excluded (X) prospects are left out by default. All always counts everything.
   const counted = useMemo(() => prospects.filter((p) => matchesPriority(p.priority, priority, "")), [prospects, priority]);
@@ -84,6 +95,8 @@ export function ProspectsBrowser({ prospects }: { prospects: ProspectListItem[] 
       if (atoll && atollGroup(p.atoll) !== atoll) return false;
       if (group && p.brandGroup !== group) return false;
       if (!matchesPriority(p.priority, priority, stage)) return false;
+      if (lead === "none" && p.leadStatus) return false;
+      if (lead && lead !== "none" && p.leadStatus !== lead) return false;
       if (q) {
         const hay = `${p.name} ${p.atoll} ${p.brandGroup} ${p.spaOperator} ${p.spaName} ${p.gmName}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -109,9 +122,9 @@ export function ProspectsBrowser({ prospects }: { prospects: ProspectListItem[] 
       );
     });
     return list;
-  }, [prospects, query, stage, atoll, group, priority, sort]);
+  }, [prospects, query, stage, atoll, group, priority, sort, lead]);
 
-  const filtered = query || atoll || group || priority || stage !== "active";
+  const filtered = query || atoll || group || priority || lead || stage !== "active";
 
   return (
     <div className="mt-8">
@@ -167,6 +180,9 @@ export function ProspectsBrowser({ prospects }: { prospects: ProspectListItem[] 
             ]}
             all="Hide excluded (X)"
           />
+          {leadOptions.length ? (
+            <Select label="Lead status" value={lead} onChange={(v) => setLead(v as typeof lead)} options={leadOptions} all="All lead statuses" />
+          ) : null}
           <Select label="Sort" value={sort} onChange={(v) => setSort(v as Sort)} options={SORTS.map((s): [string, string] => [s.value, s.label])} prefix="Sort: " />
         </div>
       </div>
@@ -193,6 +209,7 @@ export function ProspectsBrowser({ prospects }: { prospects: ProspectListItem[] 
               setAtoll("");
               setGroup("");
               setPriority("");
+              setLead("");
               setStage("active");
             }}
           >
@@ -243,6 +260,7 @@ export function ProspectsBrowser({ prospects }: { prospects: ProspectListItem[] 
                       <p className="mt-0.5 truncate text-[12.5px] text-muted-foreground">
                         {[p.brandGroup, p.keys ? `${p.keys} keys` : ""].filter(Boolean).join(" · ") || p.propertyType}
                       </p>
+                      {p.leadStatus ? <LeadStatusTag status={p.leadStatus} className="mt-1.5" /> : null}
                     </td>
                     <td className="truncate px-3 py-3.5 align-top text-[13px] text-muted-foreground">{atollGroup(p.atoll) || "—"}</td>
                     <td className="px-3 py-3.5 align-top">
@@ -296,6 +314,7 @@ export function ProspectsBrowser({ prospects }: { prospects: ProspectListItem[] 
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
                       <StatusPill status={p.status} />
+                      {p.leadStatus ? <LeadStatusTag status={p.leadStatus} /> : null}
                       {p.timing ? <span className="truncate text-[12px] text-muted-foreground">{p.timing}</span> : null}
                     </div>
                     {p.latestSignal ? (
@@ -389,6 +408,24 @@ function Select({
         </option>
       ))}
     </select>
+  );
+}
+
+const LEAD_TONES: Record<LeadStatus, string> = {
+  warm: "bg-[#c47854]/15 text-[#9a4f2c]",
+  chasing: "bg-amber-100 text-amber-800",
+  possible: "bg-primary/10 text-primary",
+  long_shot: "bg-slate-100 text-slate-700",
+  out: "bg-stone-100 text-stone-500",
+  watch: "bg-sky-50 text-sky-800",
+  not_proceeding: "bg-stone-100 text-stone-400 line-through",
+};
+
+export function LeadStatusTag({ status, className }: { status: LeadStatus; className?: string }) {
+  return (
+    <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-medium", LEAD_TONES[status], className)}>
+      {LEAD_STATUS_LABELS[status]}
+    </span>
   );
 }
 

@@ -3,7 +3,9 @@ import { BudgetForm } from "@/components/budget-form";
 import { getCompanyProfile, profileToForm } from "@/lib/company-profile";
 import { listInvites, listMembers } from "@/lib/members";
 import { integrationStatus } from "@/lib/secrets";
-import { currentMember } from "@/lib/session";
+import { authMode, currentMember } from "@/lib/session";
+import { listUsers, type LocalMember } from "@/lib/auth-local";
+import { UsersManager } from "@/components/users-manager";
 import { getSettings } from "@/lib/settings";
 import { usageSummary } from "@/lib/usage";
 import { redirect } from "next/navigation";
@@ -23,6 +25,8 @@ export default async function AdminPage() {
     Promise.resolve(integrationStatus()),
   ]);
   const company = profileToForm(profile);
+  const local = authMode() === "local";
+  const users = local ? await listUsers(member.stage) : [];
   const rows = [
     ["OpenRouter", status.openRouter],
     ["Schedule secret", status.cron],
@@ -37,7 +41,7 @@ export default async function AdminPage() {
       <div>
         <h1 className="font-heading text-3xl">Admin</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          People sign in through the host. Roles here decide what they can see after that. Secrets are never shown.
+          {local ? "People sign in with a Mandara username and password." : "People sign in through the host."} Roles here decide what they can see after that. Secrets are never shown.
         </p>
       </div>
       <section className="grid gap-6 lg:grid-cols-2">
@@ -107,6 +111,18 @@ export default async function AdminPage() {
           ))}
         </ul>
       </section>
+      {local ? (
+        <section className="rounded-xl border bg-card p-4">
+          <h2 className="font-heading text-2xl">People and sign-ins</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+            Add someone, choose their access and pass on the temporary password yourself. They pick their own password at first sign-in.
+            Management sees contracts and resort data. Spa sees no contracts. Chat only keeps them in the chat. Prospects stay with administrators.
+          </p>
+          <div className="mt-4">
+            <UsersManager users={users} selfId={(member as LocalMember).userId} />
+          </div>
+        </section>
+      ) : (
       <section className="rounded-xl border bg-card p-4">
         <h2 className="font-heading text-2xl">People</h2>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -136,6 +152,7 @@ export default async function AdminPage() {
           ))}
         </ul>
       </section>
+      )}
     </main>
   );
 }

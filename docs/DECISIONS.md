@@ -6,7 +6,7 @@ Chat, documents, sales, the agent log and admin are one Next.js app. Separate se
 
 ## Sign-in
 
-The published app is meant to be private or team. The host already signs people in. The app stores a role for each person and does not keep its own passwords. A public address would not identify staff, so it is not a usable mode.
+On Grok hosting, the host signs people in and the app stores only a role for each person. On Cloudflare (`AUTH_MODE=local`, branch `cloudflare-hosting`), the app has its own usernames and PBKDF2 password hashes, so people such as Tenille need no Grok account. An administrator creates each sign-in and resets passwords. See docs/CLOUDFLARE.md.
 
 ## Models
 

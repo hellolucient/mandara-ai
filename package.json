@@ -9,7 +9,15 @@
     "lint": "eslint",
     "test": "tsx --test src/lib/*.test.ts",
     "dsr:sandbox": "node fixtures/dsr-sandbox/server.mjs",
-    "dsr:extract": "tsx scripts/dsr-extract.ts"
+    "dsr:extract": "tsx scripts/dsr-extract.ts",
+    "prebuild": "node scripts/gen-schema-source.mjs",
+    "schema": "node scripts/gen-schema-source.mjs",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:import": "node scripts/import-export.mjs",
+    "user:create": "tsx scripts/create-user.ts",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -31,6 +39,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@opennextjs/cloudflare": "^1.20.17",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
@@ -40,6 +49,11 @@
     "eslint-config-next": "^15.5.29",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.164.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261117.1": true
   }
 }

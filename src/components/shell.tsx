@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { NavLinks } from "@/components/nav-links";
 import type { Member } from "@/lib/members";
 import { navItems } from "@/lib/nav";
+import { roleLabel } from "@/lib/access";
 
 const MARK = (
   <svg className="mark" viewBox="0 0 32 32" aria-hidden="true">
@@ -16,14 +18,16 @@ export function Shell({
   member,
   companyName,
   needsOwner,
+  localAuth,
   children,
 }: {
   member: Member;
   companyName: string;
   needsOwner?: boolean;
+  localAuth?: boolean;
   children: React.ReactNode;
 }) {
-  const items = navItems(member.role);
+  const items = navItems(member.role, member.chatOnly);
   return (
     <div className="min-h-screen md:grid md:grid-cols-[232px_1fr]">
       <aside className="hidden bg-primary text-primary-foreground md:flex md:flex-col md:px-4 md:py-6">
@@ -39,7 +43,8 @@ export function Shell({
         </div>
         <div className="mt-auto px-2 text-sm text-white/75">
           <p className="break-words text-white">{member.name || "Staff"}</p>
-          <p className="capitalize">{member.role}</p>
+          <p>{roleLabel(member.role)}{member.chatOnly && member.role !== "admin" ? " · Chat" : ""}</p>
+          {localAuth ? <AccountLinks tone="rail" /> : null}
           <p className="mt-3 text-xs leading-5 break-words text-white/60">{companyName}</p>
         </div>
       </aside>
@@ -51,6 +56,11 @@ export function Shell({
               <p className="font-heading text-lg leading-none">Mandara AI</p>
               <p className="text-xs text-muted-foreground">{member.name || "Staff"}</p>
             </div>
+            {localAuth ? (
+              <div className="ml-auto">
+                <AccountLinks tone="bar" />
+              </div>
+            ) : null}
           </div>
           <div className="px-3 pb-3">
             <NavLinks items={items} tone="bar" />
@@ -74,6 +84,20 @@ export function Shell({
         {children}
       </div>
     </div>
+  );
+}
+
+function AccountLinks({ tone }: { tone: "rail" | "bar" }) {
+  const link = tone === "rail" ? "text-white/80 underline-offset-4 hover:text-white hover:underline" : "text-muted-foreground underline-offset-4 hover:underline";
+  return (
+    <form action="/api/auth/logout" method="post" className={`flex gap-3 text-xs ${tone === "rail" ? "mt-2" : ""}`}>
+      <Link href="/account/password" className={link}>
+        Password
+      </Link>
+      <button type="submit" className={link}>
+        Sign out
+      </button>
+    </form>
   );
 }
 

@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { readFileSync } from "node:fs";
+import dsrMap from "../../config/dsr-map.json";
 
 export function envPresent(name: string): boolean {
   return Boolean(readEnv(name));
@@ -31,16 +31,11 @@ export function integrationStatus() {
     dsrUsername: envPresent("DSR_USERNAME"),
     dsrPassword: envPresent("DSR_PASSWORD"),
     dsrMapReady: readMapReady(),
-    workspaceOwner: envPresent("WORKSPACE_OWNER_SUB"),
+    workspaceOwner: envPresent("WORKSPACE_OWNER_SUB") || process.env.AUTH_MODE?.trim() === "local",
   };
 }
 
 export function readMapReady(): boolean {
-  try {
-    const raw = readFileSync("config/dsr-map.json", "utf8");
-    const parsed = JSON.parse(raw) as { ready?: boolean };
-    return parsed.ready === true;
-  } catch {
-    return false;
-  }
+  // Bundled at build time: Cloudflare Workers have no filesystem to read config/ from.
+  return (dsrMap as { ready?: boolean }).ready === true;
 }

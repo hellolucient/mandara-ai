@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { SignedOut } from "@/components/shell";
 import { PrintControls } from "@/components/print-controls";
@@ -18,6 +19,8 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
 export default async function SalesReportPrint({ searchParams }: { searchParams: Promise<{ date?: string; print?: string }> }) {
   const member = await currentMember();
   if (!member) return <SignedOut />;
+  if (member.chatOnly && member.role !== "admin") redirect("/chat");
+  if ("mustChangePassword" in member && member.mustChangePassword) redirect("/account/password");
   const query = await searchParams;
   const days = await loadDays(member.stage);
   const requested = query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : addDays(businessToday(), -1);

@@ -1,6 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { PGlite } from "@electric-sql/pglite";
+import type { PGlite } from "@electric-sql/pglite";
 import pg from "pg";
 import { SCHEMA_MIGRATIONS, splitSql } from "@/lib/schema-source";
 
@@ -8,10 +8,16 @@ let pool: pg.Pool | undefined;
 let local: Promise<PGlite> | undefined;
 let schemaReady: Promise<void> | undefined;
 
+/** True inside Cloudflare Workers (OpenNext). There is no filesystem and I/O cannot be shared between requests. */
+export function onWorkers(): boolean {
+  return typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
+}
+
 export async function sql<T = Record<string, unknown>>(
   text: string,
   params: unknown[] = [],
 ): Promise<T[]> {
+  if (onWorkers()) return workersQuery<T>(text, params);
   if (databaseUrl() !== "") {
     await ensureSchema();
     return (await getPool().query(text, params)).rows as T[];
@@ -21,6 +27,59 @@ export async function sql<T = Record<string, unknown>>(
     throw error;
   });
   return (await (await local).query<T>(text, params)).rows;
+}
+
+/**
+ * On Cloudflare one connection is opened per request, through Hyperdrive (which keeps the real Postgres
+ * connections pooled and warm), and reused by every query in that request. Workers cannot share sockets
+ * between requests, so the connection is keyed to the request context and closed shortly after the last
+ * query, while ctx.waitUntil keeps the request alive. Migrations are not run here: `npm run db:migrate`
+ * applies them at deploy time.
+ */
+type RequestDb = { client: Promise<pg.Client>; active: number; timer?: ReturnType<typeof setTimeout>; done?: () => void };
+const requestClients = new WeakMap<object, RequestDb>();
+const IDLE_CLOSE_MS = 250;
+
+async function workersQuery<T>(text: string, params: unknown[]): Promise<T[]> {
+  const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+  const context = getCloudflareContext();
+  const key = context.ctx as unknown as object;
+  let entry = requestClients.get(key);
+  if (!entry) {
+    const client = new pg.Client({ connectionString: workersConnectionString(context.env), connectionTimeoutMillis: 12_000 });
+    const created: RequestDb = { client: client.connect().then(() => client), active: 0 };
+    created.client.catch(() => {
+      requestClients.delete(key);
+      created.done?.();
+    });
+    context.ctx.waitUntil(new Promise<void>((resolve) => (created.done = resolve)));
+    requestClients.set(key, created);
+    entry = created;
+  }
+  const current = entry;
+  if (current.timer) clearTimeout(current.timer);
+  current.active += 1;
+  try {
+    const client = await current.client;
+    return (await client.query(text, params)).rows as T[];
+  } finally {
+    current.active -= 1;
+    if (current.active === 0) current.timer = setTimeout(() => {
+      requestClients.delete(key);
+      current.client
+        .then((client) => client.end())
+        .catch(() => undefined)
+        .finally(() => current.done?.());
+    }, IDLE_CLOSE_MS);
+  }
+}
+
+function workersConnectionString(bindings: unknown): string {
+  const env = bindings as Record<string, unknown>;
+  const hyperdrive = env.HYPERDRIVE as { connectionString?: string } | undefined;
+  const url = hyperdrive?.connectionString || (typeof env.DATABASE_URL === "string" ? env.DATABASE_URL : "") || databaseUrl();
+  if (!url) throw new Error("No database is configured (HYPERDRIVE binding or DATABASE_URL).");
+  return url;
 }
 
 function databaseUrl(): string {
@@ -119,6 +178,7 @@ async function migrationBodies(): Promise<Array<{ name: string; sql: string }>> 
 }
 
 async function startLocal(): Promise<PGlite> {
+  const { PGlite } = await import("@electric-sql/pglite");
   const db = new PGlite();
   const files = (await readdir("migrations").catch(() => []))
     .filter((file) => file.endsWith(".sql"))

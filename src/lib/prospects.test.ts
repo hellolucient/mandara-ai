@@ -141,8 +141,9 @@ describe("prospects: who can see them", () => {
       "src/app/(app)/prospects/page.tsx",
       "src/app/(app)/prospects/[id]/page.tsx",
       "src/lib/prospects-access.ts",
-      // Administrator-only whole-workspace export for moving hosts.
+      // Administrator-only whole-workspace export for moving hosts, and the generated schema copy of migrations/*.sql.
       "src/lib/data-export.ts",
+      "src/lib/schema-source.ts",
       ...ROUTES,
     ]);
     const offenders: string[] = [];
@@ -302,5 +303,43 @@ describe("prospects: validation", () => {
     assert.equal(matchesPriority("X", "any", "active"), true);
     assert.equal(matchesPriority("X", "X", "active"), true);
     assert.equal(matchesPriority("C", "AB", "active"), false);
+  });
+});
+
+describe("prospects: lead status and JC notes from the reconciled workbook", async () => {
+  const { leadStatus, validateProspect, validateProspectImport } = await import("./prospects-validate");
+  it("reads the Status column by label, key or common variant", () => {
+    assert.equal(leadStatus("Warm lead"), "warm");
+    assert.equal(leadStatus("Contact being chased"), "chasing");
+    assert.equal(leadStatus("possible"), "possible");
+    assert.equal(leadStatus("Long shot"), "long_shot");
+    assert.equal(leadStatus("Out for now"), "out");
+    assert.equal(leadStatus("Watch only"), "watch");
+    assert.equal(leadStatus("Not proceeding"), "not_proceeding");
+    assert.equal(leadStatus(""), "");
+    assert.equal(leadStatus(undefined), undefined);
+    assert.equal(leadStatus("banana"), null);
+  });
+  it("leaves both fields absent for the 17 Nov file format, so a re-import changes nothing", () => {
+    const result = validateProspect({ name: "Old Format Resort", priority: "B" });
+    assert.ok(result.ok);
+    if (!result.ok) return;
+    assert.equal("leadStatus" in result.value, false);
+    assert.equal("jcNotes" in result.value, false);
+  });
+  it("keeps JC contacts verbatim (admin-only) but still scrubs the other fields", () => {
+    const result = validateProspect({ name: "Emerald Faarufushi", status: "Warm lead", jcNotes: "Rao (GM) rao@example.com +960 123 4567", notes: "call +960 765 4321" });
+    assert.ok(result.ok);
+    if (!result.ok) return;
+    assert.equal(result.value.leadStatus, "warm");
+    assert.match(result.value.jcNotes ?? "", /rao@example\.com/);
+    assert.doesNotMatch(result.value.notes, /765/);
+  });
+  it("reports an unknown status as a skipped row instead of guessing", () => {
+    const result = validateProspectImport({ kind: "mandara-prospects", prospects: [{ name: "A", status: "maybe?" }, { name: "B", status: "Possible" }] });
+    assert.ok(result.ok);
+    if (!result.ok) return;
+    assert.equal(result.value.prospects.length, 1);
+    assert.match(result.value.skipped[0], /not a known lead status/);
   });
 });

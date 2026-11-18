@@ -23,6 +23,7 @@ export default async function ProspectsPage() {
     spaName: p.spaName,
     priority: p.priority,
     status: p.status,
+    leadStatus: p.leadStatus,
     timing: p.timing,
     timingDate: p.timingDate,
     estFee: p.estFee,

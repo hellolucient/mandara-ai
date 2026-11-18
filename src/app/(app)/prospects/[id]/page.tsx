@@ -1,3 +1,4 @@
+import { LeadStatusTag } from "@/components/prospects/prospects-browser";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, Building2, Flower2, Link2, NotebookPen, Radar, UserRound } from "lucide-react";
@@ -35,6 +36,7 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
           <div className="flex flex-wrap items-center gap-2.5">
             <PriorityBadge priority={p.priority} withLabel />
             <StatusPill status={p.status} />
+            {p.leadStatus ? <LeadStatusTag status={p.leadStatus} /> : null}
           </div>
           <h1 className="mt-3 font-heading text-[30px] leading-[1.12] font-normal tracking-[-0.01em] text-primary md:text-[40px]">{p.name}</h1>
           {where ? <p className="mt-2 text-[14px] text-muted-foreground">{where}</p> : null}
@@ -62,6 +64,12 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
               ]}
             />
           </Card>
+          {p.jcNotes ? (
+            <Card icon={UserRound} title="JC notes and contacts">
+              <p className="text-[14px] leading-6 whitespace-pre-line break-words">{p.jcNotes}</p>
+              <p className="mt-3 text-[12px] text-muted-foreground">Administrators only. Never sent to the chat assistant.</p>
+            </Card>
+          ) : null}
           <Card icon={Flower2} title="The spa today">
             <Facts
               rows={[

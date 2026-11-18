@@ -2,8 +2,10 @@ import { sql } from "@/lib/db";
 import { newId } from "@/lib/ids";
 import { assertProspectsAccess } from "@/lib/prospects-access";
 import {
+  LEAD_STATUSES,
   PROSPECT_STATUSES,
   STATUS_LABELS,
+  type LeadStatus,
   type Prospect,
   type ProspectInput,
   type ProspectNote,
@@ -40,6 +42,8 @@ type ProspectRow = {
   priority: Prospect["priority"];
   verdict: string;
   status: ProspectStatus;
+  lead_status: string;
+  jc_notes: string;
   timing: string;
   timing_date: string | null;
   est_spa_revenue: number | string | null;
@@ -64,7 +68,7 @@ type ProspectRow = {
 const SELECT = `
   select p.id, p.key, p.name, p.property_type, p.atoll, p.brand_group, p.owner_company, p.management_company,
          p.keys, p.tier, p.spa_name, p.spa_operator, p.spa_managed_by, p.spa_model, p.mandara_history, p.priority,
-         p.verdict, p.status, p.timing, to_char(p.timing_date, 'YYYY-MM-DD') as timing_date,
+         p.verdict, p.status, p.lead_status, p.jc_notes, p.timing, to_char(p.timing_date, 'YYYY-MM-DD') as timing_date,
          p.est_spa_revenue, p.est_fee, p.gm_name, p.gm_since, p.gm_background, p.spa_manager, p.approach,
          p.owner_links, p.notes, p.confidence, to_char(p.intel_date, 'YYYY-MM-DD') as intel_date, p.sources,
          p.updated_at::text as updated_at,
@@ -110,6 +114,8 @@ function toProspect(row: ProspectRow): Prospect {
     priority: row.priority,
     verdict: row.verdict,
     status: row.status,
+    leadStatus: (LEAD_STATUSES as readonly string[]).includes(row.lead_status) ? (row.lead_status as LeadStatus) : "",
+    jcNotes: row.jc_notes ?? "",
     timing: row.timing,
     timingDate: row.timing_date,
     estSpaRevenue: num(row.est_spa_revenue),
@@ -366,12 +372,18 @@ async function upsertProspect(stage: string, p: ProspectInput, author: string): 
   const placeholders = names.map((_, i) => `$${i + 5}`).join(", ");
   const updates = names.map((c) => `${c} = excluded.${c}`).join(", ");
   const id = newId();
+  // Lead status and JC notes are only touched when the file carries them, so an older file leaves them as they are.
+  const leadParam = `$${names.length + 5}`;
+  const jcParam = `$${names.length + 6}`;
   const rows = await sql<{ id: string; inserted: boolean }>(
-    `insert into prospects (id, stage, key, status, ${columns}, imported_at)
-     values ($1, $2, $3, $4, ${placeholders}, now())
-     on conflict (stage, key) do update set ${updates}, imported_at = now(), updated_at = now()
+    `insert into prospects (id, stage, key, status, ${columns}, lead_status, jc_notes, imported_at)
+     values ($1, $2, $3, $4, ${placeholders}, coalesce(${leadParam}::text, ''), coalesce(${jcParam}::text, ''), now())
+     on conflict (stage, key) do update set ${updates},
+       lead_status = coalesce(${leadParam}::text, prospects.lead_status),
+       jc_notes = coalesce(${jcParam}::text, prospects.jc_notes),
+       imported_at = now(), updated_at = now()
      returning id, (xmax = 0) as inserted`,
-    [id, stage, p.key, p.statusOnCreate ?? "watching", ...fields],
+    [id, stage, p.key, p.statusOnCreate ?? "watching", ...fields, p.leadStatus ?? null, p.jcNotes ?? null],
   );
   const row = rows[0];
   if (row?.inserted && p.initialNote) {

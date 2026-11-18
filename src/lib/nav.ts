@@ -4,7 +4,8 @@ import { canSeeProspects } from "@/lib/prospects-access";
 export type NavItem = { href: string; label: string };
 
 /** The menu for a role. Prospects and Admin are for administrators only. The pages and APIs refuse everyone else too. */
-export function navItems(role: Role): NavItem[] {
+export function navItems(role: Role, chatOnly = false): NavItem[] {
+  if (chatOnly && role !== "admin") return [{ href: "/chat", label: "Chat" }];
   const items: NavItem[] = [
     { href: "/", label: "Home" },
     { href: "/chat", label: "Chat" },

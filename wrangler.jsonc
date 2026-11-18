@@ -1,0 +1,26 @@
+// Cloudflare Workers config for Mandara AI (Next.js through OpenNext).
+// Nothing here is secret. Secrets are set with `npx wrangler secret put NAME` (see docs/CLOUDFLARE.md).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mandara-ai",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "observability": { "enabled": true },
+  "vars": {
+    "AUTH_MODE": "local",
+    "APP_STAGE": "production"
+  },
+  // Postgres (Neon) through Hyperdrive. Replace the id with the one `npx wrangler hyperdrive create` prints.
+  // localConnectionString is only used by `wrangler dev` / `npm run cf:preview` on this machine.
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "00000000000000000000000000000000",
+      "localConnectionString": "postgres://postgres:postgres@127.0.0.1:55432/postgres"
+    }
+  ]
+  // Custom domain, added at go-live (zone mandaraspamaldives.com is on Cloudflare DNS):
+  // "routes": [{ "pattern": "ai.mandaraspamaldives.com", "custom_domain": true }]
+}

@@ -20,6 +20,21 @@ export const STATUS_LABELS: Record<ProspectStatus, string> = {
   lost: "Lost / Declined",
 };
 
+/** Lead status from the reconciled master workbook ("Status" column). Separate from the pipeline stage above. */
+export const LEAD_STATUSES = ["warm", "chasing", "possible", "long_shot", "out", "watch", "not_proceeding"] as const;
+
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+
+export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
+  warm: "Warm lead",
+  chasing: "Contact being chased",
+  possible: "Possible",
+  long_shot: "Long shot",
+  out: "Out for now",
+  watch: "Watch only",
+  not_proceeding: "Not proceeding",
+};
+
 export const SIGNAL_TYPES = ["news", "job_ad", "new_gm", "development", "other"] as const;
 
 export type SignalType = (typeof SIGNAL_TYPES)[number];
@@ -76,6 +91,10 @@ export type ProspectInput = {
   confidence: string;
   intelDate: string | null;
   sources: string[];
+  /** Lead status from the workbook. Undefined when the file has no Status column, so an older file leaves it alone. "" clears it. */
+  leadStatus?: LeadStatus | "";
+  /** JC notes & contacts. Admin-only, never sent to the chat model. Undefined when the file has no such column. */
+  jcNotes?: string;
   statusOnCreate: ProspectStatus | null;
   initialNote: { date: string; body: string } | null;
 };
@@ -88,8 +107,10 @@ export type SignalInput = {
   url: string;
 };
 
-export type Prospect = Omit<ProspectInput, "statusOnCreate" | "initialNote"> & {
+export type Prospect = Omit<ProspectInput, "statusOnCreate" | "initialNote" | "leadStatus" | "jcNotes"> & {
   id: string;
+  leadStatus: LeadStatus | "";
+  jcNotes: string;
   status: ProspectStatus;
   updatedAt: string;
   latestSignal: { date: string; type: SignalType; summary: string } | null;
