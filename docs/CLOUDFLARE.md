@@ -60,6 +60,13 @@ The preferred path is a full copy with nothing re-keyed:
 
 The fallback, if the export cannot be published, is to rebuild from box sources through the app's own import screens. Use the DSR JSONs in `/workspace/mandara/dsr-nov-2026/extracts-v2` and `/workspace/mandara/dsr-daily/import`, and Cleo's reconciled prospects JSON. Chat history, memories, uploaded documents and Admin edits would then not carry over.
 
+## Hyperdrive query caching is off
+
+Hyperdrive caches read queries for up to a minute by default. That served stale chat messages right after a reply
+(the new answer was saved but the page re-read the old list), so caching is disabled on `mandara-neon`:
+`npx wrangler hyperdrive update <id> --caching-disabled true`. Keep it off; the app's queries are small and Hyperdrive
+still pools the connections.
+
 ## Local proof
 
 `npm run cf:preview` runs the real Workers runtime (workerd) on `http://localhost:8787`. `wrangler.jsonc` points it at a local Postgres on port 55432.

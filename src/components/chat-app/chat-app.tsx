@@ -513,7 +513,13 @@ function Conversation({
   const fileRef = useRef<HTMLInputElement>(null);
   const attachRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setMessages(initialMessages), [initialMessages]);
+  // A refresh brings the stored messages; never let an older copy replace newer ones already on screen.
+  useEffect(() => {
+    setMessages((current) => {
+      const shown = current.filter((message) => message.id !== "pending-user").length;
+      return initialMessages.length >= shown ? initialMessages : current;
+    });
+  }, [initialMessages]);
 
   useEffect(() => {
     return () => {
