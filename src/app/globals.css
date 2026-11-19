@@ -486,7 +486,8 @@
 }
 
 .ticker-scroll {
-  animation: ticker-scroll 12s linear infinite;
+  width: max-content;
+  animation: ticker-scroll 30s linear infinite;
 }
 
 .ticker-content {

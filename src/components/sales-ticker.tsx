@@ -27,6 +27,8 @@ export function SalesTicker() {
   const [data, setData] = useState<TickerData | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [durationSec, setDurationSec] = useState<number | null>(null);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -68,6 +70,21 @@ export function SalesTicker() {
     };
   }, []);
 
+  // Keep a constant scroll speed (pixels per second) on every screen size.
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const PX_PER_SEC = 70;
+    const update = () => {
+      const width = el.offsetWidth;
+      if (width > 0) setDurationSec(Math.max(6, width / PX_PER_SEC));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [data, prefersReducedMotion]);
+
   if (!data || data.spas.length === 0) {
     return null;
   }
@@ -77,8 +94,9 @@ export function SalesTicker() {
       <div 
         ref={containerRef}
         className={prefersReducedMotion ? "ticker-static" : "ticker-scroll"}
+        style={!prefersReducedMotion && durationSec ? { animationDuration: `${durationSec}s` } : undefined}
       >
-        <div className="ticker-content">
+        <div className="ticker-content" ref={contentRef}>
           {data.spas.map((spa, index) => (
             <div key={`${spa.name}-${index}`} className="ticker-item">
               <span className="ticker-spa-name">{spa.name}:</span>
