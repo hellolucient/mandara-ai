@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 export function LoginForm({ next }: { next: string }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,13 +48,23 @@ export function LoginForm({ next }: { next: string }) {
       </label>
       <label className="block">
         <span className="text-sm font-medium">Password</span>
-        <input
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          className="mt-1.5 h-12 w-full rounded-xl border border-border bg-white/80 px-4 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-        />
+        <div className="relative">
+          <input
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            className="mt-1.5 h-12 w-full rounded-xl border border-border bg-white/80 px-4 pr-12 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="absolute top-1/2 right-3 -translate-y-1/2 flex size-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+          </button>
+        </div>
       </label>
       {error ? (
         <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -74,6 +86,9 @@ export function PasswordForm({ required }: { required: boolean }) {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -101,23 +116,53 @@ export function PasswordForm({ required }: { required: boolean }) {
   }
 
   const field =
-    "mt-1.5 h-12 w-full rounded-xl border border-border bg-white/80 px-4 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
+    "mt-1.5 h-12 w-full rounded-xl border border-border bg-white/80 px-4 pr-12 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
   return (
     <form onSubmit={submit} className="space-y-4">
       {!required ? (
         <label className="block">
           <span className="text-sm font-medium">Current password</span>
-          <input name="current" type="password" autoComplete="current-password" required className={field} />
+          <div className="relative">
+            <input name="current" type={showCurrent ? "text" : "password"} autoComplete="current-password" required className={field} />
+            <button
+              type="button"
+              onClick={() => setShowCurrent(!showCurrent)}
+              aria-label={showCurrent ? "Hide password" : "Show password"}
+              className="absolute top-1/2 right-3 -translate-y-1/2 flex size-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              {showCurrent ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+            </button>
+          </div>
         </label>
       ) : null}
       <label className="block">
         <span className="text-sm font-medium">New password</span>
-        <input name="next" type="password" autoComplete="new-password" minLength={10} required className={field} />
+        <div className="relative">
+          <input name="next" type={showNew ? "text" : "password"} autoComplete="new-password" minLength={10} required className={field} />
+          <button
+            type="button"
+            onClick={() => setShowNew(!showNew)}
+            aria-label={showNew ? "Hide password" : "Show password"}
+            className="absolute top-1/2 right-3 -translate-y-1/2 flex size-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            {showNew ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+          </button>
+        </div>
         <span className="mt-1 block text-xs text-muted-foreground">At least 10 characters. A short phrase works well.</span>
       </label>
       <label className="block">
         <span className="text-sm font-medium">New password again</span>
-        <input name="confirm" type="password" autoComplete="new-password" minLength={10} required className={field} />
+        <div className="relative">
+          <input name="confirm" type={showConfirm ? "text" : "password"} autoComplete="new-password" minLength={10} required className={field} />
+          <button
+            type="button"
+            onClick={() => setShowConfirm(!showConfirm)}
+            aria-label={showConfirm ? "Hide password" : "Show password"}
+            className="absolute top-1/2 right-3 -translate-y-1/2 flex size-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            {showConfirm ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+          </button>
+        </div>
       </label>
       {error ? (
         <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">

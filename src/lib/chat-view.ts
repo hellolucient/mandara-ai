@@ -93,16 +93,11 @@ export function chatDisclaimer(tab: ChatTab): string {
 
 /**
  * Starter cards on the empty chat screen, per tab. Every one sends straight away, so the Mandara cards are
- * worded to land on stored figures and the General cards are everyday tasks.
+ * worded to land on stored figures. The General tab has no preset cards.
  */
 export function chatSuggestions(tab: ChatTab = "mandara"): Suggestion[] {
   if (tab === "general") {
-    return [
-      { id: "guest", title: "Guest message", hint: "Warm, Maldives-ready", prompt: "Write a short, warm welcome message for a guest arriving at the spa tomorrow." },
-      { id: "translate", title: "Translate", hint: "A guest note into French", prompt: "Translate into French: Your treatment starts at 4pm. Please arrive 10 minutes early and enjoy a welcome tea." },
-      { id: "ideas", title: "Spa ideas", hint: "Seasonal promotions", prompt: "Suggest three seasonal spa promotions for December." },
-      { id: "weather", title: "Weather in Malé", hint: "The week ahead", prompt: "What's the weather forecast for Malé this week?" },
-    ];
+    return [];
   }
   return [
     { id: "sales", title: "Yesterday's sales", hint: "Treatment, retail and vs budget", prompt: "What were total spa sales yesterday?" },
