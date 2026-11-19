@@ -55,6 +55,7 @@ import {
   type ChatTab,
   type HistoryItem,
 } from "@/lib/chat-view";
+import { SalesTicker } from "@/components/sales-ticker";
 
 const SUGGESTION_ICONS: Record<string, LucideIcon> = {
   sales: TrendingUp,
@@ -185,6 +186,7 @@ export function ChatApp({
           onOpenDrawer={() => setDrawerOpen(true)}
           onExpand={toggleCollapsed}
         />
+        <SalesTicker />
         <Conversation
           key={conversationId || "new"}
           conversationId={conversationId}
@@ -248,7 +250,7 @@ const TABS: Array<{ id: ChatTab; label: string }> = [
   { id: "general", label: "General" },
 ];
 
-/** Quiet segmented control. The other tab is a link to a new empty chat in that mode; the active tab stays put. */
+/** Segmented control with strong active contrast. The other tab is a link to a new empty chat in that mode; the active tab stays put. */
 function TabSwitch({ tab }: { tab: ChatTab }) {
   const index = TABS.findIndex((item) => item.id === tab);
   return (
@@ -262,7 +264,7 @@ function TabSwitch({ tab }: { tab: ChatTab }) {
         const selected = item.id === tab;
         const className = cn(
           "relative z-10 inline-flex h-[34px] min-w-[86px] items-center justify-center rounded-full px-4 text-[13.5px] leading-none tracking-[0.01em] transition-colors duration-150 before:absolute before:-inset-y-[5px] before:inset-x-0 before:content-['']",
-          selected ? "font-medium text-primary" : "text-muted-foreground hover:text-foreground",
+          selected ? "font-bold text-primary-foreground" : "text-muted-foreground hover:text-foreground",
         );
         if (selected) {
           return (
@@ -848,27 +850,29 @@ function EmptyState({ greeting, tab, onPick }: { greeting: string; tab: ChatTab;
           {tab === "mandara" ? "Ask about sales, spas and Mandara." : "Ask me anything."}
         </p>
       </div>
-      <div className="mt-8 grid grid-cols-2 gap-2.5 md:mt-10 md:gap-3">
-        {suggestions.map((item) => {
-          const Icon = SUGGESTION_ICONS[item.id] ?? Lightbulb;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onPick(item.prompt)}
-              className="suggestion-card flex min-h-[92px] flex-col items-start gap-2 rounded-2xl border bg-card/80 p-3.5 text-left md:min-h-[104px] md:p-4"
-            >
-              <span className="suggestion-icon flex size-8 items-center justify-center rounded-full">
-                <Icon className="size-[17px]" strokeWidth={1.75} />
-              </span>
-              <span>
-                <span className="block text-[14.5px] leading-5 font-medium">{item.title}</span>
-                <span className="mt-0.5 block text-[12.5px] leading-4 text-muted-foreground">{item.hint}</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {suggestions.length > 0 ? (
+        <div className="mt-8 grid grid-cols-2 gap-2.5 md:mt-10 md:gap-3">
+          {suggestions.map((item) => {
+            const Icon = SUGGESTION_ICONS[item.id] ?? Lightbulb;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onPick(item.prompt)}
+                className="suggestion-card flex min-h-[92px] flex-col items-start gap-2 rounded-2xl border bg-card/80 p-3.5 text-left md:min-h-[104px] md:p-4"
+              >
+                <span className="suggestion-icon flex size-8 items-center justify-center rounded-full">
+                  <Icon className="size-[17px]" strokeWidth={1.75} />
+                </span>
+                <span>
+                  <span className="block text-[14.5px] leading-5 font-medium">{item.title}</span>
+                  <span className="mt-0.5 block text-[12.5px] leading-4 text-muted-foreground">{item.hint}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }
