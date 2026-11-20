@@ -94,7 +94,10 @@ function AccountLinks({ tone }: { tone: "rail" | "bar" }) {
       <Link href="/account/password" className={link}>
         Password
       </Link>
-      <button type="submit" className={link}>
+      <button
+        type="submit"
+        className={tone === "rail" ? link : "rounded-full border px-3 py-1.5 text-sm font-medium text-foreground"}
+      >
         Sign out
       </button>
     </form>

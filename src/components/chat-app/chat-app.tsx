@@ -185,6 +185,7 @@ export function ChatApp({
           tab={tab}
           onOpenDrawer={() => setDrawerOpen(true)}
           onExpand={toggleCollapsed}
+          localAuth={localAuth}
         />
         <SalesTicker />
         <Conversation
@@ -214,11 +215,13 @@ function TopBar({
   tab,
   onOpenDrawer,
   onExpand,
+  localAuth,
 }: {
   collapsed: boolean;
   tab: ChatTab;
   onOpenDrawer: () => void;
   onExpand: () => void;
+  localAuth: boolean;
 }) {
   return (
     <header className="chat-topbar relative z-10 flex h-14 shrink-0 items-center gap-1 px-2 md:h-16 md:px-3">
@@ -241,6 +244,13 @@ function TopBar({
       <Link href={`/chat?mode=${tab}`} className="icon-btn ml-auto md:hidden" aria-label="New chat">
         <SquarePen className="size-[21px]" strokeWidth={1.75} />
       </Link>
+      {localAuth ? (
+        <form action="/api/auth/logout" method="post" className="relative md:ml-auto">
+          <button type="submit" className="icon-btn" aria-label="Sign out" title="Sign out">
+            <LogOut className="size-[20px]" strokeWidth={1.75} />
+          </button>
+        </form>
+      ) : null}
     </header>
   );
 }
