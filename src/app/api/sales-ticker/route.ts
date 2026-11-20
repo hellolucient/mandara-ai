@@ -3,6 +3,9 @@ import { sql } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
+// Phones (especially a Home Screen app) must never show yesterday's copy.
+const NO_STORE = { "Cache-Control": "no-store, max-age=0" };
+
 type SalesLine = {
   location_name: string;
   treatment_sales: number | null;
@@ -23,7 +26,7 @@ export async function GET(request: NextRequest) {
     );
 
     if (latestDate.length === 0) {
-      return NextResponse.json({ spas: [] });
+      return NextResponse.json({ spas: [] }, { headers: NO_STORE });
     }
 
     const date = latestDate[0].business_date;
@@ -44,9 +47,9 @@ export async function GET(request: NextRequest) {
       total: (line.treatment_sales ?? 0) + (line.retail_sales ?? 0),
     }));
 
-    return NextResponse.json({ spas, date });
+    return NextResponse.json({ spas, date }, { headers: NO_STORE });
   } catch (error) {
     console.error("Sales ticker error:", error);
-    return NextResponse.json({ spas: [] });
+    return NextResponse.json({ spas: [] }, { headers: NO_STORE });
   }
 }

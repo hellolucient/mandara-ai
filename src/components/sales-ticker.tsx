@@ -14,6 +14,13 @@ type TickerData = {
   date?: string;
 };
 
+function formatDay(date?: string): string | null {
+  if (!date) return null;
+  const d = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(d);
+}
+
 function formatMoney(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -44,11 +51,12 @@ export function SalesTicker() {
 
   useEffect(() => {
     let mounted = true;
-    let timeoutId: ReturnType<typeof setTimeout>;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
     async function fetchData() {
+      clearTimeout(timeoutId);
       try {
-        const response = await fetch("/api/sales-ticker");
+        const response = await fetch(`/api/sales-ticker?t=${Date.now()}`, { cache: "no-store" });
         if (!response.ok) throw new Error("Failed to fetch");
         const json = (await response.json()) as TickerData;
         if (mounted) {
@@ -57,16 +65,28 @@ export function SalesTicker() {
         }
       } catch {
         if (mounted) {
-          setData({ spas: [] });
+          setData((prev) => prev ?? { spas: [] });
           timeoutId = setTimeout(fetchData, 60 * 1000);
         }
       }
     }
 
+    // Phones pause pages in the background; refresh the moment the app is opened again.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void fetchData();
+    };
+    const onPageShow = () => void fetchData();
+
     void fetchData();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    window.addEventListener("pageshow", onPageShow);
     return () => {
       mounted = false;
       clearTimeout(timeoutId);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+      window.removeEventListener("pageshow", onPageShow);
     };
   }, []);
 
@@ -97,6 +117,11 @@ export function SalesTicker() {
         style={!prefersReducedMotion && durationSec ? { animationDuration: `${durationSec}s` } : undefined}
       >
         <div className="ticker-content" ref={contentRef}>
+          {formatDay(data.date) && (
+            <div className="ticker-item">
+              <span className="ticker-spa-name">Sales {formatDay(data.date)}</span>
+            </div>
+          )}
           {data.spas.map((spa, index) => (
             <div key={`${spa.name}-${index}`} className="ticker-item">
               <span className="ticker-spa-name">{spa.name}:</span>
@@ -108,6 +133,11 @@ export function SalesTicker() {
         </div>
         {!prefersReducedMotion && (
           <div className="ticker-content" aria-hidden="true">
+            {formatDay(data.date) && (
+            <div className="ticker-item">
+              <span className="ticker-spa-name">Sales {formatDay(data.date)}</span>
+            </div>
+          )}
             {data.spas.map((spa, index) => (
               <div key={`${spa.name}-dup-${index}`} className="ticker-item">
                 <span className="ticker-spa-name">{spa.name}:</span>
