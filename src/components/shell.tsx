@@ -30,7 +30,7 @@ export function Shell({
   const items = navItems(member.role, member.chatOnly);
   return (
     <div className="min-h-screen md:grid md:grid-cols-[232px_1fr]">
-      <aside className="hidden bg-primary text-primary-foreground md:flex md:flex-col md:px-4 md:py-6">
+      <aside className="hidden bg-primary text-primary-foreground md:sticky md:top-0 md:flex md:h-screen md:flex-col md:overflow-y-auto md:px-4 md:py-6">
         <div className="flex items-center gap-3 px-2">
           {MARK}
           <div>
@@ -90,13 +90,13 @@ export function Shell({
 function AccountLinks({ tone }: { tone: "rail" | "bar" }) {
   const link = tone === "rail" ? "text-white/80 underline-offset-4 hover:text-white hover:underline" : "text-muted-foreground underline-offset-4 hover:underline";
   return (
-    <form action="/api/auth/logout" method="post" className={`flex gap-3 text-xs ${tone === "rail" ? "mt-2" : ""}`}>
+    <form action="/api/auth/logout" method="post" className={`flex items-center gap-3 text-xs ${tone === "rail" ? "mt-3" : ""}`}>
       <Link href="/account/password" className={link}>
         Password
       </Link>
       <button
         type="submit"
-        className={tone === "rail" ? link : "rounded-full border px-3 py-1.5 text-sm font-medium text-foreground"}
+        className={tone === "rail" ? "rounded-full border border-white/40 px-3 py-1 text-white hover:bg-white/10" : "rounded-full border px-3 py-1.5 text-sm font-medium text-foreground"}
       >
         Sign out
       </button>
