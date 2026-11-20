@@ -28,6 +28,14 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="font-heading text-3xl">Sales</h1>
+          {day ? (
+            <p className="mt-1 text-lg font-medium">
+              Figures for {formatBusinessDate(day.businessDate)}
+              {day.businessDate === days.at(-1)?.businessDate ? (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">latest DSR loaded</span>
+              ) : null}
+            </p>
+          ) : null}
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             Figures come from stored records. A missing number stays missing. The same records answer sales questions in the assistant.
           </p>
@@ -57,7 +65,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
           </div>
           <section className="mt-5 grid gap-3 sm:grid-cols-3">
             <article className="rounded-xl border bg-card p-4">
-              <p className="text-xs tracking-wide text-muted-foreground uppercase">Recorded net sales</p>
+              <p className="text-xs tracking-wide text-muted-foreground uppercase">Total sales (treatments + retail)</p>
               <p className="mt-2 font-heading text-3xl">{headline.total == null ? "—" : money(headline.total, day.currency)}</p>
               <p className="mt-1 text-xs text-muted-foreground">{headline.locations} locations with a figure</p>
             </article>
@@ -77,7 +85,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
               <thead className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                 <tr>
                   <th className="py-3 pr-2 pl-3 font-medium sm:px-4">Location</th>
-                  <th className="px-2 py-3 text-right font-medium whitespace-nowrap sm:px-4">Net sales</th>
+                  <th className="px-2 py-3 text-right font-medium whitespace-nowrap sm:px-4" title="Treatments plus retail">Total sales</th>
                   <th className="px-2 py-3 text-right font-medium whitespace-nowrap sm:px-4">Budget</th>
                   <th className="py-3 pr-3 pl-2 text-right font-medium whitespace-nowrap sm:px-4" title="Treatment guests">
                     Guests
@@ -98,6 +106,12 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
                     </td>
                     <td className="px-2 py-3 text-right whitespace-nowrap tabular-nums sm:px-4">
                       {line.netSales == null ? "Missing" : money(line.netSales, day.currency)}
+                      {line.treatmentSales != null || line.retailSales != null ? (
+                        <div className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                          <div>Treat {line.treatmentSales == null ? "—" : money(line.treatmentSales, day.currency)}</div>
+                          <div>Retail {line.retailSales == null ? "—" : money(line.retailSales, day.currency)}</div>
+                        </div>
+                      ) : null}
                     </td>
                     <td className="px-2 py-3 text-right whitespace-nowrap tabular-nums sm:px-4">
                       {line.budget == null ? <span className="text-muted-foreground" title="No budget stored">—</span> : money(line.budget, day.currency)}
