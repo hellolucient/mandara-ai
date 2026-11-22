@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { apiAllowed, canSeeContracts, pageAllowed, usesChatOnlyView } from "./access";
+import { apiAllowed, canSeeContracts, canSeeQuickAccess, pageAllowed, usesChatOnlyView, usesDashboardAccess } from "./access";
+import { navItems } from "./nav";
 import { canSeeProspects } from "./prospects-access";
 import { askPlaceholder } from "./ask-placeholder";
 import { buildPicturePrompt, isCreativeMandaraTask, PRINTABLE_CARD_BRIEF, storedGapMessage } from "./mandara-context";
@@ -91,6 +92,83 @@ describe("chat-only view: who gets it", () => {
     assert.equal((conversation.match(/rejectCrossOrigin\(request\)/g) ?? []).length, 2);
     // Chat never reads prospects.
     assert.doesNotMatch(readFileSync("src/lib/chat.ts", "utf8"), /prospect/i);
+  });
+});
+
+
+describe("dashboard + chat access", () => {
+  const tenille = { role: "manager", appAccess: "dashboard" as const };
+
+  it("is for Management and Spa people with dashboard access, never for Admin", () => {
+    assert.equal(usesDashboardAccess({ role: "manager", appAccess: "dashboard" }), true);
+    assert.equal(usesDashboardAccess({ role: "staff", appAccess: "dashboard" }), true);
+    assert.equal(usesDashboardAccess({ role: "manager", appAccess: "chat" }), false);
+    assert.equal(usesDashboardAccess({ role: "manager", chatOnly: true }), false);
+    assert.equal(usesDashboardAccess({ role: "admin", appAccess: "dashboard" }), false);
+    assert.equal(usesChatOnlyView(tenille), false);
+    assert.equal(canSeeQuickAccess(tenille), false);
+    assert.equal(canSeeQuickAccess({ role: "admin" }), true);
+    assert.equal(canSeeQuickAccess({ role: "manager", appAccess: "full" }), true);
+  });
+
+  it("lets them open Home, Chat and account pages, and nothing else", () => {
+    for (const path of ["/", "/chat", "/chat/abc", "/account/password"]) assert.equal(pageAllowed(tenille, path), true, path);
+    for (const path of ["/sales", "/knowledge", "/agents", "/memories", "/prospects", "/prospects/abc", "/admin", "/print/sales"]) {
+      assert.equal(pageAllowed(tenille, path), false, path);
+    }
+  });
+
+  it("allows chat, ticker and auth APIs, and refuses prospects, admin, sales import, agents and knowledge", () => {
+    for (const path of ["/api/chat", "/api/conversations/abc", "/api/memories", "/api/auth/logout", "/api/auth/password", "/api/sales-ticker", "/api/version"]) {
+      assert.equal(apiAllowed(tenille, path), true, path);
+    }
+    for (const path of [
+      "/api/prospects",
+      "/api/prospects/abc",
+      "/api/prospects/abc/notes",
+      "/api/prospects/import",
+      "/api/admin",
+      "/api/admin/users",
+      "/api/admin/export",
+      "/api/sales/import",
+      "/api/knowledge",
+      "/api/budgets",
+      "/api/agents/sales/run",
+    ]) {
+      assert.equal(apiAllowed(tenille, path), false, path);
+    }
+  });
+
+  it("shows only Home and Chat in the nav, leaves chat-only and admin menus unchanged", () => {
+    assert.deepEqual(navItems("manager", false, "dashboard").map((item) => item.href), ["/", "/chat"]);
+    assert.deepEqual(navItems("staff", false, "dashboard").map((item) => item.label), ["Home", "Chat"]);
+    assert.deepEqual(navItems("manager", true).map((item) => item.href), ["/chat"]);
+    const admin = navItems("admin").map((item) => item.href);
+    assert.ok(admin.includes("/") && admin.includes("/chat") && admin.includes("/prospects") && admin.includes("/admin"));
+  });
+
+  it("does not treat a leftover chatOnly flag as Chat only when appAccess is dashboard", () => {
+    const mixed = { role: "manager", chatOnly: true, appAccess: "dashboard" as const };
+    assert.equal(usesDashboardAccess(mixed), true);
+    assert.equal(usesChatOnlyView(mixed), false);
+    assert.equal(pageAllowed(mixed, "/"), true);
+  });
+
+  it("still hides Prospects from dashboard people, including in chat", () => {
+    assert.equal(canSeeProspects("manager"), false);
+    assert.equal(canSeeProspects("staff"), false);
+    assert.equal(canSeeContracts("manager"), true);
+  });
+
+  it("wires Home, People and print access to the new level", () => {
+    const home = readFileSync("src/app/(app)/page.tsx", "utf8");
+    assert.match(home, /canSeeQuickAccess\(member\)/);
+    assert.match(home, /Dashboard \+ chat people get Ask across the full width/);
+    const people = readFileSync("src/components/users-manager.tsx", "utf8");
+    assert.match(people, /Dashboard \+ chat/);
+    assert.match(people, /htmlFor="new-pages"/);
+    const print = readFileSync("src/app/print/sales/page.tsx", "utf8");
+    assert.match(print, /pageAllowed\(member, "\/print\/sales"\)/);
   });
 });
 

@@ -4,7 +4,7 @@ import { getIdentity } from "../../cursor/identity";
 import { ensureSeed } from "@/lib/seed";
 import { memberFromIdentity, type Member } from "@/lib/members";
 import { json } from "@/lib/http";
-import { apiAllowed } from "@/lib/access";
+import { accessDeniedMessage, apiAllowed } from "@/lib/access";
 import { appStage, memberFromSession, readSessionToken, SESSION_COOKIE, type LocalMember } from "@/lib/auth-local";
 
 /**
@@ -49,7 +49,7 @@ export async function requireMember(request: Request): Promise<Member | Response
   } catch {
     path = "/";
   }
-  if (!apiAllowed(member, path)) return json({ error: "Your access is limited to Chat." }, 403);
+  if (!apiAllowed(member, path)) return json({ error: accessDeniedMessage(member) }, 403);
   return member;
 }
 

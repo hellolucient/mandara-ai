@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { APP_ACCESS_LABELS, APP_ACCESS_VALUES, appAccessFromFlags, type AppAccess } from "@/lib/access";
 
 export type UserRow = {
   id: string;
@@ -13,6 +14,7 @@ export type UserRow = {
   name: string;
   role: "admin" | "manager" | "staff";
   chatOnly: boolean;
+  appAccess?: AppAccess;
   disabled: boolean;
   mustChangePassword: boolean;
   lastLoginAt: string | null;
@@ -23,6 +25,13 @@ const ROLE_OPTIONS = [
   { value: "manager", label: "Management: contracts and resort data" },
   { value: "staff", label: "Spa: no contracts" },
 ] as const;
+
+const PAGE_OPTIONS = APP_ACCESS_VALUES.map((value) => ({
+  value,
+  label: APP_ACCESS_LABELS[value],
+  short:
+    value === "full" ? "All pages" : value === "dashboard" ? "Dashboard + chat" : "Chat only",
+}));
 
 async function call(body: Record<string, unknown>): Promise<{ temporaryPassword?: string }> {
   const response = await fetch("/api/admin/users", {
@@ -54,6 +63,7 @@ export function UsersManager({ users, selfId }: { users: UserRow[]; selfId: stri
   const router = useRouter();
   const [error, setError] = useState("");
   const [shown, setShown] = useState<{ who: string; password: string } | null>(null);
+  const [newRole, setNewRole] = useState<"admin" | "manager" | "staff">("manager");
 
   async function run(body: Record<string, unknown>, who?: string) {
     setError("");
@@ -75,18 +85,20 @@ export function UsersManager({ users, selfId }: { users: UserRow[]; selfId: stri
           const formElement = event.currentTarget;
           const form = new FormData(formElement);
           const username = String(form.get("username") ?? "");
+          const role = String(form.get("role") ?? "staff");
           await run(
             {
               action: "create",
               username,
               name: String(form.get("name") ?? ""),
               email: String(form.get("email") ?? ""),
-              role: String(form.get("role") ?? "staff"),
-              chatOnly: form.get("chatOnly") === "on",
+              role,
+              appAccess: role === "admin" ? "full" : String(form.get("appAccess") ?? "chat"),
             },
             username,
           );
           formElement.reset();
+          setNewRole("manager");
         }}
       >
         <div>
@@ -102,8 +114,14 @@ export function UsersManager({ users, selfId }: { users: UserRow[]; selfId: stri
           <Input id="new-email" name="email" type="email" placeholder="name@mandaraspamaldives.com" />
         </div>
         <div>
-          <Label htmlFor="new-role">Access</Label>
-          <select id="new-role" name="role" defaultValue="manager" className="h-10 w-full rounded-lg border bg-background px-3 text-sm">
+          <Label htmlFor="new-role">Role</Label>
+          <select
+            id="new-role"
+            name="role"
+            value={newRole}
+            onChange={(event) => setNewRole(event.target.value as "admin" | "manager" | "staff")}
+            className="h-10 w-full rounded-lg border bg-background px-3 text-sm"
+          >
             {ROLE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -111,9 +129,31 @@ export function UsersManager({ users, selfId }: { users: UserRow[]; selfId: stri
             ))}
           </select>
         </div>
-        <label className="flex items-center gap-2 text-sm sm:col-span-2">
-          <input type="checkbox" name="chatOnly" defaultChecked /> Chat only (they see just the chat)
-        </label>
+        <div className="sm:col-span-2">
+          <Label htmlFor="new-pages">Pages</Label>
+          <select
+            id="new-pages"
+            name="appAccess"
+            defaultValue="chat"
+            disabled={newRole === "admin"}
+            className="h-10 w-full rounded-lg border bg-background px-3 text-sm disabled:opacity-60"
+          >
+            {newRole === "admin" ? (
+              <option value="full">Everything</option>
+            ) : (
+              PAGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))
+            )}
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {newRole === "admin"
+              ? "Administrators always have every page."
+              : "Dashboard + chat shows Home (Performance, Ask Mandara AI and By spa) and Chat. Chat only keeps them in the chat."}
+          </p>
+        </div>
         <div className="sm:col-span-2">
           <Button type="submit">Add person</Button>
         </div>
@@ -121,49 +161,60 @@ export function UsersManager({ users, selfId }: { users: UserRow[]; selfId: stri
       {shown ? <OneTimePassword who={shown.who} password={shown.password} onClose={() => setShown(null)} /> : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <ul className="divide-y">
-        {users.map((user) => (
-          <li key={user.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className={user.disabled ? "text-muted-foreground line-through" : ""}>
-                {user.name || user.username} <span className="text-xs text-muted-foreground">@{user.username}</span>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {user.email || "No email"} · {user.lastLoginAt ? `last in ${user.lastLoginAt} (Bangkok)` : "never signed in"}
-                {user.mustChangePassword ? " · temporary password" : ""}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                aria-label={`Access for ${user.username}`}
-                defaultValue={user.role}
-                className="h-9 rounded-lg border bg-background px-2 text-sm"
-                onChange={(event) => run({ action: "update", id: user.id, role: event.target.value })}
-              >
-                {ROLE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label.split(":")[0]}
-                  </option>
-                ))}
-              </select>
-              <label className="flex items-center gap-1 text-xs">
-                <input
-                  type="checkbox"
-                  defaultChecked={user.chatOnly}
-                  onChange={(event) => run({ action: "update", id: user.id, chatOnly: event.target.checked })}
-                />
-                Chat only
-              </label>
-              <Button type="button" variant="outline" size="sm" onClick={() => run({ action: "reset", id: user.id }, user.username)}>
-                Reset password
-              </Button>
-              {user.id !== selfId ? (
-                <Button type="button" variant="outline" size="sm" onClick={() => run({ action: "update", id: user.id, disabled: !user.disabled })}>
-                  {user.disabled ? "Switch on" : "Switch off"}
+        {users.map((user) => {
+          const pages = user.role === "admin" ? "full" : appAccessFromFlags({ appAccess: user.appAccess, chatOnly: user.chatOnly });
+          return (
+            <li key={user.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className={user.disabled ? "text-muted-foreground line-through" : ""}>
+                  {user.name || user.username} <span className="text-xs text-muted-foreground">@{user.username}</span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {user.email || "No email"} · {user.lastLoginAt ? `last in ${user.lastLoginAt} (Bangkok)` : "never signed in"}
+                  {user.mustChangePassword ? " · temporary password" : ""}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  aria-label={`Role for ${user.username}`}
+                  defaultValue={user.role}
+                  className="h-9 rounded-lg border bg-background px-2 text-sm"
+                  onChange={(event) => run({ action: "update", id: user.id, role: event.target.value })}
+                >
+                  {ROLE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label.split(":")[0]}
+                    </option>
+                  ))}
+                </select>
+                {user.role === "admin" ? (
+                  <span className="text-xs text-muted-foreground">Everything</span>
+                ) : (
+                  <select
+                    aria-label={`Pages for ${user.username}`}
+                    defaultValue={pages}
+                    className="h-9 rounded-lg border bg-background px-2 text-sm"
+                    onChange={(event) => run({ action: "update", id: user.id, appAccess: event.target.value })}
+                  >
+                    {PAGE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.short}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <Button type="button" variant="outline" size="sm" onClick={() => run({ action: "reset", id: user.id }, user.username)}>
+                  Reset password
                 </Button>
-              ) : null}
-            </div>
-          </li>
-        ))}
+                {user.id !== selfId ? (
+                  <Button type="button" variant="outline" size="sm" onClick={() => run({ action: "update", id: user.id, disabled: !user.disabled })}>
+                    {user.disabled ? "Switch on" : "Switch off"}
+                  </Button>
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

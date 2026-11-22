@@ -2,7 +2,7 @@ import Link from "next/link";
 import { NavLinks } from "@/components/nav-links";
 import type { Member } from "@/lib/members";
 import { navItems } from "@/lib/nav";
-import { roleLabel } from "@/lib/access";
+import { resolveAppAccess, roleLabel } from "@/lib/access";
 
 const MARK = (
   <svg className="mark" viewBox="0 0 32 32" aria-hidden="true">
@@ -27,7 +27,8 @@ export function Shell({
   localAuth?: boolean;
   children: React.ReactNode;
 }) {
-  const items = navItems(member.role, member.chatOnly);
+  const items = navItems(member.role, member.chatOnly, member.appAccess);
+  const access = resolveAppAccess(member);
   return (
     <div className="min-h-screen md:grid md:grid-cols-[232px_1fr]">
       <aside className="hidden bg-primary text-primary-foreground md:sticky md:top-0 md:flex md:h-screen md:flex-col md:overflow-y-auto md:px-4 md:py-6">
@@ -43,7 +44,7 @@ export function Shell({
         </div>
         <div className="mt-auto px-2 text-sm text-white/75">
           <p className="break-words text-white">{member.name || "Staff"}</p>
-          <p>{roleLabel(member.role)}{member.chatOnly && member.role !== "admin" ? " · Chat" : ""}</p>
+          <p>{roleLabel(member.role)}{access === "chat" ? " · Chat" : access === "dashboard" ? " · Dashboard + chat" : ""}</p>
           {localAuth ? <AccountLinks tone="rail" /> : null}
           <p className="mt-3 text-xs leading-5 break-words text-white/60">{companyName}</p>
         </div>

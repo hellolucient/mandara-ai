@@ -115,8 +115,8 @@ export default async function AdminPage() {
         <section className="rounded-xl border bg-card p-4">
           <h2 className="font-heading text-2xl">People and sign-ins</h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
-            Add someone, choose their access and pass on the temporary password yourself. They pick their own password at first sign-in.
-            Management sees contracts and resort data. Spa sees no contracts. Chat only keeps them in the chat. Prospects stay with administrators.
+            Add someone, choose their role and pages and pass on the temporary password yourself. They pick their own password at first sign-in.
+            Management sees contracts and resort data. Spa sees no contracts. Dashboard + chat shows Home and Chat. Chat only keeps them in the chat. Prospects stay with administrators.
           </p>
           <div className="mt-4">
             <UsersManager users={users} selfId={(member as LocalMember).userId} />

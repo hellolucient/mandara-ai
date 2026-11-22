@@ -5,6 +5,7 @@ import { PrintControls } from "@/components/print-controls";
 import { addDays, businessToday, formatBusinessDate, formatMaldives, money } from "@/lib/dates";
 import { buildSalesReport, type SalesReport } from "@/lib/sales-report";
 import { loadDays } from "@/lib/sales-store";
+import { pageAllowed } from "@/lib/access";
 import { currentMember } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -15,11 +16,11 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   return { title: `Mandara daily sales report ${date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : ""}`.trim() };
 }
 
-/** Printable management report. Same access as the Sales page: any signed-in member of the workspace. */
+/** Printable management report. Same access as the Sales page: full-app members only. */
 export default async function SalesReportPrint({ searchParams }: { searchParams: Promise<{ date?: string; print?: string }> }) {
   const member = await currentMember();
   if (!member) return <SignedOut />;
-  if (member.chatOnly && member.role !== "admin") redirect("/chat");
+  if (!pageAllowed(member, "/print/sales")) redirect("/chat");
   if ("mustChangePassword" in member && member.mustChangePassword) redirect("/account/password");
   const query = await searchParams;
   const days = await loadDays(member.stage);

@@ -17,6 +17,7 @@ import { currentMember } from "@/lib/session";
 import { calculateHomeKPIs, getSpaSummaries, type HomeKPIs, type SpaSummary } from "@/lib/home-kpis";
 import { AskTile } from "@/components/ask-tile";
 import { ProspectsCard } from "@/components/prospects/home-card";
+import { canSeeQuickAccess } from "@/lib/access";
 import { canSeeProspects } from "@/lib/prospects-access";
 import { prospectSummary } from "@/lib/prospects-store";
 
@@ -55,6 +56,7 @@ export default async function HomePage() {
 
   const firstName = member.name?.split(" ")[0] || "there";
   const currency = kpis?.currency || "USD";
+  const showApps = canSeeQuickAccess(member);
 
   return (
     <main className="mx-auto max-w-[1200px] px-5 pt-8 pb-16 md:px-10 md:pt-12">
@@ -71,20 +73,22 @@ export default async function HomePage() {
 
       {kpis ? <Overview kpis={kpis} spas={spas} today={today} /> : <EmptyOverview />}
 
-      {/* Ask + apps */}
-      <section className="mt-10 grid gap-5 lg:grid-cols-12">
-        <div className="flex flex-col lg:col-span-7">
+      {/* Ask + apps. Dashboard + chat people get Ask across the full width, without Quick access. */}
+      <section className={showApps ? "mt-10 grid gap-5 lg:grid-cols-12" : "mt-10"}>
+        <div className={showApps ? "flex flex-col lg:col-span-7" : "flex flex-col"}>
           <SectionTitle>Ask Mandara AI</SectionTitle>
           <AskTile />
         </div>
-        <div className="lg:col-span-5">
-          <SectionTitle>Quick access</SectionTitle>
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            {APP_LINKS.map((link) => (
-              <AppTile key={link.url} {...link} />
-            ))}
+        {showApps ? (
+          <div className="lg:col-span-5">
+            <SectionTitle>Quick access</SectionTitle>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              {APP_LINKS.map((link) => (
+                <AppTile key={link.url} {...link} />
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
       </section>
 
       {spas.length > 0 ? <SpaTable spas={spas} currency={currency} /> : null}

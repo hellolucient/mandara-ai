@@ -83,4 +83,8 @@ export const SCHEMA_MIGRATIONS: Array<{ name: string; sql: string }> = [
     name: "019_session_temp_password.sql",
     sql: "-- Mark sessions that were opened with a temporary password, so the forced\n-- first-sign-in change can skip asking for that password again.\nalter table app_sessions add column if not exists from_temp_password boolean not null default false;\n\nupdate app_sessions s\nset from_temp_password = true\nfrom app_users u\nwhere s.user_id = u.id and u.must_change_password = true and s.from_temp_password = false;",
   },
+  {
+    name: "020_app_access.sql",
+    sql: "-- Which pages a person can open, for their role.\n-- full: all pages that role already had (today's default when chat_only is false).\n-- dashboard: Home and Chat only (Performance, Ask Mandara AI, By spa).\n--   No Quick access, Prospects or admin pages.\n-- chat: Chat only (today's chat_only).\nalter table members add column if not exists app_access text not null default 'full';\n\nupdate members\nset app_access = 'chat'\nwhere chat_only = true and app_access = 'full';",
+  },
 ];

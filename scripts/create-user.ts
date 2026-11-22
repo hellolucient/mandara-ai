@@ -1,6 +1,6 @@
 // Creates a Mandara sign-in directly in the database (first administrator, or anyone, from a terminal).
 // Usage:
-//   DATABASE_URL=... npx tsx scripts/create-user.ts --username trent --name "Trent Munday" --role admin [--email x] [--chat-only] [--sub user:123]
+//   DATABASE_URL=... npx tsx scripts/create-user.ts --username trent --name "Trent Munday" --role admin [--email x] [--chat-only | --dashboard] [--sub user:123]
 // --sub links the sign-in to an existing member id (for example Trent's Grok-era id) so chats and memories carry over.
 // The temporary password is written to a private file (mode 600), never printed. The person changes it at first sign-in.
 import { writeFileSync } from "node:fs";
@@ -21,6 +21,7 @@ async function main() {
     email: arg("email"),
     role,
     chatOnly: process.argv.includes("--chat-only"),
+    appAccess: process.argv.includes("--dashboard") ? "dashboard" : process.argv.includes("--chat-only") ? "chat" : "full",
     sub: arg("sub"),
   });
   if (!result.ok) {
