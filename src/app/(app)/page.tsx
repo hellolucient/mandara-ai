@@ -257,7 +257,7 @@ function AppTile({ label, hint, url, icon: Icon }: { label: string; hint: string
 /* ---------- Spa table ---------- */
 
 function SpaTable({ spas, currency, latestDate, today }: { spas: SpaSummary[]; currency: string; latestDate: string; today: string }) {
-  const headings = latestDate ? latestDayColumnLabels(latestDate, today) : { treatment: "Treatment", retail: "Retail", day: "Latest day" };
+  const headings = latestDate ? latestDayColumnLabels(latestDate, today) : { treatment: "Treatment", retail: "Retail", day: "Latest day", summary: "Treatment and retail" };
   return (
     <section className="mt-12">
       <div className="flex items-baseline justify-between">
@@ -308,26 +308,24 @@ function SpaTable({ spas, currency, latestDate, today }: { spas: SpaSummary[]; c
       </div>
 
       {/* Mobile */}
-      <ul className="mt-4 divide-y divide-black/[0.05] overflow-hidden rounded-2xl border border-black/[0.06] bg-card shadow-[0_1px_2px_rgba(20,40,35,0.04)] md:hidden dark:divide-white/[0.06] dark:border-white/10">
+      <p className="mt-3 text-[12px] leading-5 text-muted-foreground md:hidden">{headings.summary}</p>
+      <ul className="mt-2 divide-y divide-black/[0.05] overflow-hidden rounded-2xl border border-black/[0.06] bg-card shadow-[0_1px_2px_rgba(20,40,35,0.04)] md:hidden dark:divide-white/[0.06] dark:border-white/10">
         {spas.map((spa) => (
           <li key={spa.locationId} className="px-4 py-3">
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="min-w-0 truncate text-[14.5px] font-medium text-foreground">{spa.locationName}</p>
-              <p className="shrink-0 text-right">
-                <span className="text-[15px] font-medium text-foreground tabular-nums">{formatCurrencyExact(spa.mtdRevenue, currency)}</span>
-                <span className="ml-1.5 text-[10px] tracking-wide text-muted-foreground uppercase">Month to date</span>
-              </p>
-            </div>
-            <div className="mt-2 flex items-end justify-between gap-3">
-              <div className="flex min-w-0 flex-wrap items-end gap-x-4 gap-y-1.5">
-                <Stat label={headings.treatment} value={spa.latestTreatmentSales != null ? formatCurrencyExact(spa.latestTreatmentSales, currency) : "—"} />
-                <Stat label={headings.retail} value={spa.latestRetailSales != null ? formatCurrencyExact(spa.latestRetailSales, currency) : "—"} />
-                <Stat
-                  label="vs budget"
-                  value={spa.budgetPercent == null ? "No budget" : `${spa.budgetPercent.toFixed(0)}%`}
-                />
+            <div className="flex items-start justify-between gap-3">
+              <p className="min-w-0 truncate pt-0.5 text-[14.5px] font-medium text-foreground">{spa.locationName}</p>
+              <div className="shrink-0 text-right">
+                <p className="text-[15px] leading-5 font-medium text-foreground tabular-nums">{formatCurrencyExact(spa.mtdRevenue, currency)}</p>
+                <p className="mt-0.5 text-[10px] leading-3 tracking-wide text-muted-foreground uppercase">Month to date</p>
               </div>
-              <Sparkline data={spa.sparklineData} id={`m-${spa.locationId}`} width={84} height={22} />
+            </div>
+            <div className="mt-2.5 grid grid-cols-3 gap-2">
+              <Stat label="Treatment" value={spa.latestTreatmentSales != null ? formatCurrencyExact(spa.latestTreatmentSales, currency) : "—"} />
+              <Stat label="Retail" value={spa.latestRetailSales != null ? formatCurrencyExact(spa.latestRetailSales, currency) : "—"} />
+              <Stat label="vs budget" value={spa.budgetPercent == null ? "No budget" : `${spa.budgetPercent.toFixed(0)}%`} />
+            </div>
+            <div className="mt-2.5 w-full">
+              <Sparkline data={spa.sparklineData} id={`m-${spa.locationId}`} width={320} height={28} className="text-primary w-full" />
             </div>
           </li>
         ))}
@@ -364,8 +362,8 @@ function BudgetBar({ percent }: { percent: number | null }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0">
-      <p className="max-w-[9.5rem] text-[10px] leading-3 tracking-wide text-muted-foreground uppercase">{label}</p>
+    <div className="min-w-0 text-left">
+      <p className="text-[10px] leading-3 tracking-wide text-muted-foreground uppercase">{label}</p>
       <p className="mt-0.5 text-[13px] leading-5 tabular-nums text-foreground">{value}</p>
     </div>
   );
