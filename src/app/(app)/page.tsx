@@ -15,6 +15,7 @@ import { WorldClocks } from "@/components/world-clocks";
 import { Sparkline } from "@/components/sparkline";
 import { currentMember } from "@/lib/session";
 import { calculateHomeKPIs, getSpaSummaries, type HomeKPIs, type SpaSummary } from "@/lib/home-kpis";
+import { latestDayColumnLabels } from "@/lib/dates";
 import { AskTile } from "@/components/ask-tile";
 import { ProspectsCard } from "@/components/prospects/home-card";
 import { canSeeQuickAccess } from "@/lib/access";
@@ -91,7 +92,7 @@ export default async function HomePage() {
         ) : null}
       </section>
 
-      {spas.length > 0 ? <SpaTable spas={spas} currency={currency} /> : null}
+      {spas.length > 0 ? <SpaTable spas={spas} currency={currency} latestDate={kpis?.latestDate ?? spas[0]?.latestDate ?? ""} today={today} /> : null}
 
       {prospects ? <ProspectsCard summary={prospects} /> : null}
     </main>
@@ -255,8 +256,8 @@ function AppTile({ label, hint, url, icon: Icon }: { label: string; hint: string
 
 /* ---------- Spa table ---------- */
 
-function SpaTable({ spas, currency }: { spas: SpaSummary[]; currency: string }) {
-  const showRetail = spas.some((spa) => spa.mtdRetailSales !== null);
+function SpaTable({ spas, currency, latestDate, today }: { spas: SpaSummary[]; currency: string; latestDate: string; today: string }) {
+  const headings = latestDate ? latestDayColumnLabels(latestDate, today) : { treatment: "Treatment", retail: "Retail", day: "Latest day" };
   return (
     <section className="mt-12">
       <div className="flex items-baseline justify-between">
@@ -270,9 +271,9 @@ function SpaTable({ spas, currency }: { spas: SpaSummary[]; currency: string }) 
           <thead>
             <tr className="border-b border-black/[0.06] text-left text-[11px] tracking-[0.14em] text-muted-foreground uppercase dark:border-white/10">
               <th className="py-3 pr-3 pl-6 font-medium">Spa</th>
-              <th className="px-3 py-3 text-right font-medium">Latest day</th>
+              <th className="px-3 py-3 text-right font-medium">{headings.treatment}</th>
+              <th className="px-3 py-3 text-right font-medium">{headings.retail}</th>
               <th className="px-3 py-3 text-right font-medium">Month to date</th>
-              {showRetail ? <th className="px-3 py-3 text-right font-medium">Retail MTD</th> : null}
               <th className="px-3 py-3 font-medium">vs budget</th>
               <th className="py-3 pr-6 pl-3 text-right font-medium">14 days</th>
             </tr>
@@ -285,16 +286,14 @@ function SpaTable({ spas, currency }: { spas: SpaSummary[]; currency: string }) 
               >
                 <td className="py-3.5 pr-3 pl-6 font-medium text-foreground">{spa.locationName}</td>
                 <td className="px-3 py-3.5 text-right text-muted-foreground tabular-nums">
-                  {spa.latestRevenue !== null ? formatCurrency(spa.latestRevenue, currency) : <Missing />}
+                  {spa.latestTreatmentSales != null ? formatCurrencyExact(spa.latestTreatmentSales, currency) : <Missing />}
+                </td>
+                <td className="px-3 py-3.5 text-right text-muted-foreground tabular-nums">
+                  {spa.latestRetailSales != null ? formatCurrencyExact(spa.latestRetailSales, currency) : <Missing />}
                 </td>
                 <td className="px-3 py-3.5 text-right font-medium text-foreground tabular-nums">
-                  {formatCurrency(spa.mtdRevenue, currency)}
+                  {formatCurrencyExact(spa.mtdRevenue, currency)}
                 </td>
-                {showRetail ? (
-                  <td className="px-3 py-3.5 text-right text-muted-foreground tabular-nums">
-                    {spa.mtdRetailSales !== null ? formatCurrency(spa.mtdRetailSales, currency) : <Missing />}
-                  </td>
-                ) : null}
                 <td className="px-3 py-3.5">
                   <BudgetBar percent={spa.budgetPercent} />
                 </td>
@@ -305,6 +304,7 @@ function SpaTable({ spas, currency }: { spas: SpaSummary[]; currency: string }) 
             ))}
           </tbody>
         </table>
+        <p className="px-6 py-2.5 text-[12px] text-muted-foreground">Month to date is treatment + retail.</p>
       </div>
 
       {/* Mobile */}
@@ -312,17 +312,22 @@ function SpaTable({ spas, currency }: { spas: SpaSummary[]; currency: string }) 
         {spas.map((spa) => (
           <li key={spa.locationId} className="px-4 py-3.5">
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-[14.5px] font-medium text-foreground">{spa.locationName}</p>
-                <p className="mt-0.5 text-[12px] text-muted-foreground tabular-nums">
-                  Latest {spa.latestRevenue !== null ? formatCurrency(spa.latestRevenue, currency) : "—"}
-                  {showRetail && spa.mtdRetailSales !== null ? ` · Retail ${formatCurrency(spa.mtdRetailSales, currency)}` : ""}
-                </p>
-              </div>
+              <p className="min-w-0 truncate text-[14.5px] font-medium text-foreground">{spa.locationName}</p>
               <div className="text-right">
-                <p className="text-[15px] font-medium text-foreground tabular-nums">{formatCurrency(spa.mtdRevenue, currency)}</p>
-                <p className="text-[11px] tracking-wide text-muted-foreground uppercase">MTD</p>
+                <p className="text-[15px] font-medium text-foreground tabular-nums">{formatCurrencyExact(spa.mtdRevenue, currency)}</p>
+                <p className="text-[11px] tracking-wide text-muted-foreground uppercase">Month to date</p>
               </div>
+            </div>
+            <p className="mt-2 text-[11px] tracking-wide text-muted-foreground uppercase">{headings.day}</p>
+            <div className="mt-1 grid grid-cols-2 gap-x-4 text-[13px] tabular-nums">
+              <p className="flex items-baseline justify-between gap-2">
+                <span className="text-muted-foreground">Treatment</span>
+                <span>{spa.latestTreatmentSales != null ? formatCurrencyExact(spa.latestTreatmentSales, currency) : "—"}</span>
+              </p>
+              <p className="flex items-baseline justify-between gap-2">
+                <span className="text-muted-foreground">Retail</span>
+                <span>{spa.latestRetailSales != null ? formatCurrencyExact(spa.latestRetailSales, currency) : "—"}</span>
+              </p>
             </div>
             <div className="mt-2.5 flex items-center justify-between gap-4">
               <BudgetBar percent={spa.budgetPercent} />
@@ -331,6 +336,7 @@ function SpaTable({ spas, currency }: { spas: SpaSummary[]; currency: string }) 
           </li>
         ))}
       </ul>
+      <p className="mt-2 text-[12px] text-muted-foreground md:hidden">Month to date is treatment + retail.</p>
     </section>
   );
 }
@@ -404,5 +410,14 @@ function formatCurrency(amount: number, currency: string): string {
     currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatCurrencyExact(amount: number, currency: string): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount);
 }

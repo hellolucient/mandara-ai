@@ -255,6 +255,25 @@ function budgetAnswer(day: LoadedDay): string {
   return lines.join("\n");
 }
 
+
+/** Treatment, retail, then total — never lead with the total, so it cannot be read as treatment. */
+function breakdownLines(figures: { treatment: number | null; retail: number | null; total: number | null }, currency: string): string[] {
+  const lines: string[] = [];
+  if (figures.treatment != null || figures.retail != null) {
+    lines.push(`Treatment: ${cellMoney(figures.treatment, currency)}`);
+    lines.push(`Retail: ${cellMoney(figures.retail, currency)}`);
+  }
+  lines.push(`Total (treatment + retail): ${cellMoney(figures.total, currency)}`);
+  if (figures.treatment == null && figures.retail == null) {
+    lines.push("The treatment and retail split is not stored.");
+  }
+  return lines;
+}
+
+function figuresFromLine(line: SalesLine): { treatment: number | null; retail: number | null; total: number | null } {
+  return { treatment: line.treatmentSales ?? null, retail: line.retailSales ?? null, total: line.netSales ?? null };
+}
+
 function locationAnswer(day: LoadedDay, ordered: LoadedDay[], name: string): string {
   const line = day.lines.find((item) => item.locationName.toLowerCase() === name.toLowerCase());
   if (!line) return `${name} is not on the sales record for ${formatBusinessDate(day.businessDate)}.`;
@@ -262,19 +281,14 @@ function locationAnswer(day: LoadedDay, ordered: LoadedDay[], name: string): str
   const week = ordered.find((item) => item.businessDate === weekDate);
   const priorLine = week?.lines.find((item) => item.locationName === line.locationName) ?? null;
   const shortWeek = formatBusinessDate(weekDate).replace(/ \d{4}$/, "");
-  const split =
-    line.treatmentSales != null && line.retailSales != null
-      ? `Treatments ${money(line.treatmentSales, day.currency)} · Retail ${money(line.retailSales, day.currency)}`
-      : "";
   const lastWeek =
     priorLine && line.netSales != null && priorLine.netSales != null && priorLine.netSales !== 0
       ? `Same day last week (${shortWeek}): ${money(priorLine.netSales, day.currency)}, ${percent(((line.netSales - priorLine.netSales) / priorLine.netSales) * 100)}`
       : `Same day last week (${shortWeek}): ${changePhrase(line, priorLine, day.currency, weekDate)}`;
   const bits = [
     `**${line.locationName} · ${formatBusinessDate(day.businessDate)}**`,
-    `Net sales: ${figure(line, day.currency)}`,
+    ...breakdownLines(figuresFromLine(line), day.currency),
     line.treatments != null ? `Treatment guests: ${line.treatments}` : "",
-    split,
     line.budget == null ? "Budget: none on file for this spa" : `Budget: ${budgetPhrase(line, day.currency)}`,
     lastWeek,
     sourceLine(day),
@@ -290,6 +304,10 @@ function locationMonthAnswer(ordered: LoadedDay[], name: string, through: string
   const currency = inMonth[0].currency;
   const key = name.toLowerCase();
   let sales = 0;
+  let treatment = 0;
+  let retail = 0;
+  let hasTreatment = false;
+  let hasRetail = false;
   let guests = 0;
   let days = 0;
   let paced = 0;
@@ -300,6 +318,14 @@ function locationMonthAnswer(ordered: LoadedDay[], name: string, through: string
       if (line.netSales != null) totals.set(line.locationName, (totals.get(line.locationName) ?? 0) + line.netSales);
       if (line.locationName.toLowerCase() !== key || line.netSales == null) continue;
       sales += line.netSales;
+      if (line.treatmentSales != null) {
+        treatment += line.treatmentSales;
+        hasTreatment = true;
+      }
+      if (line.retailSales != null) {
+        retail += line.retailSales;
+        hasRetail = true;
+      }
       guests += line.treatments ?? 0;
       days += 1;
       if (line.budget != null) {
@@ -315,8 +341,12 @@ function locationMonthAnswer(ordered: LoadedDay[], name: string, through: string
   const rank = ranked.findIndex(([spa]) => spa.toLowerCase() === key) + 1;
   const lines = [
     `**${name} · month to date (${formatBusinessDate(first).replace(/ \d{4}$/, "")} – ${formatBusinessDate(last)})**`,
-    `Net sales: ${money(sales, currency)} over ${days} recorded day${days === 1 ? "" : "s"}`,
-    `Average per day: ${money(sales / days, currency)}`,
+    ...breakdownLines({
+      treatment: hasTreatment ? treatment : null,
+      retail: hasRetail ? retail : null,
+      total: sales,
+    }, currency),
+    `Over ${days} recorded day${days === 1 ? "" : "s"}. Average per day: ${money(sales / days, currency)}`,
     guests ? `Treatment guests: ${guests}` : "",
     budget > 0
       ? `Budget pace: ${money(paced, currency)} against ${money(budget, currency)} on days with a budget, ${percent(((paced - budget) / budget) * 100)}`
@@ -350,6 +380,10 @@ function mtdAnswer(days: LoadedDay[], through: string): string {
     if (!presentDates.has(iso)) missingDates.push(formatBusinessDate(iso));
   }
   let total = 0;
+  let treatment = 0;
+  let retail = 0;
+  let hasTreatment = false;
+  let hasRetail = false;
   let counted = 0;
   const sources = new Set<SalesSource>();
   for (const day of inMonth) {
@@ -359,12 +393,23 @@ function mtdAnswer(days: LoadedDay[], through: string): string {
         total += line.netSales;
         counted += 1;
       }
+      if (line.treatmentSales != null) {
+        treatment += line.treatmentSales;
+        hasTreatment = true;
+      }
+      if (line.retailSales != null) {
+        retail += line.retailSales;
+        hasRetail = true;
+      }
     }
   }
   if (counted === 0) return `No month-to-date sales are stored through ${formatBusinessDate(through)}.`;
   const currency = inMonth[0]?.currency ?? "USD";
+  const split = hasTreatment || hasRetail
+    ? ` Treatment ${cellMoney(hasTreatment ? treatment : null, currency)}, retail ${cellMoney(hasRetail ? retail : null, currency)}, total (treatment + retail) ${cellMoney(total, currency)}.`
+    : ` Month-to-date net sales are ${money(total, currency)}.`;
   const lines = [
-    `Month-to-date net sales through ${formatBusinessDate(through)} are ${money(total, currency)}, from ${counted} stored location figures across ${inMonth.length} recorded days.`,
+    `Month to date through ${formatBusinessDate(through)}:${split} From ${counted} stored location figures across ${inMonth.length} recorded days.`,
   ];
   if (missingDates.length) lines.push(`No record for ${missingDates.join(", ")}. Those dates are not estimated.`);
   if (sources.size > 1) lines.push(`This total mixes ${[...sources].join(", ")} records. It is not a single-source figure.`);
@@ -383,7 +428,12 @@ function totalSentence(day: LoadedDay): string {
 }
 
 function lineSentence(line: SalesLine, currency: string): string {
-  return `${line.locationName}: ${figure(line, currency)}. ${budgetPhrase(line, currency)}`.trim();
+  const figs = figuresFromLine(line);
+  const sales =
+    figs.treatment != null || figs.retail != null
+      ? `treatment ${cellMoney(figs.treatment, currency)}, retail ${cellMoney(figs.retail, currency)}, total ${cellMoney(figs.total, currency)}`
+      : figure(line, currency);
+  return `${line.locationName}: ${sales}. ${budgetPhrase(line, currency)}`.trim();
 }
 
 function figure(line: SalesLine, currency: string): string {
@@ -514,7 +564,7 @@ function monthPeriodAnswer(ordered: LoadedDay[], monthKey: string, periodLabel: 
   
   const lines = [
     `Sales for ${periodLabel} (${coverage}, ${inMonth.length} days stored):`,
-    `Total: ${money(grandTotal, currency)}`,
+    `Total (treatment + retail): ${money(grandTotal, currency)}`,
     "",
     "By location:",
     ...sortedLocations.map(([name, total]) => `${name}: ${money(total, currency)}`),
@@ -579,11 +629,11 @@ function comparisonAnswer(ordered: LoadedDay[], period: "last-month" | "this-mon
   const lines = [
     `Revenue comparison for ${periodLabel} (${coverage}, ${daysInPeriod.length} day${daysInPeriod.length === 1 ? "" : "s"} stored):`,
     "",
-    `Highest: ${highest[0]} with ${money(highest[1], currency)}`,
+    `Highest: ${highest[0]} with ${money(highest[1], currency)} total`,
   ];
   
   if (sortedLocations.length > 1) {
-    lines.push(`Lowest: ${lowest[0]} with ${money(lowest[1], currency)}`);
+    lines.push(`Lowest: ${lowest[0]} with ${money(lowest[1], currency)} total`);
   }
   
   if (sortedLocations.length > 2) {

@@ -1,0 +1,143 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { answerSales } from "./sales-answers.js";
+import { latestDayColumnLabels, shortWeekdayDate } from "./dates.js";
+import { readFileSync } from "node:fs";
+import type { LoadedDay } from "./sales-types.js";
+
+/** Exact Ellaidhoo figures from the 21 Nov 2026 DSR. */
+const ELLAIDHOO = {
+  locationId: "ellaidhoo",
+  locationName: "Ellaidhoo",
+  netSales: 657.33,
+  treatments: 7,
+  budget: 769.09,
+  treatmentSales: 643.34,
+  retailSales: 13.99,
+};
+
+const RANNALHI = {
+  locationId: "rannalhi",
+  locationName: "Rannalhi",
+  netSales: 89.35,
+  treatments: 1,
+  budget: 100,
+  treatmentSales: 89.35,
+  retailSales: 0,
+};
+
+const DHONVELI = {
+  locationId: "dhonveli",
+  locationName: "Dhonveli",
+  netSales: 757.2,
+  treatments: 14,
+  budget: 1338.87,
+  treatmentSales: 716.79,
+  retailSales: 40.41,
+};
+
+function day(date: string, lines: LoadedDay["lines"]): LoadedDay {
+  return { businessDate: date, source: "import", currency: "USD", complete: true, note: "", lines };
+}
+
+const yesterday: LoadedDay = day("2026-11-21", [ELLAIDHOO, RANNALHI, DHONVELI]);
+const earlier: LoadedDay = day("2026-11-20", [
+  { ...ELLAIDHOO, netSales: 500, treatmentSales: 480, retailSales: 20, treatments: 6 },
+  { ...RANNALHI, netSales: 80, treatmentSales: 80, retailSales: 0, treatments: 1 },
+  { ...DHONVELI, netSales: 700, treatmentSales: 660, retailSales: 40, treatments: 12 },
+]);
+
+describe("sales answers label treatment, retail and total correctly", () => {
+  it("states Ellaidhoo's yesterday treatment, retail and total, and does not swap them", () => {
+    const text = answerSales({ kind: "location", name: "Ellaidhoo" }, [earlier, yesterday], "2026-11-22");
+    assert.match(text, /\*\*Ellaidhoo · 21 Nov 2026\*\*/);
+    assert.match(text, /Treatment: \$643\.34/);
+    assert.match(text, /Retail: \$13\.99/);
+    assert.match(text, /Total \(treatment \+ retail\): \$657\.33/);
+    assert.match(text, /Treatment guests: 7/);
+    // The bug was labelling the $657.33 total as treatment and the $643.34 treatment figure as retail.
+    const treatmentLine = text.split("\n").find((line) => line.startsWith("Treatment:"));
+    const retailLine = text.split("\n").find((line) => line.startsWith("Retail:"));
+    const totalLine = text.split("\n").find((line) => line.startsWith("Total (treatment + retail):"));
+    assert.equal(treatmentLine, "Treatment: $643.34");
+    assert.equal(retailLine, "Retail: $13.99");
+    assert.equal(totalLine, "Total (treatment + retail): $657.33");
+    assert.ok(text.indexOf("Treatment: $643.34") < text.indexOf("Retail: $13.99"));
+    assert.ok(text.indexOf("Retail: $13.99") < text.indexOf("Total (treatment + retail): $657.33"));
+    assert.doesNotMatch(text, /Treatment: \$657/);
+    assert.doesNotMatch(text, /Retail: \$643/);
+    assert.doesNotMatch(text, /Treatments \$/);
+  });
+
+  it("shows $0.00 retail when a spa had treatment sales and no retail", () => {
+    const text = answerSales({ kind: "location", name: "Rannalhi" }, [yesterday], "2026-11-22");
+    assert.match(text, /Treatment: \$89\.35/);
+    assert.match(text, /Retail: \$0\.00/);
+    assert.match(text, /Total \(treatment \+ retail\): \$89\.35/);
+  });
+
+  it("keeps treatment, retail and total in the right columns for all spas yesterday", () => {
+    const text = answerSales({ kind: "total" }, [yesterday], "2026-11-22");
+    assert.match(text, /\| Spa \| Treatment \| Retail \| Total \| vs budget \|/);
+    assert.match(text, /\| Ellaidhoo \| \$643\.34 \| \$13\.99 \| \$657\.33 \|/);
+    assert.match(text, /\| Rannalhi \| \$89\.35 \| \$0\.00 \| \$89\.35 \|/);
+    assert.match(text, /\| Dhonveli \| \$716\.79 \| \$40\.41 \| \$757\.20 \|/);
+    assert.doesNotMatch(text, /\| Ellaidhoo \| \$657\.33 \| \$643\.34 \|/);
+    const totalRow = text.split("\n").filter((line) => line.startsWith("| Total |"));
+    assert.equal(totalRow.length, 1);
+    // 643.34+89.35+716.79 = 1449.48 treatment; 13.99+0+40.41 = 54.40 retail; 657.33+89.35+757.20 = 1503.88 total
+    assert.match(totalRow[0], /\| Total \| \$1,449\.48 \| \$54\.40 \| \$1,503\.88 \|/);
+  });
+
+  it("keeps the same order for one spa month to date and for group month-to-date totals", () => {
+    const spa = answerSales({ kind: "location-month", name: "Ellaidhoo" }, [earlier, yesterday], "2026-11-22");
+    assert.match(spa, /Treatment: \$1,123\.34/);
+    assert.match(spa, /Retail: \$33\.99/);
+    assert.match(spa, /Total \(treatment \+ retail\): \$1,157\.33/);
+    assert.ok(spa.indexOf("Treatment: $1,123.34") < spa.indexOf("Retail: $33.99"));
+    assert.ok(spa.indexOf("Retail: $33.99") < spa.indexOf("Total (treatment + retail): $1,157.33"));
+    assert.doesNotMatch(spa, /Treatment: \$1,157/);
+    assert.doesNotMatch(spa, /Retail: \$1,123/);
+
+    const group = answerSales({ kind: "mtd" }, [earlier, yesterday], "2026-11-22");
+    assert.match(group, /Treatment \$2,669\.48/);
+    assert.match(group, /retail \$114\.40/);
+    assert.match(group, /total \(treatment \+ retail\) \$2,783\.88/);
+    assert.doesNotMatch(group, /Treatment \$2,983/);
+  });
+});
+
+describe("Home By spa latest-day column labels", () => {
+  it("says Yesterday when the latest DSR day is the day before today", () => {
+    assert.deepEqual(latestDayColumnLabels("2026-11-21", "2026-11-22"), {
+      treatment: "Yesterday treatment",
+      retail: "Yesterday retail",
+      day: "Yesterday",
+    });
+  });
+
+  it("uses the actual date when the latest DSR day is older than yesterday", () => {
+    assert.equal(shortWeekdayDate("2026-11-21"), "Sat 21 Nov");
+    assert.deepEqual(latestDayColumnLabels("2026-11-21", "2026-11-23"), {
+      treatment: "Sat 21 Nov treatment",
+      retail: "Sat 21 Nov retail",
+      day: "Sat 21 Nov",
+    });
+  });
+
+  it("wires the By spa table to treatment, retail and month-to-date total, not Latest day or Retail MTD", () => {
+    const page = readFileSync("src/app/(app)/page.tsx", "utf8");
+    assert.match(page, /latestDayColumnLabels/);
+    assert.match(page, /headings\.treatment/);
+    assert.match(page, /headings\.retail/);
+    assert.match(page, /Month to date/);
+    assert.match(page, /Month to date is treatment \+ retail/);
+    assert.match(page, /latestTreatmentSales/);
+    assert.match(page, /latestRetailSales/);
+    assert.doesNotMatch(page, />Latest day</);
+    assert.doesNotMatch(page, />Retail MTD</);
+    const kpis = readFileSync("src/lib/home-kpis.ts", "utf8");
+    assert.match(kpis, /latestTreatmentSales/);
+    assert.match(kpis, /business_date === latestDate/);
+  });
+});

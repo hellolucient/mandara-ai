@@ -17,11 +17,16 @@ export type HomeKPIs = {
 export type SpaSummary = {
   locationId: string;
   locationName: string;
+  /** The latest stored DSR day, shared by every spa (the "yesterday" columns). */
+  latestDate: string | null;
+  /** Net sales (treatment + retail) on the latest DSR day. */
   latestRevenue: number | null;
+  latestTreatmentSales: number | null;
+  latestRetailSales: number | null;
   mtdRevenue: number;
   budgetAmount: number | null;
   budgetPercent: number | null;
-  /** Retail revenue month to date; null when no day for this spa splits out retail. */
+  /** Retail revenue month to date; used by tests and tiles, not the By spa table. */
   mtdRetailSales: number | null;
   sparklineData: Array<{ date: string; revenue: number | null }>;
 };
@@ -122,11 +127,13 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
       location_id: string;
       business_date: string;
       net_sales: number | null;
+      treatment_sales: number | null;
       retail_sales: number | null;
     }>(
       `select l.location_id,
               to_char(d.business_date, 'YYYY-MM-DD') as business_date,
               l.net_sales,
+              l.treatment_sales,
               l.retail_sales
        from sales_lines l
        join sales_days d on d.id = l.day_id
@@ -140,8 +147,10 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   for (const row of salesData) {
     row.net_sales = num(row.net_sales);
+    row.treatment_sales = num(row.treatment_sales);
     row.retail_sales = num(row.retail_sales);
   }
+  const latestDate = salesData.map((s) => s.business_date).sort().at(-1) ?? null;
   const latestMtdDate = salesData
     .map((s) => s.business_date)
     .filter((d) => d.startsWith(currentMonth) && d <= today)
@@ -154,9 +163,11 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
   for (const loc of locations) {
     const locSales = salesData.filter((s) => s.location_id === loc.location_id);
 
-    // Latest day revenue
-    const latest = locSales.length > 0 ? locSales[locSales.length - 1] : null;
+    // Figures for the latest DSR day (same date for every spa), not this spa's last stored day.
+    const latest = latestDate ? locSales.find((s) => s.business_date === latestDate) ?? null : null;
     const latestRevenue = latest?.net_sales ?? null;
+    const latestTreatmentSales = latest?.treatment_sales ?? null;
+    const latestRetailSales = latest?.retail_sales ?? null;
 
     // MTD revenue
     const mtdSales = locSales.filter((s) => s.business_date.startsWith(currentMonth) && s.business_date <= today);
@@ -180,7 +191,10 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
     summaries.push({
       locationId: loc.location_id,
       locationName: loc.location_name,
+      latestDate,
       latestRevenue,
+      latestTreatmentSales,
+      latestRetailSales,
       mtdRevenue,
       budgetAmount,
       budgetPercent,
