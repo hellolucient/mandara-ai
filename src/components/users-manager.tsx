@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { APP_ACCESS_LABELS, APP_ACCESS_VALUES, appAccessFromFlags, type AppAccess } from "@/lib/access";
@@ -64,6 +65,8 @@ export function UsersManager({ users, selfId }: { users: UserRow[]; selfId: stri
   const [error, setError] = useState("");
   const [shown, setShown] = useState<{ who: string; password: string } | null>(null);
   const [newRole, setNewRole] = useState<"admin" | "manager" | "staff">("manager");
+  const [pendingDelete, setPendingDelete] = useState<UserRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function run(body: Record<string, unknown>, who?: string) {
     setError("");
@@ -73,6 +76,17 @@ export function UsersManager({ users, selfId }: { users: UserRow[]; selfId: stri
       router.refresh();
     } catch (problem) {
       setError(problem instanceof Error ? problem.message : "The change was not saved.");
+    }
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete || deleting) return;
+    setDeleting(true);
+    try {
+      await run({ action: "delete", id: pendingDelete.id });
+      setPendingDelete(null);
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -207,15 +221,38 @@ export function UsersManager({ users, selfId }: { users: UserRow[]; selfId: stri
                   Reset password
                 </Button>
                 {user.id !== selfId ? (
-                  <Button type="button" variant="outline" size="sm" onClick={() => run({ action: "update", id: user.id, disabled: !user.disabled })}>
-                    {user.disabled ? "Switch on" : "Switch off"}
-                  </Button>
+                  <>
+                    <Button type="button" variant="outline" size="sm" onClick={() => run({ action: "update", id: user.id, disabled: !user.disabled })}>
+                      {user.disabled ? "Switch on" : "Switch off"}
+                    </Button>
+                    <Button type="button" variant="destructive" size="sm" onClick={() => setPendingDelete(user)}>
+                      Delete
+                    </Button>
+                  </>
                 ) : null}
               </div>
             </li>
           );
         })}
       </ul>
+      <Dialog open={pendingDelete !== null} onOpenChange={(open) => { if (!open && !deleting) setPendingDelete(null); }}>
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Delete {pendingDelete?.name || pendingDelete?.username || "this person"} permanently?
+            </DialogTitle>
+            <DialogDescription>Their sign-in and chats will be removed.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={deleting} onClick={() => setPendingDelete(null)}>
+              Cancel
+            </Button>
+            <Button type="button" variant="destructive" disabled={deleting} onClick={() => void confirmDelete()}>
+              {deleting ? "Deleting" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
