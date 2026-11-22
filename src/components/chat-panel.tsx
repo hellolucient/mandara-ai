@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { safeHttpUrl, safeImageSrc } from "@/lib/answer-text";
 import { beginHomeAsk, homeAskStarted, shouldAdoptNewConversation, stripHomeAskFromUrl } from "@/lib/home-ask";
+import { Menu } from "lucide-react";
 import { MarkdownMessage } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +13,8 @@ import { Calculator } from "@/components/calculator";
 import { PromoCards } from "@/components/promo-cards";
 import { parsePromoCards } from "@/lib/promo-cards";
 import type { CalculatorSpec } from "@/lib/calculator-spec";
+import { salesAnswerMarkdown, splitSalesSource } from "@/lib/chat-view";
+import { useOpenHistory } from "@/components/dashboard-chat";
 
 type Citation = { documentId: string; title: string; excerpt: string; sample: boolean; url?: string };
 export type ChatMessage = {
@@ -54,6 +57,7 @@ export function ChatPanel({
   modelOn,
   initialDraft = "",
   askId = "",
+  onOpenHistory,
 }: {
   conversationId: string;
   conversationMode?: string;
@@ -61,7 +65,10 @@ export function ChatPanel({
   askId?: string;
   initialMessages: Message[];
   modelOn: boolean;
+  onOpenHistory?: () => void;
 }) {
+  const historyFromLayout = useOpenHistory();
+  const openHistory = onOpenHistory ?? historyFromLayout;
   const router = useRouter();
   const photoRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -194,17 +201,21 @@ export function ChatPanel({
   const pendingPreview = messages.some((message) => message.id === "pending-user") ? previewUrl : "";
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col md:min-h-screen">
-      <div className="border-b bg-background px-4 py-3 md:px-8">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-muted-foreground">Mode:</span>
-          <div className="flex gap-1 rounded-lg border p-1" role="tablist" aria-label="Chat mode">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
+      <div className="shrink-0 border-b bg-background px-3 py-2 md:px-8 md:py-3">
+        <div className="flex items-center gap-2 md:gap-3">
+          {openHistory ? (
+            <button type="button" className="icon-btn -ml-1 md:hidden" aria-label="Chat history" onClick={openHistory}>
+              <Menu className="size-[22px]" strokeWidth={1.75} />
+            </button>
+          ) : null}
+          <div className="flex gap-1 rounded-full border p-0.5" role="tablist" aria-label="Chat mode">
             {([
               { id: "general", label: "General" },
               { id: "mandara", label: "Mandara" },
             ] as const).map((item) => {
               const selected = mode === item.id;
-              const className = `rounded px-3 py-1 text-sm font-medium transition-colors ${
+              const className = `rounded-full px-3 py-1 text-sm font-medium transition-colors ${
                 selected
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -223,14 +234,14 @@ export function ChatPanel({
               );
             })}
           </div>
-          <span className="text-xs text-muted-foreground">
+          <span className="hidden text-xs text-muted-foreground lg:inline">
             {mode === "general"
               ? "Normal chat with web search when needed"
               : "Answers only from Mandara data"}
           </span>
         </div>
       </div>
-      <div className="flex-1 space-y-6 overflow-y-auto px-4 py-6 md:px-8">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain px-4 py-6 md:px-8">
         {messages.length === 0 && !busy ? (
           <div className="mx-auto max-w-2xl" />
         ) : (
@@ -241,24 +252,7 @@ export function ChatPanel({
                   {message.role === "user" ? "You" : "Mandara"}
                 </p>
                 <div className={message.role === "user" ? "mt-1" : "mt-2 rounded-xl border bg-card px-4 py-3"}>
-                  {message.content ? (
-                    message.role === "assistant" ? <Prose text={message.content} /> : <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
-                  ) : null}
-                  {message.role === "user" ? (
-                    <UserAttachments
-                      name={message.attachment_name}
-                      raw={message.images}
-                      liveSrc={message.id === "pending-user" ? pendingPreview : ""}
-                    />
-                  ) : (
-                    <Pictures raw={message.images} />
-                  )}
-                  {message.role === "assistant" && MODE[message.mode] ? (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      {message.mode === "general" && hasWebSource(message.citations) ? "Checked the web" : MODE[message.mode]}
-                      {message.model ? ` · ${message.model}` : ""}
-                    </p>
-                  ) : null}
+                  <AssistantOrUserBody message={message} pendingPreview={pendingPreview} />
                   <Citations raw={message.citations} />
                 </div>
               </article>
@@ -268,7 +262,7 @@ export function ChatPanel({
         )}
       </div>
       <form
-        className="border-t bg-background px-4 py-3 md:px-8"
+        className="shrink-0 border-t bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-8 md:pb-4"
         onSubmit={(event) => {
           event.preventDefault();
           void send(draft);
@@ -337,6 +331,38 @@ export function ChatPanel({
         </div>
       </form>
     </div>
+  );
+}
+
+function AssistantOrUserBody({ message, pendingPreview }: { message: Message; pendingPreview: string }) {
+  if (message.role === "user") {
+    return (
+      <>
+        {message.content ? <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p> : null}
+        <UserAttachments name={message.attachment_name} raw={message.images} liveSrc={message.id === "pending-user" ? pendingPreview : ""} />
+      </>
+    );
+  }
+  const sales = message.mode === "sales" ? splitSalesSource(message.content) : null;
+  const text = sales ? salesAnswerMarkdown(sales.body) : message.content;
+  const modeLabel =
+    message.mode === "general" && hasWebSource(message.citations)
+      ? "Checked the web"
+      : sales?.source
+        ? ""
+        : MODE[message.mode] ?? "";
+  return (
+    <>
+      {text ? <Prose text={text} /> : null}
+      <Pictures raw={message.images} />
+      {sales?.source ? <p className="mt-3 text-[12.5px] leading-5 text-muted-foreground">{sales.source}</p> : null}
+      {modeLabel ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          {modeLabel}
+          {message.model ? ` · ${message.model}` : ""}
+        </p>
+      ) : null}
+    </>
   );
 }
 

@@ -1,7 +1,7 @@
 import { ChatPanel } from "@/components/chat-panel";
 import { ChatOnlyPage } from "@/components/chat-app/chat-only-page";
+import { DashboardChat } from "@/components/dashboard-chat";
 import { usesChatOnlyView } from "@/lib/access";
-import { ConversationList } from "@/components/conversation-list";
 import { listConversations } from "@/lib/chat";
 import { parseHomeAsk } from "@/lib/home-ask";
 import { modelConfigured } from "@/lib/openrouter";
@@ -24,11 +24,8 @@ export default async function ChatPage({
     return <ChatOnlyPage member={member} conversations={conversations} conversationMode={mode} initialDraft={q} askId={ask} />;
   }
   return (
-    <div className="md:flex md:min-h-screen">
-      <ConversationList items={conversations} activeId="" />
-      <div className="min-w-0 flex-1">
-        <ChatPanel key={mode} conversationId="" conversationMode={mode} initialDraft={q} askId={ask} initialMessages={[]} modelOn={modelConfigured()} />
-      </div>
-    </div>
+    <DashboardChat conversations={conversations} activeId="" tab={mode}>
+      <ChatPanel key={mode} conversationId="" conversationMode={mode} initialDraft={q} askId={ask} initialMessages={[]} modelOn={modelConfigured()} />
+    </DashboardChat>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   ArrowUp,
   CloudSun,
@@ -23,10 +23,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Paperclip,
-  Pencil,
   Plus,
   SquarePen,
-  Trash2,
   TrendingUp,
   X,
   type LucideIcon,
@@ -46,10 +44,10 @@ import {
   type ChatMessage,
 } from "@/components/chat-panel";
 import { askPlaceholder } from "@/lib/ask-placeholder";
+import { ConversationHistory } from "@/components/conversation-history";
 import {
   chatDisclaimer,
   chatSuggestions,
-  groupConversations,
   salesAnswerMarkdown,
   splitSalesSource,
   type ChatTab,
@@ -155,7 +153,7 @@ export function ChatApp({
       <div className={cn("fixed inset-0 z-40 md:hidden", drawerOpen ? "pointer-events-auto" : "pointer-events-none")} aria-hidden={!drawerOpen}>
         <button
           type="button"
-          aria-label="Close menu"
+          aria-label="Close chat history"
           tabIndex={drawerOpen ? 0 : -1}
           className={cn("absolute inset-0 bg-[oklch(0.25_0.02_185/0.35)] backdrop-blur-[2px] transition-opacity duration-200", drawerOpen ? "opacity-100" : "opacity-0")}
           onClick={() => setDrawerOpen(false)}
@@ -229,7 +227,7 @@ function TopBar({
 }) {
   return (
     <header className="chat-topbar relative z-10 flex h-14 shrink-0 items-center gap-1 px-2 md:h-16 md:px-3">
-      <button type="button" className="icon-btn md:hidden" aria-label="Open menu" onClick={onOpenDrawer}>
+      <button type="button" className="icon-btn md:hidden" aria-label="Chat history" onClick={onOpenDrawer}>
         <Menu className="size-[22px]" strokeWidth={1.75} />
       </button>
       {collapsed ? (
@@ -318,10 +316,6 @@ function Sidebar({
   closeIcon: LucideIcon;
   onNavigate: () => void;
 }) {
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => setNow(new Date()), []);
-  const groups = useMemo(() => groupConversations(conversations, now ?? new Date()), [conversations, now]);
-
   return (
     <div className="flex h-full min-w-[272px] flex-col pt-[env(safe-area-inset-top)]">
       <div className="flex h-14 shrink-0 items-center gap-2.5 px-3">
@@ -334,178 +328,12 @@ function Sidebar({
         </button>
       </div>
 
-      <div className="px-3 pb-2">
-        <Link
-          href={`/chat?mode=${tab}`}
-          onClick={onNavigate}
-          className="new-chat-btn flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-[15px] font-medium"
-        >
-          <SquarePen className="size-[18px]" strokeWidth={1.75} />
-          New chat
-        </Link>
-      </div>
-
-      <nav className="chat-history min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3" aria-label="Chat history">
-        {groups.length === 0 ? (
-          <p className="px-3 pt-4 text-sm leading-6 text-muted-foreground">Your chats will appear here.</p>
-        ) : (
-          groups.map((group) => (
-            <section key={group.label} className="mt-4 first:mt-2">
-              <h2 className="px-3 pb-1.5 text-[11.5px] font-medium tracking-[0.08em] text-muted-foreground uppercase">{group.label}</h2>
-              <ul className="space-y-0.5">
-                {group.items.map((item) => (
-                  <HistoryRow key={item.id} item={item} active={item.id === activeId} onNavigate={onNavigate} />
-                ))}
-              </ul>
-            </section>
-          ))
-        )}
-      </nav>
+      <ConversationHistory tab={tab} activeId={activeId} conversations={conversations} onNavigate={onNavigate} />
 
       <div className="shrink-0 border-t border-[oklch(0.87_0.02_88/0.7)] px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <AccountMenu user={user} localAuth={localAuth} />
       </div>
     </div>
-  );
-}
-
-function HistoryRow({ item, active, onNavigate }: { item: HistoryItem; active: boolean; onNavigate: () => void }) {
-  const router = useRouter();
-  const [menu, setMenu] = useState(false);
-  const [renaming, setRenaming] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [title, setTitle] = useState(item.title);
-  const [busy, setBusy] = useState(false);
-  const rowRef = useRef<HTMLLIElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => setTitle(item.title), [item.title]);
-  useEffect(() => {
-    if (renaming) inputRef.current?.select();
-  }, [renaming]);
-  useEffect(() => {
-    if (!menu) return;
-    const onDown = (event: PointerEvent) => {
-      if (rowRef.current && !rowRef.current.contains(event.target as Node)) {
-        setMenu(false);
-        setConfirmDelete(false);
-      }
-    };
-    document.addEventListener("pointerdown", onDown);
-    return () => document.removeEventListener("pointerdown", onDown);
-  }, [menu]);
-
-  async function saveTitle() {
-    const next = title.replace(/\s+/g, " ").trim();
-    setRenaming(false);
-    if (!next || next === item.title) {
-      setTitle(item.title);
-      return;
-    }
-    setBusy(true);
-    const response = await fetch(`/api/conversations/${item.id}`, {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title: next }),
-    }).catch(() => null);
-    setBusy(false);
-    if (!response?.ok) setTitle(item.title);
-    router.refresh();
-  }
-
-  async function remove() {
-    setBusy(true);
-    await fetch(`/api/conversations/${item.id}`, { method: "DELETE" }).catch(() => null);
-    setBusy(false);
-    setMenu(false);
-    if (active) router.push("/chat");
-    router.refresh();
-  }
-
-  if (renaming) {
-    return (
-      <li ref={rowRef} className="px-1">
-        <input
-          ref={inputRef}
-          value={title}
-          maxLength={80}
-          aria-label="Chat name"
-          onChange={(event) => setTitle(event.target.value)}
-          onBlur={() => void saveTitle()}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              void saveTitle();
-            }
-            if (event.key === "Escape") {
-              setTitle(item.title);
-              setRenaming(false);
-            }
-          }}
-          className="h-11 w-full rounded-xl border border-ring/40 bg-card px-3 text-[15px] outline-none focus:ring-2 focus:ring-ring/30"
-        />
-      </li>
-    );
-  }
-
-  return (
-    <li ref={rowRef} className={cn("history-row group relative flex items-center rounded-xl", active && "is-active", busy && "opacity-60")}>
-      <Link
-        href={`/chat/${item.id}`}
-        onClick={onNavigate}
-        className="flex min-h-11 min-w-0 flex-1 items-center rounded-xl py-2 pr-10 pl-3 text-[14.5px] leading-5"
-        aria-current={active ? "page" : undefined}
-      >
-        <span className="min-w-0 flex-1 truncate">{title}</span>
-        {item.mode === "mandara" ? (
-          <span className="history-badge ml-2 shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-medium tracking-wide" title="Mandara chat">
-            M
-          </span>
-        ) : null}
-      </Link>
-      <button
-        type="button"
-        aria-label={`Options for ${title}`}
-        aria-expanded={menu}
-        className={cn(
-          "row-more absolute right-0.5 flex size-10 items-center justify-center rounded-lg text-muted-foreground",
-          menu || active ? "opacity-100" : "opacity-60 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100",
-        )}
-        onClick={() => {
-          setMenu((open) => !open);
-          setConfirmDelete(false);
-        }}
-      >
-        <Ellipsis className="size-[18px]" />
-      </button>
-      {menu ? (
-        <div className="popover-panel absolute top-full right-0 z-30 mt-1 w-48 p-1.5" role="menu">
-          <button
-            type="button"
-            role="menuitem"
-            className="menu-item"
-            onClick={() => {
-              setMenu(false);
-              setRenaming(true);
-            }}
-          >
-            <Pencil className="size-4" strokeWidth={1.75} />
-            Rename
-          </button>
-          {confirmDelete ? (
-            <button type="button" role="menuitem" className="menu-item text-destructive" onClick={() => void remove()}>
-              <Trash2 className="size-4" strokeWidth={1.75} />
-              Tap again to delete
-            </button>
-          ) : (
-            <button type="button" role="menuitem" className="menu-item text-destructive" onClick={() => setConfirmDelete(true)}>
-              <Trash2 className="size-4" strokeWidth={1.75} />
-              Delete
-            </button>
-          )}
-        </div>
-      ) : null}
-    </li>
   );
 }
 

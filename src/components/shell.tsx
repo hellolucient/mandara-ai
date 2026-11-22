@@ -30,8 +30,8 @@ export function Shell({
   const items = navItems(member.role, member.chatOnly, member.appAccess);
   const access = resolveAppAccess(member);
   return (
-    <div className="min-h-screen md:grid md:grid-cols-[232px_1fr]">
-      <aside className="hidden bg-primary text-primary-foreground md:sticky md:top-0 md:flex md:h-screen md:flex-col md:overflow-y-auto md:px-4 md:py-6">
+    <div className="flex min-h-dvh flex-col md:grid md:h-dvh md:grid-cols-[232px_1fr]">
+      <aside className="hidden bg-primary text-primary-foreground md:flex md:h-full md:flex-col md:overflow-y-auto md:px-4 md:py-6">
         <div className="flex items-center gap-3 px-2">
           {MARK}
           <div>
@@ -49,8 +49,8 @@ export function Shell({
           <p className="mt-3 text-xs leading-5 break-words text-white/60">{companyName}</p>
         </div>
       </aside>
-      <div className="min-w-0">
-        <header className="border-b bg-card md:hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="shrink-0 border-b bg-card md:hidden">
           <div className="flex items-center gap-3 px-4 py-3">
             <span className="text-primary">{MARK}</span>
             <div>
@@ -82,7 +82,7 @@ export function Shell({
             This is the preview workspace. Its records stay separate from the live workspace.
           </p>
         ) : null}
-        {children}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
       </div>
     </div>
   );

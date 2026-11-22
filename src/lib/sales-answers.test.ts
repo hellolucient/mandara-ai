@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { answerSales } from "./sales-answers.js";
 import { latestDayColumnLabels, shortWeekdayDate } from "./dates.js";
+import { salesAnswerMarkdown, splitSalesSource } from "./chat-view.js";
 import { readFileSync } from "node:fs";
 import type { LoadedDay } from "./sales-types.js";
 
@@ -139,5 +140,91 @@ describe("Home By spa latest-day column labels", () => {
     const kpis = readFileSync("src/lib/home-kpis.ts", "utf8");
     assert.match(kpis, /latestTreatmentSales/);
     assert.match(kpis, /business_date === latestDate/);
+  });
+});
+
+
+describe("sales answer layout and sparkline polish", () => {
+  it("keeps each sales figure on its own Markdown line, with the source as a footnote", () => {
+    const raw = [
+      "**Ellaidhoo · 21 Nov 2026**",
+      "Treatment: $643.34",
+      "Retail: $13.99",
+      "Total (treatment + retail): $657.33",
+      "Treatment guests: 7",
+      "Budget: $112 below the stored budget of $769.",
+      "Same day last week (14 Nov): $1,029, -36.1%",
+      "Source: Steiners DSR, imported from the daily export.",
+    ].join("\n");
+    const { body, source } = splitSalesSource(raw);
+    assert.equal(source, "Source: Steiners DSR, imported from the daily export.");
+    const md = salesAnswerMarkdown(body);
+    const lines = md.split("\n").map((item) => item.replace(/ {2}$/, ""));
+    assert.deepEqual(lines, [
+      "**Ellaidhoo · 21 Nov 2026**",
+      "Treatment: $643.34",
+      "Retail: $13.99",
+      "Total (treatment + retail): $657.33",
+      "Treatment guests: 7",
+      "Budget: $112 below the stored budget of $769.",
+      "Same day last week (14 Nov): $1,029, -36.1%",
+    ]);
+        assert.doesNotMatch(md, /Treatment: \$643\.34 Retail:/);
+  });
+
+  it("renders those line breaks in both ChatPanel and ChatApp", () => {
+    const panel = readFileSync("src/components/chat-panel.tsx", "utf8");
+    assert.match(panel, /salesAnswerMarkdown/);
+    assert.match(panel, /splitSalesSource/);
+    assert.match(panel, /sales\?\.source/);
+    const app = readFileSync("src/components/chat-app/chat-app.tsx", "utf8");
+    assert.match(app, /salesAnswerMarkdown/);
+    assert.match(app, /splitSalesSource/);
+  });
+
+  it("draws the sparkline end dot as a path on the last point, not a displaced circle", () => {
+    const spark = readFileSync("src/components/sparkline.tsx", "utf8");
+    assert.match(spark, /function dotPath/);
+    assert.match(spark, /dotPath\(end\[0\], end\[1\]/);
+    assert.doesNotMatch(spark, /<circle[\s/>]/);
+    const kpis = readFileSync("src/lib/home-kpis.ts", "utf8");
+    assert.match(kpis, /sparkDates/);
+  });
+
+  it("keeps By spa mobile stats in compact label-above-value pairs", () => {
+    const page = readFileSync("src/app/(app)/page.tsx", "utf8");
+    assert.match(page, /function Stat\(/);
+    assert.match(page, /<Stat label=\{headings\.treatment\}/);
+    assert.match(page, /<Stat label=\{headings\.retail\}/);
+    assert.match(page, /label="vs budget"/);
+    assert.doesNotMatch(page, /justify-between gap-2/);
+  });
+});
+
+describe("mobile chat history drawer", () => {
+  it("opens chat into the conversation on mobile, with history in a drawer, for both views", () => {
+    const dashboard = readFileSync("src/components/dashboard-chat.tsx", "utf8");
+    assert.match(dashboard, /role="dialog"/);
+    assert.match(dashboard, /Chat history/);
+    assert.match(dashboard, /ConversationHistory/);
+    assert.match(dashboard, /hidden.*md:flex|md:flex/);
+    const panel = readFileSync("src/components/chat-panel.tsx", "utf8");
+    assert.match(panel, /aria-label="Chat history"/);
+    assert.match(panel, /onOpenHistory/);
+    assert.match(panel, /safe-area-inset-bottom/);
+    const app = readFileSync("src/components/chat-app/chat-app.tsx", "utf8");
+    assert.match(app, /ConversationHistory/);
+    assert.match(app, /aria-label="Chat history"/);
+    assert.match(app, /safe-area-inset-bottom/);
+    const history = readFileSync("src/components/conversation-history.tsx", "utf8");
+    assert.match(history, /New chat/);
+    assert.match(history, /history-badge/);
+    assert.match(history, /Options for/);
+    assert.match(history, /onTouchEnd/);
+    assert.match(history, /Tap again to delete/);
+    assert.doesNotMatch(history, /text-xs text-muted-foreground opacity-100/);
+    const pages = ["src/app/(app)/chat/page.tsx", "src/app/(app)/chat/[id]/page.tsx"].map((f) => readFileSync(f, "utf8")).join("\n");
+    assert.match(pages, /DashboardChat/);
+    assert.doesNotMatch(pages, /ConversationList/);
   });
 });

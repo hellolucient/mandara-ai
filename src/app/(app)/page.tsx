@@ -270,12 +270,12 @@ function SpaTable({ spas, currency, latestDate, today }: { spas: SpaSummary[]; c
         <table className="w-full border-collapse text-[14px]">
           <thead>
             <tr className="border-b border-black/[0.06] text-left text-[11px] tracking-[0.14em] text-muted-foreground uppercase dark:border-white/10">
-              <th className="py-3 pr-3 pl-6 font-medium">Spa</th>
-              <th className="px-3 py-3 text-right font-medium">{headings.treatment}</th>
-              <th className="px-3 py-3 text-right font-medium">{headings.retail}</th>
-              <th className="px-3 py-3 text-right font-medium">Month to date</th>
-              <th className="px-3 py-3 font-medium">vs budget</th>
-              <th className="py-3 pr-6 pl-3 text-right font-medium">14 days</th>
+              <th className="w-[22%] py-3 pr-3 pl-5 font-medium">Spa</th>
+              <th className="w-[14%] px-2 py-3 text-right font-medium">{headings.treatment}</th>
+              <th className="w-[14%] px-2 py-3 text-right font-medium">{headings.retail}</th>
+              <th className="w-[14%] px-2 py-3 text-right font-medium">Month to date</th>
+              <th className="w-[16%] px-2 py-3 font-medium">vs budget</th>
+              <th className="w-[20%] py-3 pr-5 pl-2 text-right font-medium">14 days</th>
             </tr>
           </thead>
           <tbody>
@@ -284,21 +284,21 @@ function SpaTable({ spas, currency, latestDate, today }: { spas: SpaSummary[]; c
                 key={spa.locationId}
                 className="border-b border-black/[0.045] transition-colors last:border-0 hover:bg-primary/[0.025] dark:border-white/[0.06]"
               >
-                <td className="py-3.5 pr-3 pl-6 font-medium text-foreground">{spa.locationName}</td>
-                <td className="px-3 py-3.5 text-right text-muted-foreground tabular-nums">
+                <td className="py-3 pr-3 pl-5 font-medium text-foreground">{spa.locationName}</td>
+                <td className="px-2 py-3 text-right whitespace-nowrap text-muted-foreground tabular-nums">
                   {spa.latestTreatmentSales != null ? formatCurrencyExact(spa.latestTreatmentSales, currency) : <Missing />}
                 </td>
-                <td className="px-3 py-3.5 text-right text-muted-foreground tabular-nums">
+                <td className="px-2 py-3 text-right whitespace-nowrap text-muted-foreground tabular-nums">
                   {spa.latestRetailSales != null ? formatCurrencyExact(spa.latestRetailSales, currency) : <Missing />}
                 </td>
-                <td className="px-3 py-3.5 text-right font-medium text-foreground tabular-nums">
+                <td className="px-2 py-3 text-right font-medium whitespace-nowrap text-foreground tabular-nums">
                   {formatCurrencyExact(spa.mtdRevenue, currency)}
                 </td>
-                <td className="px-3 py-3.5">
+                <td className="px-2 py-3">
                   <BudgetBar percent={spa.budgetPercent} />
                 </td>
-                <td className="py-3.5 pr-6 pl-3 text-right">
-                  <Sparkline data={spa.sparklineData} id={spa.locationId} width={140} />
+                <td className="py-3 pr-5 pl-2 text-right">
+                  <Sparkline data={spa.sparklineData} id={spa.locationId} width={128} />
                 </td>
               </tr>
             ))}
@@ -310,28 +310,24 @@ function SpaTable({ spas, currency, latestDate, today }: { spas: SpaSummary[]; c
       {/* Mobile */}
       <ul className="mt-4 divide-y divide-black/[0.05] overflow-hidden rounded-2xl border border-black/[0.06] bg-card shadow-[0_1px_2px_rgba(20,40,35,0.04)] md:hidden dark:divide-white/[0.06] dark:border-white/10">
         {spas.map((spa) => (
-          <li key={spa.locationId} className="px-4 py-3.5">
-            <div className="flex items-start justify-between gap-3">
+          <li key={spa.locationId} className="px-4 py-3">
+            <div className="flex items-baseline justify-between gap-3">
               <p className="min-w-0 truncate text-[14.5px] font-medium text-foreground">{spa.locationName}</p>
-              <div className="text-right">
-                <p className="text-[15px] font-medium text-foreground tabular-nums">{formatCurrencyExact(spa.mtdRevenue, currency)}</p>
-                <p className="text-[11px] tracking-wide text-muted-foreground uppercase">Month to date</p>
+              <p className="shrink-0 text-right">
+                <span className="text-[15px] font-medium text-foreground tabular-nums">{formatCurrencyExact(spa.mtdRevenue, currency)}</span>
+                <span className="ml-1.5 text-[10px] tracking-wide text-muted-foreground uppercase">Month to date</span>
+              </p>
+            </div>
+            <div className="mt-2 flex items-end justify-between gap-3">
+              <div className="flex min-w-0 flex-wrap items-end gap-x-4 gap-y-1.5">
+                <Stat label={headings.treatment} value={spa.latestTreatmentSales != null ? formatCurrencyExact(spa.latestTreatmentSales, currency) : "—"} />
+                <Stat label={headings.retail} value={spa.latestRetailSales != null ? formatCurrencyExact(spa.latestRetailSales, currency) : "—"} />
+                <Stat
+                  label="vs budget"
+                  value={spa.budgetPercent == null ? "No budget" : `${spa.budgetPercent.toFixed(0)}%`}
+                />
               </div>
-            </div>
-            <p className="mt-2 text-[11px] tracking-wide text-muted-foreground uppercase">{headings.day}</p>
-            <div className="mt-1 grid grid-cols-2 gap-x-4 text-[13px] tabular-nums">
-              <p className="flex items-baseline justify-between gap-2">
-                <span className="text-muted-foreground">Treatment</span>
-                <span>{spa.latestTreatmentSales != null ? formatCurrencyExact(spa.latestTreatmentSales, currency) : "—"}</span>
-              </p>
-              <p className="flex items-baseline justify-between gap-2">
-                <span className="text-muted-foreground">Retail</span>
-                <span>{spa.latestRetailSales != null ? formatCurrencyExact(spa.latestRetailSales, currency) : "—"}</span>
-              </p>
-            </div>
-            <div className="mt-2.5 flex items-center justify-between gap-4">
-              <BudgetBar percent={spa.budgetPercent} />
-              <Sparkline data={spa.sparklineData} id={`m-${spa.locationId}`} width={96} height={24} />
+              <Sparkline data={spa.sparklineData} id={`m-${spa.locationId}`} width={84} height={22} />
             </div>
           </li>
         ))}
@@ -365,6 +361,15 @@ function BudgetBar({ percent }: { percent: number | null }) {
 }
 
 /* ---------- Bits ---------- */
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="max-w-[9.5rem] text-[10px] leading-3 tracking-wide text-muted-foreground uppercase">{label}</p>
+      <p className="mt-0.5 text-[13px] leading-5 tabular-nums text-foreground">{value}</p>
+    </div>
+  );
+}
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="font-heading text-[19px] font-normal tracking-[-0.005em] text-foreground">{children}</h2>;
