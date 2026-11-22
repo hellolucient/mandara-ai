@@ -1,3 +1,4 @@
+import { appAccessFromFlags, isAppAccess, type AppAccess } from "@/lib/access";
 import { sql } from "@/lib/db";
 import { newId } from "@/lib/ids";
 import type { Member } from "@/lib/members";
@@ -123,6 +124,7 @@ type SessionRow = {
   name: string;
   role: Role;
   chat_only: boolean;
+  app_access: string;
   spa_location_id: string;
   must_change_password: boolean;
   stale: boolean;
@@ -135,7 +137,7 @@ export async function memberFromSession(stageName: string, token: string): Promi
   if (!token) return null;
   const hash = await tokenHash(token);
   const rows = await sql<SessionRow>(
-    `select s.token_hash, u.id as user_id, u.sub, u.username, u.email, m.name, m.role, m.chat_only, m.spa_location_id,
+    `select s.token_hash, u.id as user_id, u.sub, u.username, u.email, m.name, m.role, m.chat_only, m.app_access, m.spa_location_id,
             u.must_change_password, (s.last_seen_at < now() - interval '1 hour') as stale
      from app_sessions s
      join app_users u on u.id = s.user_id
@@ -153,7 +155,8 @@ export async function memberFromSession(stageName: string, token: string): Promi
     name: row.name || row.username,
     role: row.role,
     simulated: false,
-    chatOnly: Boolean(row.chat_only),
+    chatOnly: appAccessFromFlags({ appAccess: row.app_access, chatOnly: Boolean(row.chat_only) }) === "chat",
+    appAccess: appAccessFromFlags({ appAccess: row.app_access, chatOnly: Boolean(row.chat_only) }),
     spaLocationId: row.spa_location_id || "",
     userId: row.user_id,
     username: row.username,
@@ -169,6 +172,7 @@ export type UserListRow = {
   name: string;
   role: Role;
   chatOnly: boolean;
+  appAccess: AppAccess;
   disabled: boolean;
   mustChangePassword: boolean;
   lastLoginAt: string | null;
@@ -176,22 +180,24 @@ export type UserListRow = {
 
 export async function listUsers(stageName: string): Promise<UserListRow[]> {
   const rows = await sql<{
-    id: string; sub: string; username: string; email: string; name: string; role: Role; chat_only: boolean;
+    id: string; sub: string; username: string; email: string; name: string; role: Role; chat_only: boolean; app_access: string;
     disabled: boolean; must_change_password: boolean; last_login_at: string | null;
   }>(
-    `select u.id, u.sub, u.username, u.email, m.name, m.role, m.chat_only, u.disabled, u.must_change_password,
+    `select u.id, u.sub, u.username, u.email, m.name, m.role, m.chat_only, m.app_access, u.disabled, u.must_change_password,
             to_char(u.last_login_at at time zone 'Asia/Bangkok', 'DD Mon YYYY HH24:MI') as last_login_at
      from app_users u join members m on m.stage = u.stage and m.sub = u.sub
      where u.stage = $1 order by u.created_at`,
     [stageName],
   );
   return rows.map((r) => ({
-    id: r.id, sub: r.sub, username: r.username, email: r.email, name: r.name, role: r.role, chatOnly: Boolean(r.chat_only),
+    id: r.id, sub: r.sub, username: r.username, email: r.email, name: r.name, role: r.role,
+    chatOnly: appAccessFromFlags({ appAccess: r.app_access, chatOnly: Boolean(r.chat_only) }) === "chat",
+    appAccess: appAccessFromFlags({ appAccess: r.app_access, chatOnly: Boolean(r.chat_only) }),
     disabled: Boolean(r.disabled), mustChangePassword: Boolean(r.must_change_password), lastLoginAt: r.last_login_at,
   }));
 }
 
-export type NewUser = { username: string; name: string; email?: string; role: Role; chatOnly: boolean; sub?: string; password?: string };
+export type NewUser = { username: string; name: string; email?: string; role: Role; chatOnly?: boolean; appAccess?: AppAccess; sub?: string; password?: string };
 
 /**
  * Creates a person with a temporary password (or the given one) that they must change at first sign-in.
@@ -213,11 +219,12 @@ export async function createUser(stageName: string, input: NewUser): Promise<{ o
   const sub = input.sub?.trim() || `local:${id}`;
   const linked = await sql("select 1 from app_users where stage = $1 and sub = $2", [stageName, sub]);
   if (linked.length) return { ok: false, error: "That member already has a sign-in." };
+  const access = appAccessFromFlags({ appAccess: input.appAccess, chatOnly: input.chatOnly });
   await sql(
-    `insert into members (stage, sub, email, name, role, chat_only) values ($1, $2, $3, $4, $5, $6)
+    `insert into members (stage, sub, email, name, role, chat_only, app_access) values ($1, $2, $3, $4, $5, $6, $7)
      on conflict (stage, sub) do update set email = excluded.email, name = excluded.name, role = excluded.role,
-       chat_only = excluded.chat_only, updated_at = now()`,
-    [stageName, sub, email, input.name.trim().slice(0, 120) || username, input.role, input.chatOnly],
+       chat_only = excluded.chat_only, app_access = excluded.app_access, updated_at = now()`,
+    [stageName, sub, email, input.name.trim().slice(0, 120) || username, input.role, access === "chat", access],
   );
   await sql(
     `insert into app_users (id, stage, sub, username, email, password_hash, must_change_password) values ($1, $2, $3, $4, $5, $6, $7)`,
@@ -229,7 +236,7 @@ export async function createUser(stageName: string, input: NewUser): Promise<{ o
 export async function updateUser(
   stageName: string,
   id: string,
-  change: { role?: Role; chatOnly?: boolean; disabled?: boolean; name?: string },
+  change: { role?: Role; chatOnly?: boolean; appAccess?: AppAccess; disabled?: boolean; name?: string },
   actorUserId: string,
 ): Promise<string | null> {
   const rows = await sql<{ sub: string; role: Role }>(
@@ -253,8 +260,13 @@ export async function updateUser(
     if (!["admin", "manager", "staff"].includes(change.role)) return "Unknown role.";
     await sql("update members set role = $3, updated_at = now() where stage = $1 and sub = $2", [stageName, target.sub, change.role]);
   }
-  if (change.chatOnly !== undefined) {
-    await sql("update members set chat_only = $3, updated_at = now() where stage = $1 and sub = $2", [stageName, target.sub, change.chatOnly]);
+  if (change.appAccess !== undefined || change.chatOnly !== undefined) {
+    if (change.appAccess !== undefined && !isAppAccess(change.appAccess)) return "Unknown access.";
+    const access = appAccessFromFlags({ appAccess: change.appAccess, chatOnly: change.chatOnly });
+    await sql(
+      "update members set chat_only = $3, app_access = $4, updated_at = now() where stage = $1 and sub = $2",
+      [stageName, target.sub, access === "chat", access],
+    );
   }
   if (change.name !== undefined && change.name.trim()) {
     await sql("update members set name = $3, updated_at = now() where stage = $1 and sub = $2", [stageName, target.sub, change.name.trim().slice(0, 120)]);

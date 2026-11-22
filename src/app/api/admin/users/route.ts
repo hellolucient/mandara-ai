@@ -1,5 +1,6 @@
 import { json, rejectCrossOrigin } from "@/lib/http";
 import { createUser, listUsers, resetPassword, updateUser, type LocalMember } from "@/lib/auth-local";
+import { isAppAccess, type AppAccess } from "@/lib/access";
 import type { Role } from "@/lib/membership";
 import { authMode, isResponse, requireMember } from "@/lib/session";
 
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
 }
 
 /**
- * Administrator user management: create (returns a one-time temporary password), update role / chat-only / name,
+ * Administrator user management: create (returns a one-time temporary password), update role / pages (app access) / name,
  * switch off or on, and reset a password (returns a new temporary password and signs the person out everywhere).
  */
 export async function POST(request: Request) {
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
       email: str("email"),
       role,
       chatOnly: body.chatOnly === true,
+      appAccess: isAppAccess(body.appAccess) ? (body.appAccess as AppAccess) : undefined,
     });
     if (!result.ok) return json({ error: result.error }, 400);
     return json({ ok: true, id: result.id, temporaryPassword: result.password });
@@ -59,6 +61,7 @@ export async function POST(request: Request) {
       {
         role,
         chatOnly: typeof body.chatOnly === "boolean" ? body.chatOnly : undefined,
+        appAccess: isAppAccess(body.appAccess) ? (body.appAccess as AppAccess) : undefined,
         disabled: typeof body.disabled === "boolean" ? body.disabled : undefined,
         name: body.name === undefined ? undefined : str("name"),
       },

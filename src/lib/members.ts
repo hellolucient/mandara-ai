@@ -1,5 +1,6 @@
 import { cache } from "react";
 import type { VerifiedIdentity } from "../../cursor/identity";
+import { appAccessFromFlags, type AppAccess } from "@/lib/access";
 import { sql } from "@/lib/db";
 import { decideMembership, isWorkspaceOwner, type Role } from "@/lib/membership";
 import { workspaceOwnerSub } from "@/lib/secrets";
@@ -13,20 +14,26 @@ export type Member = {
   name: string;
   role: Role;
   simulated: boolean;
-  /** Limited to Chat (Mandara sign-in only). */
+  /** Limited to Chat (Mandara sign-in only). Kept in sync with appAccess === "chat". */
   chatOnly?: boolean;
+  /** Which pages they can open: full, dashboard (Home and Chat), or chat. */
+  appAccess?: AppAccess;
   /** Reserved: a Spa person's own location, for "only their own spa" later. */
   spaLocationId?: string;
 };
 
-type MemberRow = { sub: string; email: string; name: string; role: Role };
+type MemberRow = { sub: string; email: string; name: string; role: Role; chat_only?: boolean; app_access?: string };
+
+function accessFromRow(row: { chat_only?: boolean; app_access?: string } | undefined): AppAccess {
+  return appAccessFromFlags({ appAccess: row?.app_access, chatOnly: Boolean(row?.chat_only) });
+}
 
 export async function memberFromIdentity(identity: VerifiedIdentity): Promise<Member | null> {
   if (identity.kind !== "person") return null;
   const stage = identity.stage;
   const trustedEmail = identity.emailVerified ? identity.email.trim().toLowerCase() : "";
   const existing = await sql<MemberRow>(
-    "select sub, email, name, role from members where stage = $1 and sub = $2",
+    "select sub, email, name, role, chat_only, app_access from members where stage = $1 and sub = $2",
     [stage, identity.sub],
   );
   const invited = trustedEmail
@@ -67,6 +74,7 @@ export async function memberFromIdentity(identity: VerifiedIdentity): Promise<Me
   }
 
   if (unchanged) {
+    const access = accessFromRow(existing[0]);
     return {
       stage,
       sub: identity.sub,
@@ -74,21 +82,26 @@ export async function memberFromIdentity(identity: VerifiedIdentity): Promise<Me
       name,
       role: decision.role,
       simulated: identity.simulated,
+      chatOnly: access === "chat",
+      appAccess: access,
     };
   }
 
   const stored = await sql<MemberRow>(
-    "select sub, email, name, role from members where stage = $1 and sub = $2",
+    "select sub, email, name, role, chat_only, app_access from members where stage = $1 and sub = $2",
     [stage, identity.sub],
   );
   if (!stored[0]) return null;
+  const access = accessFromRow(stored[0]);
   return {
     stage,
-    sub: identity.sub,
+    sub: stored[0].sub,
     email: stored[0].email,
     name: stored[0].name,
     role: stored[0].role,
     simulated: identity.simulated,
+    chatOnly: access === "chat",
+    appAccess: access,
   };
 }
 
@@ -102,7 +115,7 @@ export const hasAdministrator = cache(async (stage: string): Promise<boolean> =>
 
 export async function listMembers(stage: string): Promise<MemberRow[]> {
   return sql<MemberRow>(
-    "select sub, email, name, role from members where stage = $1 order by created_at",
+    "select sub, email, name, role, chat_only, app_access from members where stage = $1 order by created_at",
     [stage],
   );
 }

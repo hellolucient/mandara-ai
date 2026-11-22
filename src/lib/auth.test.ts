@@ -116,6 +116,7 @@ describe("auth: sign-in, sessions and administration (local database)", () => {
     const member = await memberFromSession(stage, signedIn.token);
     assert.equal(member?.role, "manager");
     assert.equal(member?.chatOnly, true);
+    assert.equal(member?.appAccess, "chat");
     assert.equal(member?.mustChangePassword, true);
     assert.equal(await changeOwnPassword(member!.userId, "", "a-new-long-password", signedIn.token), null);
     assert.equal((await memberFromSession(stage, signedIn.token))?.mustChangePassword, false);
@@ -204,11 +205,35 @@ describe("auth: sign-in, sessions and administration (local database)", () => {
       const m = await memberFromSession(stage, again.token);
       assert.equal(m?.role, "staff");
       assert.equal(m?.chatOnly, false);
+      assert.equal(m?.appAccess, "full");
     }
     assert.equal(await updateUser(stage, tenille.id, { disabled: true }, trent.id), null);
     if (again.ok) assert.equal(await memberFromSession(stage, again.token), null, "switching off ends sessions");
     assert.equal((await login(stage, "tenille", reset.password)).ok, false);
     assert.ok(await updateUser(stage, trent.id, { role: "manager" }, trent.id), "the only admin cannot be demoted");
+  });
+
+  it("creates and updates Dashboard + chat access and keeps chat-only people on chat", async () => {
+    const made = await createUser(stage, { username: "dash-test", name: "Dash", role: "manager", appAccess: "dashboard", password: "dashboard-test-password" });
+    assert.ok(made.ok);
+    if (!made.ok) return;
+    const signedIn = await login(stage, "dash-test", "dashboard-test-password");
+    assert.ok(signedIn.ok);
+    if (!signedIn.ok) return;
+    const member = await memberFromSession(stage, signedIn.token);
+    assert.equal(member?.appAccess, "dashboard");
+    assert.equal(member?.chatOnly, false);
+    const users = await listUsers(stage);
+    const trent = users.find((u) => u.username === "trent")!;
+    assert.equal(await updateUser(stage, made.id, { appAccess: "chat" }, trent.id), null);
+    assert.equal((await memberFromSession(stage, signedIn.token))?.appAccess, "chat");
+    assert.equal((await memberFromSession(stage, signedIn.token))?.chatOnly, true);
+    assert.equal(await updateUser(stage, made.id, { appAccess: "dashboard" }, trent.id), null);
+    const again = await memberFromSession(stage, signedIn.token);
+    assert.equal(again?.appAccess, "dashboard");
+    assert.equal(again?.chatOnly, false);
+    const listed = (await listUsers(stage)).find((u) => u.username === "dash-test");
+    assert.equal(listed?.appAccess, "dashboard");
   });
 
   it("can link a sign-in to an existing member so chat history carries over", async () => {
