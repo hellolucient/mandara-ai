@@ -14,6 +14,7 @@ export function ChatOnlyPage({
   conversationMode = "general",
   messages = [],
   initialDraft = "",
+  askId = "",
 }: {
   member: Member;
   conversations: Array<{ id: string; title: string; updated_at?: string; mode?: string }>;
@@ -21,6 +22,7 @@ export function ChatOnlyPage({
   conversationMode?: string;
   messages?: ChatMessage[];
   initialDraft?: string;
+  askId?: string;
 }) {
   const name = member.name?.replace(/\s*\([^)]*\)\s*/g, " ").trim() || "Mandara team";
   return (
@@ -34,6 +36,7 @@ export function ChatOnlyPage({
       modelOn={modelConfigured()}
       localAuth={authMode() === "local"}
       initialDraft={initialDraft}
+      askId={askId}
     />
   );
 }

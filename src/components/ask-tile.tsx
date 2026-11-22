@@ -14,7 +14,15 @@ export function AskTile() {
 
   return (
     <div className="mt-4 flex flex-1 flex-col rounded-2xl border border-black/[0.06] bg-card p-5 shadow-[0_1px_2px_rgba(20,40,35,0.04)] md:p-6 dark:border-white/10">
-      <form action="/chat" method="get">
+      <form
+        action="/chat"
+        method="get"
+        onSubmit={(event) => {
+          const ask = event.currentTarget.elements.namedItem("ask");
+          if (ask instanceof HTMLInputElement) ask.value = crypto.randomUUID();
+        }}
+      >
+        <input type="hidden" name="ask" value="" />
         <div className="flex items-center gap-2 rounded-xl border border-input bg-background p-1.5 pl-3.5 transition-shadow focus-within:border-primary/40 focus-within:shadow-[0_0_0_4px_rgba(40,90,85,0.08)]">
           <Sparkles aria-hidden="true" className="size-[18px] shrink-0 text-primary/70" strokeWidth={1.5} />
           <input
