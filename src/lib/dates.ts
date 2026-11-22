@@ -56,3 +56,25 @@ export function percent(value: number): string {
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toFixed(1)}%`;
 }
+
+/** "Sat 21 Nov" for a business date, used in dashboard column headings. */
+export function shortWeekdayDate(iso: string): string {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+/**
+ * Headings for the latest DSR day on the Home By spa table.
+ * "Yesterday" when that day is the calendar day before today; otherwise the actual date.
+ */
+export function latestDayColumnLabels(latestDate: string, today: string): { treatment: string; retail: string; day: string } {
+  const isYesterday = latestDate === addDays(today, -1);
+  const day = isYesterday ? "Yesterday" : shortWeekdayDate(latestDate);
+  return { treatment: `${day} treatment`, retail: `${day} retail`, day };
+}
+

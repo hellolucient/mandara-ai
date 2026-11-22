@@ -214,7 +214,9 @@ describe("chat-only view: sales routing", () => {
     });
     const text = answerSales({ kind: "location-month", name: "Vadoo" }, [day("2026-11-01", 600, 2000), day("2026-11-02", 400, 2100), day("2026-10-31", 9999, 1)], "2026-11-03");
     assert.match(text, /Vadoo · month to date \(1 Nov – 2 Nov 2026\)/);
-    assert.match(text, /Net sales: \$1,000 over 2 recorded days/);
+    assert.match(text, /Total \(treatment \+ retail\): \$1,000\.00/);
+    assert.match(text, /The treatment and retail split is not stored/);
+    assert.match(text, /Over 2 recorded days/);
     assert.match(text, /Treatment guests: 10/);
     assert.match(text, /Budget pace: \$1,000 against \$1,000/);
     assert.match(text, /Rank: 2 of 2 spas/);
