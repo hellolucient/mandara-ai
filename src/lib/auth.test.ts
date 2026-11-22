@@ -6,6 +6,7 @@ import {
   changeOwnPassword,
   clearedSessionCookie,
   createUser,
+  deleteUser,
   listUsers,
   login,
   logout,
@@ -234,6 +235,65 @@ describe("auth: sign-in, sessions and administration (local database)", () => {
     assert.equal(again?.chatOnly, false);
     const listed = (await listUsers(stage)).find((u) => u.username === "dash-test");
     assert.equal(listed?.appAccess, "dashboard");
+  });
+
+  it("puts a Delete confirm in People and only administrators can call the API", () => {
+    const people = readFileSync("src/components/users-manager.tsx", "utf8");
+    assert.match(people, /Delete \{pendingDelete/);
+    assert.match(people, /Their sign-in and chats will be removed/);
+    assert.match(people, /setPendingDelete\(user\)/);
+    assert.doesNotMatch(people, /window\.confirm/);
+    assert.match(people, /user\.id !== selfId/);
+    const route = readFileSync("src/app/api/admin/users/route.ts", "utf8");
+    assert.match(route, /body\.action === "delete"/);
+    assert.match(route, /deleteUser\(admin\.stage, str\("id"\), admin\.userId\)/);
+    assert.ok(route.indexOf("requireAdmin") < route.indexOf('body.action === "delete"'));
+    assert.match(route, /Only an administrator can manage sign-ins/);
+  });
+
+  it("deletes a person and their chats, refuses deleting yourself or the last admin, and frees the username", async () => {
+    const users = await listUsers(stage);
+    const trent = users.find((u) => u.username === "trent")!;
+    assert.equal(await deleteUser(stage, trent.id, trent.id), "You cannot delete your own sign-in.");
+    assert.equal(await deleteUser(stage, trent.id, "not-the-admin-id"), "Keep at least one administrator.");
+    assert.ok((await listUsers(stage)).some((u) => u.username === "trent"));
+
+    const made = await createUser(stage, { username: "tmp-delete", name: "Tmp Delete", role: "manager", appAccess: "chat", password: "delete-me-please-now" });
+    assert.ok(made.ok);
+    if (!made.ok) return;
+    const signedIn = await login(stage, "tmp-delete", "delete-me-please-now");
+    assert.ok(signedIn.ok);
+    if (!signedIn.ok) return;
+    const member = await memberFromSession(stage, signedIn.token);
+    assert.ok(member);
+    await sql("insert into conversations (id, stage, owner_sub, title) values ($1, $2, $3, 'A private chat')", [`c-del-${stage}`, stage, member.sub]);
+    await sql("insert into user_memories (id, stage, user_sub, content) values ($1, $2, $3, 'A private memory')", [`m-del-${stage}`, stage, member.sub]);
+    await sql("insert into conversations (id, stage, owner_sub, title) values ($1, $2, 'other-sub', 'Someone else')", [`c-keep-${stage}`, stage]);
+
+    assert.equal(await deleteUser(stage, made.id, trent.id), null);
+    assert.equal(await memberFromSession(stage, signedIn.token), null);
+    assert.equal((await listUsers(stage)).some((u) => u.username === "tmp-delete"), false);
+    assert.equal((await sql("select 1 from conversations where stage = $1 and owner_sub = $2", [stage, member.sub])).length, 0);
+    assert.equal((await sql("select 1 from user_memories where stage = $1 and user_sub = $2", [stage, member.sub])).length, 0);
+    assert.equal((await sql("select 1 from conversations where id = $1", [`c-keep-${stage}`])).length, 1);
+    assert.equal((await sql("select 1 from members where stage = $1 and sub = $2", [stage, member.sub])).length, 0);
+    assert.equal(await deleteUser(stage, made.id, trent.id), "That person was not found.");
+
+    const again = await createUser(stage, { username: "tmp-delete", name: "Tmp Delete Again", role: "staff", chatOnly: false, password: "reused-username-ok-1" });
+    assert.ok(again.ok, "the username can be used again");
+    if (!again.ok) return;
+    const loginAgain = await login(stage, "tmp-delete", "reused-username-ok-1");
+    assert.ok(loginAgain.ok);
+    if (!loginAgain.ok) return;
+    const fresh = await memberFromSession(stage, loginAgain.token);
+    assert.equal(fresh?.name, "Tmp Delete Again");
+    assert.equal((await sql("select 1 from conversations where stage = $1 and owner_sub = $2", [stage, fresh!.sub])).length, 0);
+
+    const second = await createUser(stage, { username: "admin-two", name: "Admin Two", role: "admin", chatOnly: false, password: "second-admin-password" });
+    assert.ok(second.ok);
+    if (!second.ok) return;
+    assert.equal(await deleteUser(stage, second.id, trent.id), null);
+    assert.equal(await deleteUser(stage, trent.id, second.id), "Keep at least one administrator.");
   });
 
   it("can link a sign-in to an existing member so chat history carries over", async () => {

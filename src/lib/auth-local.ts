@@ -292,6 +292,34 @@ export async function resetPassword(stageName: string, id: string): Promise<{ ok
   return { ok: true, password };
 }
 
+/**
+ * Permanently removes a person's sign-in, sessions, their own chats and chat memories.
+ * Company documents, usage records and other people's data are left alone.
+ * The username can then be used again.
+ */
+export async function deleteUser(stageName: string, id: string, actorUserId: string): Promise<string | null> {
+  const rows = await sql<{ sub: string; role: Role }>(
+    "select u.sub, m.role from app_users u join members m on m.stage = u.stage and m.sub = u.sub where u.stage = $1 and u.id = $2",
+    [stageName, id],
+  );
+  const target = rows[0];
+  if (!target) return "That person was not found.";
+  if (id === actorUserId) return "You cannot delete your own sign-in.";
+  if (target.role === "admin") {
+    const admins = await sql<{ n: number }>(
+      `select count(*)::int as n from app_users u join members m on m.stage = u.stage and m.sub = u.sub
+       where u.stage = $1 and m.role = 'admin'`,
+      [stageName],
+    );
+    if ((admins[0]?.n ?? 0) <= 1) return "Keep at least one administrator.";
+  }
+  await sql("delete from conversations where stage = $1 and owner_sub = $2", [stageName, target.sub]);
+  await sql("delete from user_memories where stage = $1 and user_sub = $2", [stageName, target.sub]);
+  await sql("delete from app_users where stage = $1 and id = $2", [stageName, id]);
+  await sql("delete from members where stage = $1 and sub = $2", [stageName, target.sub]);
+  return null;
+}
+
 /** The signed-in person changes their own password. Other sessions are signed out; this one stays. */
 export async function changeOwnPassword(
   userId: string,

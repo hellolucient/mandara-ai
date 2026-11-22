@@ -1,5 +1,5 @@
 import { json, rejectCrossOrigin } from "@/lib/http";
-import { createUser, listUsers, resetPassword, updateUser, type LocalMember } from "@/lib/auth-local";
+import { createUser, deleteUser, listUsers, resetPassword, updateUser, type LocalMember } from "@/lib/auth-local";
 import { isAppAccess, type AppAccess } from "@/lib/access";
 import type { Role } from "@/lib/membership";
 import { authMode, isResponse, requireMember } from "@/lib/session";
@@ -24,7 +24,8 @@ export async function GET(request: Request) {
 
 /**
  * Administrator user management: create (returns a one-time temporary password), update role / pages (app access) / name,
- * switch off or on, and reset a password (returns a new temporary password and signs the person out everywhere).
+ * switch off or on, reset a password (returns a new temporary password and signs the person out everywhere),
+ * and permanently delete a person (not yourself, and not the last administrator).
  */
 export async function POST(request: Request) {
   const blocked = rejectCrossOrigin(request);
@@ -74,6 +75,11 @@ export async function POST(request: Request) {
     const result = await resetPassword(admin.stage, str("id"));
     if (!result.ok) return json({ error: result.error }, 400);
     return json({ ok: true, temporaryPassword: result.password });
+  }
+  if (body.action === "delete") {
+    const error = await deleteUser(admin.stage, str("id"), admin.userId);
+    if (error) return json({ error }, 400);
+    return json({ ok: true });
   }
   return json({ error: "Unknown action." }, 400);
 }
