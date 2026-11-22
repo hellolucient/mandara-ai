@@ -114,6 +114,7 @@ describe("Home By spa latest-day column labels", () => {
       treatment: "Yesterday treatment",
       retail: "Yesterday retail",
       day: "Yesterday",
+      summary: "Yesterday's treatment and retail",
     });
   });
 
@@ -123,6 +124,7 @@ describe("Home By spa latest-day column labels", () => {
       treatment: "Sat 21 Nov treatment",
       retail: "Sat 21 Nov retail",
       day: "Sat 21 Nov",
+      summary: "Treatment and retail · Sat 21 Nov",
     });
   });
 
@@ -191,13 +193,15 @@ describe("sales answer layout and sparkline polish", () => {
     assert.match(kpis, /sparkDates/);
   });
 
-  it("keeps By spa mobile stats in compact label-above-value pairs", () => {
+  it("keeps By spa mobile stats in an even three-column grid with short labels", () => {
     const page = readFileSync("src/app/(app)/page.tsx", "utf8");
     assert.match(page, /function Stat\(/);
-    assert.match(page, /<Stat label=\{headings\.treatment\}/);
-    assert.match(page, /<Stat label=\{headings\.retail\}/);
-    assert.match(page, /label="vs budget"/);
-    assert.doesNotMatch(page, /justify-between gap-2/);
+    assert.match(page, /headings\.summary/);
+    assert.match(page, /grid grid-cols-3/);
+    assert.match(page, /<Stat label="Treatment"/);
+    assert.match(page, /<Stat label="Retail"/);
+    assert.match(page, /<Stat label="vs budget"/);
+    assert.match(page, /className="text-primary w-full"/);
   });
 });
 

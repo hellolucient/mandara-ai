@@ -72,9 +72,19 @@ export function shortWeekdayDate(iso: string): string {
  * Headings for the latest DSR day on the Home By spa table.
  * "Yesterday" when that day is the calendar day before today; otherwise the actual date.
  */
-export function latestDayColumnLabels(latestDate: string, today: string): { treatment: string; retail: string; day: string } {
+export function latestDayColumnLabels(latestDate: string, today: string): {
+  treatment: string;
+  retail: string;
+  day: string;
+  summary: string;
+} {
   const isYesterday = latestDate === addDays(today, -1);
   const day = isYesterday ? "Yesterday" : shortWeekdayDate(latestDate);
-  return { treatment: `${day} treatment`, retail: `${day} retail`, day };
+  return {
+    treatment: `${day} treatment`,
+    retail: `${day} retail`,
+    day,
+    summary: isYesterday ? "Yesterday's treatment and retail" : `Treatment and retail · ${day}`,
+  };
 }
 
