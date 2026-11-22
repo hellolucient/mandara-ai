@@ -102,10 +102,10 @@ export async function calculateHomeKPIs(stage: string, today: string): Promise<H
  * Get sparkline data (last 14 days) and MTD per spa location.
  */
 export async function getSpaSummaries(stage: string, today: string): Promise<SpaSummary[]> {
-  const fourteenDaysAgo = new Date(Date.parse(today) - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const lookback = new Date(Date.parse(today) - 45 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const currentMonth = today.slice(0, 7);
   const monthStart = `${currentMonth}-01`;
-  const fromDate = monthStart < fourteenDaysAgo ? monthStart : fourteenDaysAgo;
+  const fromDate = monthStart < lookback ? monthStart : lookback;
   const [year, month] = currentMonth.split("-").map(Number);
 
   const [locations, budgets, salesData] = await Promise.all([
@@ -151,6 +151,9 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
     row.retail_sales = num(row.retail_sales);
   }
   const latestDate = salesData.map((s) => s.business_date).sort().at(-1) ?? null;
+  const sparkDates = [...new Set(salesData.map((s) => s.business_date).filter((date) => !latestDate || date <= latestDate))]
+    .sort()
+    .slice(-14);
   const latestMtdDate = salesData
     .map((s) => s.business_date)
     .filter((d) => d.startsWith(currentMonth) && d <= today)
@@ -180,10 +183,10 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
     const budgetToDate = budgetAmount && budgetAmount > 0 && daysCovered > 0 ? (budgetAmount * daysCovered) / daysInMonth : null;
     const budgetPercent = budgetToDate ? (mtdRevenue / budgetToDate) * 100 : null;
 
-    // Sparkline data (last 14 days)
+    // Sparkline: last 14 reported DSR days (not 14 calendar days). Unreported
+    // dates in the calendar would leave a gap and float the end dot off the line.
     const sparklineData: Array<{ date: string; revenue: number | null }> = [];
-    for (let i = 13; i >= 0; i--) {
-      const date = new Date(Date.parse(today) - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    for (const date of sparkDates) {
       const dayData = locSales.find((s) => s.business_date === date);
       sparklineData.push({ date, revenue: dayData?.net_sales ?? null });
     }

@@ -122,8 +122,9 @@ export function salesAnswerMarkdown(text: string): string {
       continue;
     }
     // Four or more "Spa: $figure" lines in a row read best as a table.
+    // Treatment / retail / total breakdowns must stay as a list, not a table.
     let end = index;
-    while (end < lines.length && row.test(lines[end])) end += 1;
+    while (end < lines.length && isSpaFigureRow(lines[end], row)) end += 1;
     if (end - index >= 4) {
       const cells = lines.slice(index, end).map((item) => {
         const [, name, value] = item.match(row) ?? [];
@@ -145,6 +146,12 @@ export function salesAnswerMarkdown(text: string): string {
     out.push(`${line}  `);
   }
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+const BREAKDOWN_LABEL = /^(Treatment|Retail|Total|Budget|Same day last week)/i;
+
+function isSpaFigureRow(line: string, row: RegExp): boolean {
+  return row.test(line) && !BREAKDOWN_LABEL.test(line);
 }
 
 /** "$1,375. $37 above the stored budget of $1,339." becomes ["$1,375", "+$37"]. */
