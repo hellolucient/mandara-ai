@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { safeHttpUrl, safeImageSrc } from "@/lib/answer-text";
+import { beginHomeAsk, homeAskStarted, shouldAdoptNewConversation, stripHomeAskFromUrl } from "@/lib/home-ask";
 import { MarkdownMessage } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,10 +53,12 @@ export function ChatPanel({
   initialMessages,
   modelOn,
   initialDraft = "",
+  askId = "",
 }: {
   conversationId: string;
   conversationMode?: string;
   initialDraft?: string;
+  askId?: string;
   initialMessages: Message[];
   modelOn: boolean;
 }) {
@@ -62,8 +66,8 @@ export function ChatPanel({
   const photoRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [messages, setMessages] = useState(initialMessages);
-  const [mode, setMode] = useState<string>(conversationMode || "general");
-  const [draft, setDraft] = useState(initialDraft);
+  const mode = conversationMode === "mandara" ? "mandara" : "general";
+  const [draft, setDraft] = useState(() => (homeAskStarted(askId, initialDraft) ? "" : initialDraft));
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -74,6 +78,16 @@ export function ChatPanel({
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  useEffect(() => {
+    if (conversationId || initialMessages.length > 0) return;
+    const text = beginHomeAsk(askId, initialDraft);
+    if (!text) return;
+    stripHomeAskFromUrl();
+    void send(text);
+    // Send the Home question once when this fresh chat opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function clearFile() {
     setFile(null);
@@ -152,7 +166,18 @@ export function ChatPanel({
         return "";
       });
       if (body.conversationId !== conversationId) {
-        router.replace(`/chat/${body.conversationId}`);
+        if (
+          shouldAdoptNewConversation({
+            currentConversationId: conversationId,
+            pathname: window.location.pathname,
+            search: window.location.search,
+            sentMode: mode,
+          })
+        ) {
+          router.replace(`/chat/${body.conversationId}`);
+        } else {
+          router.refresh();
+        }
       } else {
         router.refresh();
       }
@@ -173,27 +198,30 @@ export function ChatPanel({
       <div className="border-b bg-background px-4 py-3 md:px-8">
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-muted-foreground">Mode:</span>
-          <div className="flex gap-1 rounded-lg border p-1">
-            <button
-              onClick={() => setMode("general")}
-              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
-                mode === "general"
+          <div className="flex gap-1 rounded-lg border p-1" role="tablist" aria-label="Chat mode">
+            {([
+              { id: "general", label: "General" },
+              { id: "mandara", label: "Mandara" },
+            ] as const).map((item) => {
+              const selected = mode === item.id;
+              const className = `rounded px-3 py-1 text-sm font-medium transition-colors ${
+                selected
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              General
-            </button>
-            <button
-              onClick={() => setMode("mandara")}
-              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
-                mode === "mandara"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Mandara
-            </button>
+              }`;
+              if (selected) {
+                return (
+                  <button key={item.id} type="button" role="tab" aria-selected="true" className={className}>
+                    {item.label}
+                  </button>
+                );
+              }
+              return (
+                <Link key={item.id} href={`/chat?mode=${item.id}`} role="tab" aria-selected="false" className={className}>
+                  {item.label}
+                </Link>
+              );
+            })}
           </div>
           <span className="text-xs text-muted-foreground">
             {mode === "general"

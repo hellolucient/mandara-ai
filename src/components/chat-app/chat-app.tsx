@@ -56,6 +56,7 @@ import {
   type HistoryItem,
 } from "@/lib/chat-view";
 import { SalesTicker } from "@/components/sales-ticker";
+import { beginHomeAsk, homeAskStarted, shouldAdoptNewConversation, stripHomeAskFromUrl } from "@/lib/home-ask";
 
 const SUGGESTION_ICONS: Record<string, LucideIcon> = {
   sales: TrendingUp,
@@ -80,6 +81,7 @@ export function ChatApp({
   modelOn,
   localAuth,
   initialDraft = "",
+  askId = "",
 }: {
   conversationId: string;
   conversationMode: ChatTab;
@@ -90,6 +92,7 @@ export function ChatApp({
   modelOn: boolean;
   localAuth: boolean;
   initialDraft?: string;
+  askId?: string;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   // Switching Mandara | General opens a fresh empty chat in that tab. Past chats stay in the sidebar.
@@ -189,13 +192,14 @@ export function ChatApp({
         />
         <SalesTicker />
         <Conversation
-          key={conversationId || "new"}
+          key={conversationId || `new-${tab}`}
           conversationId={conversationId}
           tab={tab}
           initialMessages={initialMessages}
           greeting={greeting}
           modelOn={modelOn}
           initialDraft={initialDraft}
+          askId={askId}
         />
       </main>
     </div>
@@ -578,6 +582,7 @@ function Conversation({
   greeting,
   modelOn,
   initialDraft,
+  askId,
 }: {
   conversationId: string;
   tab: ChatTab;
@@ -585,10 +590,11 @@ function Conversation({
   greeting: string;
   modelOn: boolean;
   initialDraft: string;
+  askId: string;
 }) {
   const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
-  const [draft, setDraft] = useState(initialDraft);
+  const [draft, setDraft] = useState(() => (homeAskStarted(askId, initialDraft) ? "" : initialDraft));
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -607,6 +613,16 @@ function Conversation({
       return initialMessages.length >= shown ? initialMessages : current;
     });
   }, [initialMessages]);
+
+  useEffect(() => {
+    if (conversationId || initialMessages.length > 0) return;
+    const text = beginHomeAsk(askId, initialDraft);
+    if (!text) return;
+    stripHomeAskFromUrl();
+    void send(text);
+    // Send the Home question once when this fresh chat opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -714,8 +730,22 @@ function Conversation({
         if (current) URL.revokeObjectURL(current);
         return "";
       });
-      if (body.conversationId !== conversationId) router.replace(`/chat/${body.conversationId}`);
-      else router.refresh();
+      if (body.conversationId !== conversationId) {
+        if (
+          shouldAdoptNewConversation({
+            currentConversationId: conversationId,
+            pathname: window.location.pathname,
+            search: window.location.search,
+            sentMode: tab,
+          })
+        ) {
+          router.replace(`/chat/${body.conversationId}`);
+        } else {
+          router.refresh();
+        }
+      } else {
+        router.refresh();
+      }
     } catch {
       setMessages((current) => current.filter((message) => message.id !== "pending-user"));
       setDraft(content);
