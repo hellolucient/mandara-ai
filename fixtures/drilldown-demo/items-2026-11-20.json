@@ -1,0 +1,41 @@
+{
+  "businessDate": "2026-11-20",
+  "currency": "USD",
+  "items": [
+    {
+      "location": "Dhonveli",
+      "category": "treatment",
+      "name": "Balinese Massage 60",
+      "quantity": 2,
+      "netSales": 240.0
+    },
+    {
+      "location": "Dhonveli",
+      "category": "treatment",
+      "name": "Couples Ritual 90",
+      "quantity": 1,
+      "netSales": 185.0
+    },
+    {
+      "location": "Dhonveli",
+      "category": "retail",
+      "name": "Mandara Body Lotion",
+      "quantity": 3,
+      "netSales": 78.0
+    },
+    {
+      "location": "Vadoo",
+      "category": "treatment",
+      "name": "Deep Tissue 45",
+      "quantity": 4,
+      "netSales": 320.0
+    },
+    {
+      "location": "Vadoo",
+      "category": "retail",
+      "name": "Spa Gift Set",
+      "quantity": 1,
+      "netSales": 95.0
+    }
+  ]
+}

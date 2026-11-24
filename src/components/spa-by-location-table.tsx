@@ -106,6 +106,8 @@ function SpaNameButton({ name, onClick, className }: { name: string; onClick: ()
     <button
       type="button"
       onClick={onClick}
+      data-spa-drilldown={name}
+      aria-haspopup="dialog"
       className={`cursor-pointer font-medium text-foreground underline-offset-[3px] transition-colors hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${className ?? ""}`}
     >
       {name}

@@ -233,13 +233,16 @@ function ItemList({
       {rows.length === 0 ? (
         <p className="mt-2 text-[13px] text-muted-foreground">None recorded.</p>
       ) : (
-        <div className="mt-3 overflow-hidden rounded-xl border border-black/[0.06] dark:border-white/10">
+        <div className="mt-3 overflow-x-auto rounded-xl border border-black/[0.06] dark:border-white/10">
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr className="border-b border-black/[0.06] text-left text-[10px] tracking-wide text-muted-foreground uppercase dark:border-white/10">
                 <th className="py-2 pr-2 pl-3 font-medium">Item</th>
                 <th className="px-2 py-2 text-right font-medium">Qty</th>
-                <th className="py-2 pr-3 pl-2 text-right font-medium">Net sales</th>
+                <th className="py-2 pr-3 pl-2 text-right font-medium">
+                  <span className="md:hidden">Net</span>
+                  <span className="hidden md:inline">Net sales</span>
+                </th>
               </tr>
             </thead>
             <tbody>

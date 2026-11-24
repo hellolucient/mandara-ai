@@ -1,13 +1,15 @@
 import { initialCompanyProfileJson } from "@/lib/company-profile-seed";
 import { sql } from "@/lib/db";
 import { chunkText } from "@/lib/chunk";
+import { ensureDrilldownDemoSeed } from "@/lib/drilldown-demo-seed";
 import { SAMPLE_DOCUMENTS, SAMPLE_LOCATIONS, buildSampleDays } from "@/lib/sample-data";
 
 const seeded = new Set<string>();
 
 export async function ensureSeed(stage: string): Promise<void> {
-  // Never seed sample data into production
-  if (stage === "production") {
+  // Never seed sample data into deployed production; local dev (NODE_ENV=development) may seed a demo workspace.
+  const localProductionDemo = stage === "production" && process.env.NODE_ENV === "development";
+  if (stage === "production" && !localProductionDemo) {
     seeded.add(stage);
     return;
   }
@@ -17,6 +19,7 @@ export async function ensureSeed(stage: string): Promise<void> {
     [stage],
   );
   if (existing[0]?.value === "done") {
+    await ensureDrilldownDemoSeed(stage);
     seeded.add(stage);
     return;
   }
@@ -103,6 +106,7 @@ export async function ensureSeed(stage: string): Promise<void> {
      on conflict (stage, key) do update set value = excluded.value`,
     [stage],
   );
+  await ensureDrilldownDemoSeed(stage);
   seeded.add(stage);
 }
 

@@ -1,0 +1,41 @@
+{
+  "businessDate": "2026-11-18",
+  "currency": "USD",
+  "items": [
+    {
+      "location": "Vadoo",
+      "category": "treatment",
+      "name": "Deep Tissue 45",
+      "quantity": 3,
+      "netSales": 240
+    },
+    {
+      "location": "Vadoo",
+      "category": "treatment",
+      "name": "Balinese Massage 60",
+      "quantity": 1,
+      "netSales": 60
+    },
+    {
+      "location": "Vadoo",
+      "category": "retail",
+      "name": "Spa Gift Set",
+      "quantity": 1,
+      "netSales": 80
+    },
+    {
+      "location": "Dhonveli",
+      "category": "treatment",
+      "name": "Balinese Massage 60",
+      "quantity": 2,
+      "netSales": 240
+    },
+    {
+      "location": "Dhonveli",
+      "category": "retail",
+      "name": "Mandara Body Lotion",
+      "quantity": 2,
+      "netSales": 80
+    }
+  ]
+}
