@@ -1,0 +1,30 @@
+{
+  "businessDate": "2026-11-20",
+  "currency": "USD",
+  "rows": [
+    {
+      "location": "Vadoo",
+      "netSales": 415,
+      "treatments": 7,
+      "budget": 600,
+      "treatmentSales": 320,
+      "retailSales": 95
+    },
+    {
+      "location": "Dhonveli",
+      "netSales": 503,
+      "treatments": 9,
+      "budget": 800,
+      "treatmentSales": 425,
+      "retailSales": 78
+    },
+    {
+      "location": "Hakuraa Huraa",
+      "netSales": 250,
+      "treatments": 5,
+      "budget": 400,
+      "treatmentSales": 210,
+      "retailSales": 40
+    }
+  ]
+}

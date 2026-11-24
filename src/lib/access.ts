@@ -79,6 +79,8 @@ export function dashboardApiAllowed(pathname: string): boolean {
     chatOnlyApiAllowed(pathname) ||
     pathname === "/api/sales-ticker" ||
     pathname.startsWith("/api/sales-ticker/") ||
+    pathname === "/api/sales/items" ||
+    pathname.startsWith("/api/sales/items/") ||
     pathname === "/api/version"
   );
 }

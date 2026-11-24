@@ -86,7 +86,9 @@ export function SalesActions({ canRun }: { canRun: boolean }) {
           <DialogHeader>
             <DialogTitle>Import one business date</DialogTitle>
             <DialogDescription>
-              CSV columns: business_date, location, net_sales, treatments, budget. Leave a cell blank when the figure is unknown. Budgets are never filled in for you.
+              Daily totals: CSV with business_date, location, net_sales, treatments, budget; or the usual location-rows JSON. Item lines: JSON with
+              businessDate, currency, and an items array (location, category treatment or retail, name, quantity, netSales). Re-importing a date replaces
+              that date&apos;s rows for the spas in the file.
             </DialogDescription>
           </DialogHeader>
           <form

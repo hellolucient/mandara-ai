@@ -10,6 +10,8 @@ export function parseSalesQuestion(text: string, locationNames: string[]): Sales
     return null;
   }
   const location = findLocation(question, locationNames);
+  const itemsSold = parseItemsSoldIntent(question, location);
+  if (itemsSold) return itemsSold;
   // Only match explicit sales/revenue terms, not just "spa" or "location"
   const hasSalesTerm = /\b(sales|revenue|budget|takings)\b/i.test(question);
   // Sales-specific patterns that don't need explicit "sales" term
@@ -67,6 +69,19 @@ export function parseSalesQuestion(text: string, locationNames: string[]): Sales
 
 export function isKnowledgeQuestion(text: string): boolean {
   return /\b(operating agreement|sop|handbook|company policy|our policy|insurance note|insurance certificate|insurance clause|treatment room opening)\b/i.test(text);
+}
+
+/** Item-level "what sold" questions when a spa is named and item breakdown is stored. */
+function parseItemsSoldIntent(question: string, location: string | null | undefined): SalesIntent | null {
+  if (!location) return null;
+  const asksItems =
+    /\b(what|which)\b[\s\S]{0,40}\b(treatments?|products?|retail)\b[\s\S]{0,30}\b(sold|selling)\b/i.test(question) ||
+    /\b(treatments?|products?|retail)\b[\s\S]{0,20}\b(sold)\b/i.test(question);
+  if (!asksItems) return null;
+  let category: "treatment" | "retail" | "all" = "all";
+  if (/\bretail\b/i.test(question) && !/\btreatments?\b/i.test(question)) category = "retail";
+  else if (/\btreatments?\b/i.test(question) && !/\bretail\b/i.test(question)) category = "treatment";
+  return { kind: "items-sold", name: location, category };
 }
 
 const GENERIC_NAME_WORDS = new Set(["spa", "spas", "resort", "resorts", "island", "islands", "maldives", "hotel", "beach", "villa", "villas", "retreat", "mandara", "prestige", "adaaran", "the"]);

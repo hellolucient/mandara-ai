@@ -14,6 +14,7 @@ export const EXPORT_TABLES: Array<{ table: string; where: string }> = [
   { table: "budgets", where: "stage = $1" },
   { table: "sales_days", where: "stage = $1" },
   { table: "sales_lines", where: "day_id in (select id from sales_days where stage = $1)" },
+  { table: "sales_item_lines", where: "stage = $1" },
   { table: "documents", where: "stage = $1" },
   { table: "chunks", where: "stage = $1" },
   { table: "conversations", where: "stage = $1" },

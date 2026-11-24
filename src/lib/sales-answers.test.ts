@@ -129,7 +129,9 @@ describe("Home By spa latest-day column labels", () => {
   });
 
   it("wires the By spa table to treatment, retail and month-to-date total, not Latest day or Retail MTD", () => {
-    const page = readFileSync("src/app/(app)/page.tsx", "utf8");
+    const page = readFileSync("src/components/spa-by-location-table.tsx", "utf8");
+    const home = readFileSync("src/app/(app)/page.tsx", "utf8");
+    assert.match(home, /SpaByLocationTable/);
     assert.match(page, /latestDayColumnLabels/);
     assert.match(page, /headings\.treatment/);
     assert.match(page, /headings\.retail/);
@@ -194,7 +196,7 @@ describe("sales answer layout and sparkline polish", () => {
   });
 
   it("keeps By spa mobile stats in an even three-column grid with short labels", () => {
-    const page = readFileSync("src/app/(app)/page.tsx", "utf8");
+    const page = readFileSync("src/components/spa-by-location-table.tsx", "utf8");
     assert.match(page, /function Stat\(/);
     assert.match(page, /headings\.summary/);
     assert.match(page, /grid grid-cols-3/);
