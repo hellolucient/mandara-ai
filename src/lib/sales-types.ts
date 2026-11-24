@@ -35,7 +35,8 @@ type SalesIntentKind =
   | { kind: "last-month" }
   | { kind: "this-month" }
   | { kind: "named-month"; month: string }
-  | { kind: "comparison"; period: "last-month" | "this-month" | "week" | "yesterday" };
+  | { kind: "comparison"; period: "last-month" | "this-month" | "week" | "yesterday" }
+  | { kind: "items-sold"; name: string; category: "treatment" | "retail" | "all" };
 
 /** dayOffset shifts a single-day answer from yesterday: -1 is the day before. */
 export type SalesIntent = SalesIntentKind & { dayOffset?: number };

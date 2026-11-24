@@ -70,3 +70,32 @@ still pools the connections.
 ## Local proof
 
 `npm run cf:preview` runs the real Workers runtime (workerd) on `http://localhost:8787`. `wrangler.jsonc` points it at a local Postgres on port 55432.
+
+## Sales item-lines import
+
+Daily DSR **totals** import is unchanged: one business date per file, with spa-level `netSales`, `treatmentSales`, `retailSales`, and the rest.
+
+**Item lines** (optional, for Home spa drill-down and Mandara chat) use a separate JSON file detected by an `items` array:
+
+```json
+{
+  "businessDate": "YYYY-MM-DD",
+  "currency": "USD",
+  "items": [
+    {
+      "location": "Dhonveli",
+      "category": "treatment",
+      "name": "Balinese Massage 60",
+      "quantity": 2,
+      "netSales": 240.0
+    }
+  ]
+}
+```
+
+- `category` must be `treatment` or `retail`.
+- `location` uses the same short spa names as the totals import.
+- Re-importing a date **replaces** item rows for every spa listed in that file (other spas on that date are left as they were).
+- A sample file lives at `fixtures/sales-item-lines-sample.json`.
+
+Apply new tables with `DATABASE_URL=<direct> npm run db:migrate` (migration `021_sales_item_lines.sql`).

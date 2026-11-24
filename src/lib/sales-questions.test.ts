@@ -28,6 +28,14 @@ describe("sales question parsing", () => {
     assert.equal(parseSalesQuestion("Explain the difference between Swedish and Thai massage", LOCATIONS), null);
   });
 
+  it("routes item sold questions when a spa is named", () => {
+    assert.deepEqual(parseSalesQuestion("What treatments sold at Vadoo yesterday?", LOCATIONS), {
+      kind: "items-sold",
+      name: "Vadoo",
+      category: "treatment",
+    });
+  });
+
   it("does not match hypothetical calculations", () => {
     assert.equal(parseSalesQuestion("If a spa did $8,360 in retail, what's the daily average?", LOCATIONS), null);
     assert.equal(parseSalesQuestion("Build me an interactive model for a 100-villa resort spa", LOCATIONS), null);

@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
-import { businessToday } from "@/lib/dates";
+import { addDays, businessToday } from "@/lib/dates";
+import { answerItemsSoldText } from "@/lib/sales-item-store";
 import { newId } from "@/lib/ids";
 import { validateCalculatorSpec } from "@/lib/calculator-spec";
 import { searchKnowledge, type Hit } from "@/lib/knowledge";
@@ -211,9 +212,20 @@ async function compose(
       strict: conversationMode !== "mandara",
     });
     if (salesIntent) {
+      const today = businessToday();
+      if (salesIntent.kind === "items-sold") {
+        const target = addDays(today, -1 + (salesIntent.dayOffset ?? 0));
+        return {
+          content: await answerItemsSoldText(member.stage, salesIntent.name, target, salesIntent.category),
+          citations: [],
+          mode: "sales",
+          model: "",
+          images: [],
+        };
+      }
       const days = await loadDays(member.stage);
       return {
-        content: answerSales(salesIntent, days, businessToday()),
+        content: answerSales(salesIntent, days, today),
         citations: [],
         mode: "sales",
         model: "",

@@ -87,4 +87,8 @@ export const SCHEMA_MIGRATIONS: Array<{ name: string; sql: string }> = [
     name: "020_app_access.sql",
     sql: "-- Which pages a person can open, for their role.\n-- full: all pages that role already had (today's default when chat_only is false).\n-- dashboard: Home and Chat only (Performance, Ask Mandara AI, By spa).\n--   No Quick access, Prospects or admin pages.\n-- chat: Chat only (today's chat_only).\nalter table members add column if not exists app_access text not null default 'full';\n\nupdate members\nset app_access = 'chat'\nwhere chat_only = true and app_access = 'full';",
   },
+  {
+    name: "021_sales_item_lines.sql",
+    sql: "-- Per-spa item lines (treatments and retail products) for drill-down and chat.\ncreate table if not exists sales_item_lines (\n  id text primary key,\n  stage text not null,\n  business_date date not null,\n  location_id text not null,\n  location_name text not null,\n  category text not null check (category in ('treatment', 'retail')),\n  item_name text not null,\n  quantity double precision not null,\n  net_sales double precision not null,\n  currency text not null,\n  unique (stage, business_date, location_id, category, item_name)\n);\n\ncreate index if not exists sales_item_lines_stage_date_loc on sales_item_lines (stage, business_date, location_id);",
+  },
 ];
