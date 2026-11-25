@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { apiAllowed, canSeeContracts, canSeeQuickAccess, pageAllowed, usesChatOnlyView, usesDashboardAccess } from "./access";
+import {
+  apiAllowed,
+  canSeeContracts,
+  canSeePromotions,
+  canSeeQuickAccess,
+  pageAllowed,
+  usesChatOnlyView,
+  usesDashboardAccess,
+} from "./access";
 import { navItems } from "./nav";
 import { canSeeProspects } from "./prospects-access";
 import { askPlaceholder } from "./ask-placeholder";
@@ -111,8 +119,11 @@ describe("dashboard + chat access", () => {
     assert.equal(canSeeQuickAccess({ role: "manager", appAccess: "full" }), true);
   });
 
-  it("lets them open Home, Chat and account pages, and nothing else", () => {
-    for (const path of ["/", "/chat", "/chat/abc", "/account/password"]) assert.equal(pageAllowed(tenille, path), true, path);
+  it("lets them open Home, Chat, Promotions and account pages, and nothing else", () => {
+    assert.equal(canSeePromotions(tenille), true);
+    for (const path of ["/", "/chat", "/chat/abc", "/account/password", "/promotions"]) {
+      assert.equal(pageAllowed(tenille, path), true, path);
+    }
     for (const path of ["/sales", "/knowledge", "/agents", "/memories", "/prospects", "/prospects/abc", "/admin", "/print/sales"]) {
       assert.equal(pageAllowed(tenille, path), false, path);
     }
@@ -139,8 +150,8 @@ describe("dashboard + chat access", () => {
     }
   });
 
-  it("shows only Home and Chat in the nav, leaves chat-only and admin menus unchanged", () => {
-    assert.deepEqual(navItems("manager", false, "dashboard").map((item) => item.href), ["/", "/chat"]);
+  it("shows Home and Chat for dashboard staff, adds Promotions for dashboard managers", () => {
+    assert.deepEqual(navItems("manager", false, "dashboard").map((item) => item.href), ["/", "/chat", "/promotions"]);
     assert.deepEqual(navItems("staff", false, "dashboard").map((item) => item.label), ["Home", "Chat"]);
     assert.deepEqual(navItems("manager", true).map((item) => item.href), ["/chat"]);
     const admin = navItems("admin").map((item) => item.href);

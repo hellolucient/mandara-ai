@@ -1,3 +1,4 @@
+import { PromoCategoryStackedBar } from "@/components/promo-category-cell";
 import type { SpaCategoryBarRow } from "@/lib/promo-analytics";
 import { money } from "@/lib/dates";
 
@@ -14,20 +15,7 @@ export function PromoSpaCategoryBars({ rows, title }: { rows: SpaCategoryBarRow[
               <span className="font-medium">{row.spa}</span>
               <span className="text-muted-foreground">{money(row.totalUsd, "USD")}</span>
             </div>
-            <div
-              className="flex h-2.5 w-full overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/10"
-              role="img"
-              aria-label={`${row.spa} promo revenue by category`}
-            >
-              {row.slices.map((slice) => (
-                <div
-                  key={slice.id}
-                  className={`h-full ${slice.barClass}`}
-                  style={{ width: row.totalUsd > 0 ? `${(slice.usd / row.totalUsd) * 100}%` : "0%" }}
-                  title={`${slice.label}: ${money(slice.usd, "USD")} (${slice.sharePct}% of spa promo)`}
-                />
-              ))}
-            </div>
+            <PromoCategoryStackedBar slices={row.slices} totalUsd={row.totalUsd} heightClass="h-2.5" />
           </li>
         ))}
       </ul>

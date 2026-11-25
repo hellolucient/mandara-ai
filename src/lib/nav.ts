@@ -1,6 +1,6 @@
 import type { Role } from "@/lib/membership";
 import { canSeeProspects } from "@/lib/prospects-access";
-import { resolveAppAccess, type AppAccess, type AccessSubject } from "@/lib/access";
+import { canSeePromotions, resolveAppAccess, type AppAccess, type AccessSubject } from "@/lib/access";
 
 export type NavItem = { href: string; label: string };
 
@@ -14,10 +14,14 @@ export function navItems(role: Role, chatOnly = false, appAccess?: AppAccess | s
   const subject: AccessSubject = { role, chatOnly, appAccess };
   const access = resolveAppAccess(subject);
   if (access === "chat") return [{ href: "/chat", label: "Chat" }];
-  if (access === "dashboard") return [
-    { href: "/", label: "Home" },
-    { href: "/chat", label: "Chat" },
-  ];
+  if (access === "dashboard") {
+    const items: NavItem[] = [
+      { href: "/", label: "Home" },
+      { href: "/chat", label: "Chat" },
+    ];
+    if (canSeePromotions(subject)) items.push({ href: "/promotions", label: "Promotions" });
+    return items;
+  }
   const items: NavItem[] = [
     { href: "/", label: "Home" },
     { href: "/chat", label: "Chat" },

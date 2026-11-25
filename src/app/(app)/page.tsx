@@ -18,7 +18,13 @@ import { currentMember } from "@/lib/session";
 import { calculateHomeKPIs, getSpaSummaries, type HomeKPIs, type SpaSummary } from "@/lib/home-kpis";
 import { AskTile } from "@/components/ask-tile";
 import { ProspectsCard } from "@/components/prospects/home-card";
-import { canSeeQuickAccess } from "@/lib/access";
+import { canSeePromotions, canSeeQuickAccess } from "@/lib/access";
+import { HomePromoCard } from "@/components/home-promo-card";
+import { buildHomePromoCardData } from "@/lib/promo-analytics";
+import { loadApprovedPromoCodes } from "@/lib/promo-approved-codes";
+import { seedPromoBackfill } from "@/lib/promo-backfill-seed";
+import { listPromoPeriods, loadAllPromoLines } from "@/lib/promo-store";
+import { loadDays } from "@/lib/sales-store";
 import { canSeeProspects } from "@/lib/prospects-access";
 import { prospectSummary } from "@/lib/prospects-store";
 
@@ -49,10 +55,24 @@ export default async function HomePage() {
   const today = now.toISOString().slice(0, 10);
 
   // The Prospects card is for administrators only: nothing is read for anyone else.
-  const [kpis, spas, prospects] = await Promise.all([
+  const showPromo = canSeePromotions(member);
+
+  const [kpis, spas, prospects, promoCard] = await Promise.all([
     calculateHomeKPIs(member.stage, today),
     getSpaSummaries(member.stage, today),
     canSeeProspects(member.role) ? prospectSummary(member) : Promise.resolve(null),
+    showPromo
+      ? (async () => {
+          await seedPromoBackfill(member.stage);
+          const [periods, lines, salesDays, approved] = await Promise.all([
+            listPromoPeriods(member.stage),
+            loadAllPromoLines(member.stage, "treatment"),
+            loadDays(member.stage),
+            loadApprovedPromoCodes(member.stage),
+          ]);
+          return buildHomePromoCardData(periods, lines, salesDays, approved);
+        })()
+      : Promise.resolve(null),
   ]);
 
   const firstName = member.name?.split(" ")[0] || "there";
@@ -73,6 +93,8 @@ export default async function HomePage() {
       </header>
 
       {kpis ? <Overview kpis={kpis} spas={spas} today={today} /> : <EmptyOverview />}
+
+      {promoCard ? <HomePromoCard data={promoCard} /> : null}
 
       {/* Ask + apps. Dashboard + chat people get Ask across the full width, without Quick access. */}
       <section className={showApps ? "mt-10 grid gap-5 lg:grid-cols-12" : "mt-10"}>

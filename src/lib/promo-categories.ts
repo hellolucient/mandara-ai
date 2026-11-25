@@ -11,11 +11,19 @@ export type PromoCategoryId =
   | "full_price"
   | "other";
 
+export const PROMO_CATEGORY_COLORS: Record<PromoCategoryId, string> = {
+  stay_discounts: "#1B5E20",
+  cinnamon_discovery: "#F57C00",
+  adaaran_spa_credit: "#1565C0",
+  massage_credit: "#7B1FA2",
+  full_price: "#F9A825",
+  other: "#BDBDBD",
+};
+
 export type PromoCategoryDef = {
   id: PromoCategoryId;
   label: string;
-  /** Tailwind background class for bars and legend swatches */
-  barClass: string;
+  color: string;
   codes: readonly string[];
 };
 
@@ -23,37 +31,37 @@ export const PROMO_CATEGORIES: readonly PromoCategoryDef[] = [
   {
     id: "stay_discounts",
     label: "Stay discounts",
-    barClass: "bg-primary",
+    color: PROMO_CATEGORY_COLORS.stay_discounts,
     codes: ["RI15", "T15", "RI20", "HNY20", "SR20"],
   },
   {
     id: "cinnamon_discovery",
     label: "Cinnamon Discovery",
-    barClass: "bg-amber-600",
+    color: PROMO_CATEGORY_COLORS.cinnamon_discovery,
     codes: ["CD15", "GHA"],
   },
   {
     id: "adaaran_spa_credit",
     label: "Adaaran spa credit",
-    barClass: "bg-cyan-800",
+    color: PROMO_CATEGORY_COLORS.adaaran_spa_credit,
     codes: ["CR50", "CRD20", "SCPAI", "SCSP", "SCSF"],
   },
   {
     id: "massage_credit",
     label: "Massage credit",
-    barClass: "bg-emerald-700",
+    color: PROMO_CATEGORY_COLORS.massage_credit,
     codes: ["MC"],
   },
   {
     id: "full_price",
     label: "Full price",
-    barClass: "bg-slate-600",
+    color: PROMO_CATEGORY_COLORS.full_price,
     codes: ["FP"],
   },
   {
     id: "other",
     label: "Other",
-    barClass: "bg-muted-foreground/45",
+    color: PROMO_CATEGORY_COLORS.other,
     codes: [
       "JLR",
       "PSPR",
@@ -95,13 +103,17 @@ export function promoCategoryLabel(promoCode: string): string {
   return promoCategoryDef(promoCategoryForCode(promoCode)).label;
 }
 
+export function promoCategoryColor(promoCode: string): string {
+  return promoCategoryDef(promoCategoryForCode(promoCode)).color;
+}
+
 /** Stable stack order for bars and legends (excludes zero segments at render time). */
 export const PROMO_CATEGORY_ORDER: readonly PromoCategoryId[] = PROMO_CATEGORIES.map((c) => c.id);
 
 export type CategoryUsdSlice = {
   id: PromoCategoryId;
   label: string;
-  barClass: string;
+  color: string;
   usd: number;
   sharePct: number;
 };
@@ -116,7 +128,7 @@ export function slicesFromUsdByCategory(
     return {
       id,
       label: def.label,
-      barClass: def.barClass,
+      color: def.color,
       usd,
       sharePct: grand > 0 ? Math.round((usd / grand) * 1000) / 10 : 0,
     };
