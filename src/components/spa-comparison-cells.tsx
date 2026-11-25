@@ -19,20 +19,29 @@ export function TyLyVarianceCells({
   period,
   currency,
   tdClassName = "px-2 py-3 text-right tabular-nums",
+  tyClassName,
+  lyClassName,
+  varClassName,
 }: {
   period: ComparedPeriod;
   currency: string;
   tdClassName?: string;
+  tyClassName?: string;
+  lyClassName?: string;
+  varClassName?: string;
 }) {
+  const ty = tyClassName ?? tdClassName;
+  const ly = lyClassName ?? tdClassName;
+  const vr = varClassName ?? tdClassName;
   return (
     <>
-      <td className={tdClassName}>
+      <td className={ty}>
         <ComparisonAmount value={period.ty.total} currency={currency} />
       </td>
-      <td className={tdClassName}>
+      <td className={ly}>
         <ComparisonAmount value={period.ly?.total ?? null} currency={currency} />
       </td>
-      <td className={tdClassName}>
+      <td className={vr}>
         <VariancePct value={period.variance.pct} />
       </td>
     </>
