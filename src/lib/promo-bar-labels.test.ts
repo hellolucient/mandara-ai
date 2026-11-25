@@ -8,8 +8,9 @@ import {
 
 describe("promo bar labels", () => {
   it("formats dollar and percent caption", () => {
-    assert.equal(formatPromoSegmentCaption(1310, 59.6), "$1,310 · 60%");
-    assert.equal(formatPromoSegmentCaption(42, 4.2), "$42 · 4%");
+    assert.equal(formatPromoSegmentCaption(1310, 59.6), "$1,310  (60%)");
+    assert.equal(formatPromoSegmentCaption(42, 4.2), "$42  (4%)");
+    assert.equal(formatPromoSegmentCaption(1496, 69.2), "$1,496  (69%)");
   });
 
   it("plans in-bar vs breakdown segments on desktop", () => {

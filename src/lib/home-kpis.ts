@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { groupSpasByBrand } from "@/lib/spa-groups";
 
 export type HomeKPIs = {
   latestDate: string;
@@ -206,7 +207,8 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
     });
   }
 
-  return summaries;
+  const grouped = groupSpasByBrand(summaries, (s) => s.mtdRevenue, (s) => s.locationName);
+  return grouped.flatMap((g) => g.items);
 }
 
 /**

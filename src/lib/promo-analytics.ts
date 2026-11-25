@@ -1,4 +1,5 @@
 import { addDays, businessToday } from "@/lib/dates";
+import { groupSpasByBrand } from "@/lib/spa-groups";
 import {
   addUsdToCategory,
   isFullPriceCode,
@@ -135,8 +136,8 @@ export function buildSpaCategoryBars(
       const totalUsd = slices.reduce((s, x) => s + x.usd, 0);
       return { spa, totalUsd, slices };
     })
-    .filter((r) => r.totalUsd > 0)
-    .sort((a, b) => b.totalUsd - a.totalUsd);
+    .filter((r) => r.totalUsd > 0);
+  return groupSpasByBrand(rows, (r) => r.totalUsd, (r) => r.spa).flatMap((g) => g.items);
 }
 
 function sumBySpaCode(lines: StoredPromoLine[]): Map<string, { spa: string; code: string; description: string; usd: number }> {
@@ -174,7 +175,19 @@ export function buildDailyView(
   const dayLines = lines.filter(
     (l) => l.kind === "treatment" && l.periodFrom === period.periodFrom && l.periodTo === period.periodTo,
   );
-  const spas = [...new Set(dayLines.map((l) => l.locationName))].sort();
+  const spaSet = [...new Set(dayLines.map((l) => l.locationName))];
+  const revenueBySpa = new Map<string, number>();
+  for (const spa of spaSet) {
+    revenueBySpa.set(
+      spa,
+      dayLines.filter((l) => l.locationName === spa).reduce((s, l) => s + l.usd, 0),
+    );
+  }
+  const spas = groupSpasByBrand(
+    spaSet.map((spa) => ({ spa })),
+    (r) => revenueBySpa.get(r.spa) ?? 0,
+    (r) => r.spa,
+  ).flatMap((g) => g.items.map((i) => i.spa));
   const priorWeekKeys = new Set(
     lines
       .filter((l) => l.kind === "treatment")
@@ -374,7 +387,11 @@ export function buildMonthlySummaries(
       priorLabel: prior ? formatMonthLabel(prior.periodFrom, prior.periodTo) : null,
       priorTotalUsd: priorTotal,
       changePct,
-      spas: spaSummaries.sort((a, b) => b.promoUsd - a.promoUsd),
+      spas: groupSpasByBrand(
+        spaSummaries,
+        (s) => s.promoUsd + s.fullPricePromoUsd,
+        (s) => s.spa,
+      ).flatMap((g) => g.items),
       offListCodes,
       shareJumpSpas: [],
     });

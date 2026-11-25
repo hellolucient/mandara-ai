@@ -1,10 +1,10 @@
 import { money } from "@/lib/dates";
 
-/** Minimum bar share (0–100) before an in-segment $ · % label is shown on desktop. */
+/** Minimum bar share (0–100) before an in-segment $ (%) label is shown on desktop. */
 export const PROMO_IN_BAR_LABEL_MIN_PCT = 18;
 
 export function formatPromoSegmentCaption(usd: number, sharePct: number, currency = "USD"): string {
-  return `${money(usd, currency)} · ${Math.round(sharePct)}%`;
+  return `${money(usd, currency)}  (${Math.round(sharePct)}%)`;
 }
 
 export type PromoBarSegmentLabel = {

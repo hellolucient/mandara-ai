@@ -20,7 +20,7 @@ export function StackedBarSegments({
   widthClass?: string;
   inBarLabelMinPct?: number;
   ariaLabel?: string;
-  /** When set, used for in-bar text on md+ (e.g. promo $ · %). */
+  /** When set, used for in-bar text on md+ (e.g. promo $ (%) caption). */
   formatInBarLabel?: (segment: BarSegment, sharePct: number) => string;
 }) {
   const barTotal = total > 0 ? total : segments.reduce((s, x) => s + x.value, 0);

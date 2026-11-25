@@ -6,6 +6,7 @@ import { ArrowRight } from "lucide-react";
 import type { RevenueMixHomeSnapshot, RevenueMixPeriod } from "@/lib/revenue-mix-view";
 import { buildRevenueMixPeriod } from "@/lib/revenue-mix-view";
 import type { StoredItemLine } from "@/lib/sales-item-types";
+import { spaDisplayName } from "@/lib/spa-groups";
 import { RevenueMixCategoryBar } from "@/components/revenue-mix/revenue-mix-bars";
 
 type Props = {
@@ -62,7 +63,7 @@ export function RevenueMixHomeSection({ snapshot, linesJson }: Props) {
             <option value="">All spas</option>
             {snapshot.spas.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name}
+                {spaDisplayName(s.name)}
               </option>
             ))}
           </select>

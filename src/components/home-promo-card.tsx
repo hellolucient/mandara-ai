@@ -4,6 +4,8 @@ import { PromoCategoryLegend } from "@/components/promo-category-legend";
 import { PromoCategoryStackedBar } from "@/components/promo-category-cell";
 import type { HomePromoCardData } from "@/lib/promo-analytics";
 import { formatBusinessDate } from "@/lib/dates";
+import { groupSpasByBrand, spaDisplayName } from "@/lib/spa-groups";
+import { Fragment } from "react";
 
 export function HomePromoCard({ data }: { data: HomePromoCardData }) {
   const alerts: string[] = [];
@@ -33,11 +35,16 @@ export function HomePromoCard({ data }: { data: HomePromoCardData }) {
           <p className="mt-4 text-sm text-muted-foreground">No spa-level promo lines for this day.</p>
         ) : (
           <ul className="mt-4 space-y-2.5">
-            {data.spaBars.map((row) => (
-              <li key={row.spa} className="grid grid-cols-[minmax(0,5.5rem)_1fr] items-start gap-2 md:gap-3">
-                <span className="truncate pt-0.5 text-[13px] font-medium">{row.spa}</span>
-                <PromoCategoryStackedBar slices={row.slices} totalUsd={row.totalUsd} />
-              </li>
+            {groupSpasByBrand(data.spaBars, (r) => r.totalUsd, (r) => r.spa).map((group) => (
+              <Fragment key={group.groupId}>
+                <li className="pt-1 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">{group.groupLabel}</li>
+                {group.items.map((row) => (
+                  <li key={row.spa} className="grid grid-cols-[minmax(0,5.5rem)_1fr] items-start gap-2 md:gap-3">
+                    <span className="truncate pt-0.5 text-[13px] font-medium">{spaDisplayName(row.spa)}</span>
+                    <PromoCategoryStackedBar slices={row.slices} totalUsd={row.totalUsd} />
+                  </li>
+                ))}
+              </Fragment>
             ))}
           </ul>
         )}

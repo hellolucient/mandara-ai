@@ -5,6 +5,7 @@ import { saveItemLines } from "@/lib/sales-item-store";
 import { validateItemLinesExtract } from "@/lib/sales-item-validate";
 import { saveExtract } from "@/lib/sales-store";
 import { validateExtract } from "@/lib/sales-validate";
+import { ensureSpaComparisonDemoSeed } from "@/lib/spa-comparison-seed";
 
 const FIXTURE_DIR = path.join(process.cwd(), "fixtures/drilldown-demo");
 const TOTALS_PREFIX = "totals-";
@@ -41,6 +42,8 @@ export async function ensureDrilldownDemoSeed(stage: string): Promise<void> {
     if (!validated.ok) throw new Error(`drilldown demo items ${file}: ${validated.error}`);
     await saveItemLines(stage, validated.extract);
   }
+
+  await ensureSpaComparisonDemoSeed(stage);
 
   await sql(
     `insert into settings (stage, key, value) values ($1, 'drilldownDemoSeed', 'done')

@@ -29,6 +29,8 @@ import { canSeeProspects } from "@/lib/prospects-access";
 import { prospectSummary } from "@/lib/prospects-store";
 import { canSeeRevenueMix } from "@/lib/revenue-mix-access";
 import { RevenueMixHomeLoader } from "@/components/revenue-mix/home-loader";
+import { loadSpaComparisonSnapshot } from "@/lib/spa-comparison-store";
+import { ensureDrilldownDemoSeed } from "@/lib/drilldown-demo-seed";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +61,8 @@ export default async function HomePage() {
   // The Prospects card is for administrators only: nothing is read for anyone else.
   const showPromo = canSeePromotions(member);
 
+  await ensureDrilldownDemoSeed(member.stage);
+
   const [kpis, spas, prospects, promoCard] = await Promise.all([
     calculateHomeKPIs(member.stage, today),
     getSpaSummaries(member.stage, today),
@@ -76,6 +80,7 @@ export default async function HomePage() {
         })()
       : Promise.resolve(null),
   ]);
+  const comparison = kpis ? await loadSpaComparisonSnapshot(member.stage, kpis.latestDate, kpis.currency) : null;
 
   const firstName = member.name?.split(" ")[0] || "there";
   const currency = kpis?.currency || "USD";
@@ -102,6 +107,7 @@ export default async function HomePage() {
           currency={currency}
           latestDate={kpis?.latestDate ?? spas[0]?.latestDate ?? ""}
           today={today}
+          comparison={comparison}
         />
       ) : null}
 
