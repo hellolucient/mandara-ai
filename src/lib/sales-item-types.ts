@@ -6,6 +6,9 @@ export type ItemLineRow = {
   name: string;
   quantity: number;
   netSales: number;
+  /** SKU / item code from Steiners Statistic summary when present. */
+  itemCode?: string | null;
+  supplier?: string | null;
 };
 
 export type SalesItemsExtract = {
@@ -25,6 +28,8 @@ export type StoredItemLine = {
   quantity: number;
   netSales: number;
   currency: string;
+  itemCode?: string | null;
+  supplier?: string | null;
 };
 
 export type AggregatedItemLine = {

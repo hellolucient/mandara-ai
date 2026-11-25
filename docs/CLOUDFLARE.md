@@ -87,13 +87,16 @@ Daily DSR **totals** import is unchanged: one business date per file, with spa-l
       "category": "treatment",
       "name": "Balinese Massage 60",
       "quantity": 2,
-      "netSales": 240.0
+      "netSales": 240.0,
+      "code": "TM001",
+      "supplier": "Mandara Spa"
     }
   ]
 }
 ```
 
 - `category` must be `treatment` or `retail`.
+- Optional per row: `code` / `sku` / `itemCode` (Steiners SKU) and `supplier` when the Statistic summary provides them.
 - `location` uses the same short spa names as the totals import.
 - Re-importing a date **replaces** item rows for every spa listed in that file (other spas on that date are left as they were).
 - A sample file lives at `fixtures/sales-item-lines-sample.json`.

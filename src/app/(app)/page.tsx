@@ -96,11 +96,20 @@ export default async function HomePage() {
 
       {kpis ? <Overview kpis={kpis} spas={spas} today={today} /> : <EmptyOverview />}
 
-      {promoCard ? <HomePromoCard data={promoCard} /> : null}
+      {spas.length > 0 ? (
+        <SpaByLocationTable
+          spas={spas}
+          currency={currency}
+          latestDate={kpis?.latestDate ?? spas[0]?.latestDate ?? ""}
+          today={today}
+        />
+      ) : null}
 
       {kpis && canSeeRevenueMix(member.role) ? (
         <RevenueMixHomeLoader stage={member.stage} latestDate={kpis.latestDate} />
       ) : null}
+
+      {promoCard ? <HomePromoCard data={promoCard} /> : null}
 
       {/* Ask + apps. Dashboard + chat people get Ask across the full width, without Quick access. */}
       <section className={showApps ? "mt-10 grid gap-5 lg:grid-cols-12" : "mt-10"}>
@@ -119,15 +128,6 @@ export default async function HomePage() {
           </div>
         ) : null}
       </section>
-
-      {spas.length > 0 ? (
-        <SpaByLocationTable
-          spas={spas}
-          currency={currency}
-          latestDate={kpis?.latestDate ?? spas[0]?.latestDate ?? ""}
-          today={today}
-        />
-      ) : null}
 
       {prospects ? <ProspectsCard summary={prospects} /> : null}
     </main>

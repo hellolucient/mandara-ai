@@ -60,6 +60,23 @@ export function validateItemLinesExtract(
     if (net.value == null || net.value < 0) {
       return { ok: false, error: `${location} · ${name}: netSales must be zero or greater.` };
     }
+    const codeField =
+      typeof item.code === "string"
+        ? item.code
+        : typeof item.sku === "string"
+          ? item.sku
+          : typeof item.itemCode === "string"
+            ? item.itemCode
+            : "";
+    const itemCode = codeField.trim() ? codeField.trim() : null;
+    if (itemCode && itemCode.length > 40) {
+      return { ok: false, error: `${location} · ${name}: item code is too long.` };
+    }
+    const supplier =
+      typeof item.supplier === "string" && item.supplier.trim() ? item.supplier.trim() : null;
+    if (supplier && supplier.length > 120) {
+      return { ok: false, error: `${location} · ${name}: supplier name is too long.` };
+    }
     const key = `${location.toLowerCase()}|${category}|${name.toLowerCase()}`;
     if (seen.has(key)) return { ok: false, error: `Duplicate item line: ${location}, ${category}, ${name}.` };
     seen.add(key);
@@ -69,6 +86,8 @@ export function validateItemLinesExtract(
       name,
       quantity: quantity.value,
       netSales: net.value,
+      itemCode,
+      supplier,
     });
   }
   return { ok: true, extract: { businessDate, currency, items, issues } };

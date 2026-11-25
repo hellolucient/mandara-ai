@@ -38,7 +38,7 @@ export async function seedPromoBackfill(stage: string): Promise<{ imported: numb
     await sql(
       `insert into settings (stage, key, value) values ($1, 'promoBackfillSeed', 'done')
        on conflict (stage, key) do update set value = excluded.value`,
-      [stage, "promoBackfillSeed"],
+      [stage],
     );
   }
   return { imported };

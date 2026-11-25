@@ -18,6 +18,22 @@ describe("sales item lines import", () => {
     assert.equal(result.extract.businessDate, "2026-11-20");
     assert.equal(result.extract.items.length, 5);
     assert.equal(result.extract.items[0].category, "treatment");
+    const mandara = result.extract.items.find((i) => i.name === "Mandara Body Lotion");
+    assert.equal(mandara?.itemCode, "26MS01");
+    assert.equal(mandara?.supplier, "Mandara Spa");
+  });
+
+  it("accepts sku alias and optional supplier", () => {
+    const result = validateItemLinesExtract({
+      businessDate: "2026-11-01",
+      currency: "USD",
+      items: [
+        { location: "Vadoo", category: "retail", name: "Glow bath", quantity: 1, netSales: 10, sku: "26MS33" },
+      ],
+    });
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.extract.items[0].itemCode, "26MS33");
   });
 
   it("rejects duplicate item keys on the same day", () => {

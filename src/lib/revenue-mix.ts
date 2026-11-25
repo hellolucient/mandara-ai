@@ -23,6 +23,8 @@ type ItemRow = {
   category: ItemCategory;
   item_name: string;
   net_sales: number;
+  item_code: string | null;
+  supplier: string | null;
 };
 
 export async function loadItemLinesForMix(
@@ -37,7 +39,8 @@ export async function loadItemLinesForMix(
     : [stage, fromDate, toDate];
   const rows = await sql<ItemRow & { business_date: string; currency: string; quantity: number }>(
     `select to_char(business_date, 'YYYY-MM-DD') as business_date,
-            location_id, location_name, category, item_name, quantity, net_sales, currency
+            location_id, location_name, category, item_name, quantity, net_sales, currency,
+            item_code, supplier
      from sales_item_lines
      where stage = $1
        and business_date >= $2 and business_date <= $3
@@ -55,6 +58,8 @@ export async function loadItemLinesForMix(
     quantity: Number(row.quantity),
     netSales: num(row.net_sales) ?? 0,
     currency: row.currency,
+    itemCode: row.item_code,
+    supplier: row.supplier,
   }));
 }
 
