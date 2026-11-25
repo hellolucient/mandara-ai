@@ -9,25 +9,33 @@ import { SpaDrilldownPanel } from "@/components/spa-drilldown-panel";
 import { addDays, latestDayColumnLabels } from "@/lib/dates";
 import { TyLyVarianceCells } from "@/components/spa-comparison-cells";
 
-/** Alternating column-band tints and dividers between metric groups (desktop table). */
+/** Column-band fills: card (neutral), sage (MTD), sand (YTD) — tuned for AA text on `--foreground`. */
+const BAND = {
+  card: "bg-card",
+  sage: "bg-[oklch(0.86_0.048_168)] dark:bg-[oklch(0.29_0.038_168)]",
+  sand: "bg-[oklch(0.9_0.038_78)] dark:bg-[oklch(0.31_0.032_75)]",
+} as const;
+
+const DIVIDER = "border-l border-black/[0.14] dark:border-white/[0.16]";
+
+/** Alternating column-band tints and dividers between metric groups. */
 const COL = {
-  spa: "py-3 pr-3 pl-4 whitespace-nowrap sm:pl-5",
-  dayBand: "",
-  dayStart: "border-l border-black/[0.07] px-3 py-3 dark:border-white/10",
-  mtdBand: "bg-primary/[0.04] dark:bg-primary/[0.07]",
-  mtdStart: "border-l border-black/[0.07] bg-primary/[0.04] px-3 py-3 dark:border-white/10 dark:bg-primary/[0.07]",
-  mtdCell: "bg-primary/[0.04] px-3 py-3 dark:bg-primary/[0.07]",
-  ytdBand: "bg-muted/35 dark:bg-muted/20",
-  ytdStart: "border-l border-black/[0.07] bg-muted/35 px-3 py-3 dark:border-white/10 dark:bg-muted/20",
-  ytdCell: "bg-muted/35 px-3 py-3 dark:bg-muted/20",
-  budgetStart: "border-l border-black/[0.07] px-3 py-3 dark:border-white/10",
-  sparkStart: "border-l border-black/[0.07] py-3 pr-4 pl-3 sm:pr-5 dark:border-white/10",
+  spa: "bg-card py-3 pr-3 pl-4 sm:pl-5",
+  dayStart: `${DIVIDER} ${BAND.card} px-3 py-3`,
+  dayCell: `${BAND.card} px-3 py-3`,
+  mtdStart: `${DIVIDER} ${BAND.sage} px-3 py-3`,
+  mtdCell: `${BAND.sage} px-3 py-3`,
+  ytdStart: `${DIVIDER} ${BAND.sand} px-3 py-3`,
+  ytdCell: `${BAND.sand} px-3 py-3`,
+  budgetStart: `${DIVIDER} ${BAND.card} px-3 py-3`,
+  sparkStart: `${DIVIDER} ${BAND.card} py-3 pr-4 pl-3 sm:pr-5`,
 } as const;
 
 const SUBHEAD =
-  "border-b border-black/[0.06] px-3 py-2 text-right text-[10px] font-medium tracking-[0.08em] whitespace-nowrap text-muted-foreground uppercase dark:border-white/10";
+  "border-b border-black/[0.08] px-3 py-2 text-right text-[10px] font-semibold tracking-[0.08em] whitespace-nowrap text-muted-foreground uppercase dark:border-white/10";
 const GROUPHEAD =
-  "border-b border-black/[0.06] pb-2 text-center text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase dark:border-white/10";
+  "border-b border-black/[0.08] pb-2.5 pt-0.5 text-center text-[11px] font-bold tracking-[0.16em] text-foreground/90 uppercase dark:border-white/10";
+const BRAND_ROW = "py-1.5 text-[10px] font-bold tracking-[0.16em] text-foreground/80 uppercase";
 
 type Props = {
   spas: SpaSummary[];
@@ -62,50 +70,53 @@ export function SpaByLocationTable({ spas, currency, latestDate, today, comparis
           <table className="w-full min-w-[1040px] border-collapse text-[14px]">
             <thead>
               <tr>
-                <th rowSpan={2} className={`${COL.spa} border-b border-black/[0.06] text-left text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase dark:border-white/10`}>
+                <th rowSpan={2} className={`${COL.spa} border-b border-black/[0.08] text-left text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase dark:border-white/10`}>
                   Spa
                 </th>
                 <th colSpan={2} className={`${COL.dayStart} ${GROUPHEAD}`}>
                   {latestDayGroup}
                 </th>
-                <th colSpan={3} className={`${COL.mtdStart} ${GROUPHEAD} ${COL.mtdBand}`}>
+                <th colSpan={3} className={`${COL.mtdStart} ${GROUPHEAD}`}>
                   Month to date
                 </th>
-                <th colSpan={3} className={`${COL.ytdStart} ${GROUPHEAD} ${COL.ytdBand}`}>
+                <th colSpan={3} className={`${COL.ytdStart} ${GROUPHEAD}`}>
                   Year to date
                 </th>
-                <th rowSpan={2} className={`${COL.budgetStart} border-b border-black/[0.06] text-left text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase dark:border-white/10`}>
+                <th rowSpan={2} className={`${COL.budgetStart} border-b border-black/[0.08] text-left text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase dark:border-white/10`}>
                   vs budget
                 </th>
-                <th rowSpan={2} className={`${COL.sparkStart} border-b border-black/[0.06] text-right text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase dark:border-white/10`}>
+                <th rowSpan={2} className={`${COL.sparkStart} border-b border-black/[0.08] text-right text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase dark:border-white/10`}>
                   14 days
                 </th>
               </tr>
               <tr>
                 <th className={`${COL.dayStart} ${SUBHEAD}`}>Treatment</th>
-                <th className={SUBHEAD}>Retail</th>
-                <th className={`${COL.mtdStart} ${SUBHEAD} ${COL.mtdBand}`}>TY</th>
-                <th className={`${COL.mtdCell} ${SUBHEAD} ${COL.mtdBand}`}>LY</th>
-                <th className={`${COL.mtdCell} ${SUBHEAD} ${COL.mtdBand}`}>Var %</th>
-                <th className={`${COL.ytdStart} ${SUBHEAD} ${COL.ytdBand}`}>TY</th>
-                <th className={`${COL.ytdCell} ${SUBHEAD} ${COL.ytdBand}`}>LY</th>
-                <th className={`${COL.ytdCell} ${SUBHEAD} ${COL.ytdBand}`}>Var %</th>
+                <th className={`${COL.dayCell} ${SUBHEAD}`}>Retail</th>
+                <th className={`${COL.mtdStart} ${SUBHEAD}`}>TY</th>
+                <th className={`${COL.mtdCell} ${SUBHEAD}`}>LY</th>
+                <th className={`${COL.mtdCell} ${SUBHEAD}`}>Var %</th>
+                <th className={`${COL.ytdStart} ${SUBHEAD}`}>TY</th>
+                <th className={`${COL.ytdCell} ${SUBHEAD}`}>LY</th>
+                <th className={`${COL.ytdCell} ${SUBHEAD}`}>Var %</th>
               </tr>
             </thead>
             <tbody>
               {grouped.map((group) => (
                 <Fragment key={group.groupId}>
-                  <tr className="bg-muted/40">
-                    <td colSpan={1 + dataColCount} className="px-4 py-1.5 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase sm:px-5">
-                      {group.groupLabel}
-                    </td>
+                  <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
+                    <td className={`${COL.spa} ${BRAND_ROW}`}>{group.groupLabel}</td>
+                    <td colSpan={2} className={`${COL.dayStart} ${BRAND_ROW}`} aria-hidden="true" />
+                    <td colSpan={3} className={`${COL.mtdStart} ${BRAND_ROW}`} aria-hidden="true" />
+                    <td colSpan={3} className={`${COL.ytdStart} ${BRAND_ROW}`} aria-hidden="true" />
+                    <td className={`${COL.budgetStart} ${BRAND_ROW}`} aria-hidden="true" />
+                    <td className={`${COL.sparkStart} ${BRAND_ROW}`} aria-hidden="true" />
                   </tr>
                   {group.items.map((spa) => {
                     const cmp = comparisonBySpa.get(spa.locationName);
                     return (
                       <tr
                         key={spa.locationId}
-                        className="border-b border-black/[0.045] transition-colors last:border-0 hover:bg-primary/[0.025] dark:border-white/[0.06]"
+                        className="border-b border-black/[0.06] transition-[filter] last:border-0 hover:brightness-[0.985] dark:border-white/[0.07] dark:hover:brightness-110"
                       >
                         <td className={COL.spa}>
                           <SpaNameButton name={spaDisplayName(spa.locationName)} onClick={() => setActive(spa)} />
@@ -113,7 +124,7 @@ export function SpaByLocationTable({ spas, currency, latestDate, today, comparis
                         <td className={`${COL.dayStart} text-right whitespace-nowrap text-muted-foreground tabular-nums`}>
                           {spa.latestTreatmentSales != null ? formatCurrencyExact(spa.latestTreatmentSales, currency) : <Missing />}
                         </td>
-                        <td className="px-3 py-3 text-right whitespace-nowrap text-muted-foreground tabular-nums">
+                        <td className={`${COL.dayCell} text-right whitespace-nowrap text-muted-foreground tabular-nums`}>
                           {spa.latestRetailSales != null ? formatCurrencyExact(spa.latestRetailSales, currency) : <Missing />}
                         </td>
                         {cmp ? (
