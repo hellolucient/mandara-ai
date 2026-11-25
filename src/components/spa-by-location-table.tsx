@@ -11,7 +11,7 @@ import { TyLyVarianceCells } from "@/components/spa-comparison-cells";
 
 /** Alternating column-band tints and dividers between metric groups (desktop table). */
 const COL = {
-  spa: "py-3 pr-3 pl-4 sm:pl-5",
+  spa: "py-3 pr-3 pl-4 whitespace-nowrap sm:pl-5",
   dayBand: "",
   dayStart: "border-l border-black/[0.07] px-3 py-3 dark:border-white/10",
   mtdBand: "bg-primary/[0.04] dark:bg-primary/[0.07]",
