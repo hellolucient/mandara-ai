@@ -130,7 +130,7 @@ export function buildSpaCategoryBars(
     addUsdToCategory(spaBucket, line.promoCode, line.usd);
     bySpa.set(line.locationName, spaBucket);
   }
-  return [...bySpa.entries()]
+  const rows = [...bySpa.entries()]
     .map(([spa, totals]) => {
       const slices = slicesFromUsdByCategory(totals);
       const totalUsd = slices.reduce((s, x) => s + x.usd, 0);

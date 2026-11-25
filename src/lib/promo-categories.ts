@@ -62,7 +62,9 @@ export const PROMO_CATEGORIES: readonly PromoCategoryDef[] = [
     id: "full_price",
     label: "Full Price",
     color: PROMO_CATEGORY_COLORS.full_price,
-    codes: ["FP"],
+    // FP = rack rate; MV/GM = local outside-market full-paying guests (spa/gym membership).
+    // AC (airline crew) is in-house hotel guests and stays in Other, not Full Price.
+    codes: ["FP", "MV", "GM"],
   },
 ] as const;
 

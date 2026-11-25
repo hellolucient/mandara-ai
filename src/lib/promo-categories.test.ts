@@ -41,6 +41,15 @@ test("maps spa credit, jet lag, massage, full price", () => {
   assert.equal(promoCategoryLabel("MC"), "Massage Credit Packages");
   assert.equal(promoCategoryForCode("FP"), "full_price");
   assert.equal(promoCategoryLabel("FP"), "Full Price");
+  assert.equal(promoCategoryForCode("MV"), "full_price");
+  assert.equal(promoCategoryForCode("GM"), "full_price");
+  assert.equal(isFullPriceCode("MV"), true);
+  assert.equal(isFullPriceCode("GM"), true);
+});
+
+test("airline crew stays in Other, not Full Price", () => {
+  assert.equal(promoCategoryForCode("AC"), "other");
+  assert.equal(isFullPriceCode("AC"), false);
 });
 
 test("blank and unknown map to other", () => {
