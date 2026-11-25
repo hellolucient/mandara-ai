@@ -8,6 +8,8 @@
     "start": "next start --hostname 127.0.0.1 --port 4327",
     "lint": "eslint",
     "test": "tsx --test src/lib/*.test.ts",
+    "test:promo": "python3 -m unittest discover -s scripts -p 'test_promo*.py'",
+    "promo:json": "node scripts/promo_backfill_generate.mjs",
     "dsr:sandbox": "node fixtures/dsr-sandbox/server.mjs",
     "dsr:extract": "tsx scripts/dsr-extract.ts",
     "prebuild": "node scripts/gen-schema-source.mjs",

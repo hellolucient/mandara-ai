@@ -21,7 +21,7 @@ if (data.kind !== "mandara-export") throw new Error("Not a Mandara export file."
 const targetStage = stageArg > 0 ? process.argv[stageArg + 1] : data.stage;
 
 const ORDER = [
-  "settings", "members", "role_invites", "locations", "budgets", "sales_days", "sales_lines", "sales_item_lines", "documents", "chunks",
+  "settings", "members", "role_invites", "locations", "budgets", "sales_days", "sales_lines", "sales_item_lines", "promo_periods", "promo_lines", "documents", "chunks",
   "conversations", "messages", "user_memories", "agent_runs", "usage_events", "prospects", "prospect_notes", "prospect_signals",
 ];
 

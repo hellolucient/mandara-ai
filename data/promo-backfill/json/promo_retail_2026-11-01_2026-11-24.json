@@ -1,0 +1,192 @@
+{
+  "period_from": "2026-11-01",
+  "period_to": "2026-11-24",
+  "kind": "retail",
+  "currency": "USD",
+  "rows": [
+    {
+      "spa": "Meedhupparu",
+      "promo_code": "EX24",
+      "description": "SPECIAL OFFER FOR MIR EXECUTIVES",
+      "qty": 1.0,
+      "usd": 16.16
+    },
+    {
+      "spa": "Dhonveli",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 2.0,
+      "usd": 40.41
+    },
+    {
+      "spa": "Hakuraa Huraa",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 124.0,
+      "usd": 3256.28
+    },
+    {
+      "spa": "Rannalhi",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 11.0,
+      "usd": 315.43
+    },
+    {
+      "spa": "Meedhupparu",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 22.0,
+      "usd": 670.44
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 71.0,
+      "usd": 1334.26
+    },
+    {
+      "spa": "Ellaidhoo",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 52.0,
+      "usd": 1107.81
+    },
+    {
+      "spa": "Vadoo",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 8.0,
+      "usd": 232.45
+    },
+    {
+      "spa": "Velifushi",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 38.0,
+      "usd": 1166.2
+    },
+    {
+      "spa": "Kunaavashi",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 26.0,
+      "usd": 713.7
+    },
+    {
+      "spa": "Nasandhura",
+      "promo_code": "GM",
+      "description": "GYM MEMBERSHIP",
+      "qty": 1.0,
+      "usd": 0.0
+    },
+    {
+      "spa": "Nasandhura",
+      "promo_code": "MV",
+      "description": "SPA MEMBERSHIP VCR",
+      "qty": 3.0,
+      "usd": 48.25
+    },
+    {
+      "spa": "Rannalhi",
+      "promo_code": "POTD",
+      "description": "Promo Of The Day",
+      "qty": 2.0,
+      "usd": 15.54
+    },
+    {
+      "spa": "Meedhupparu",
+      "promo_code": "POTD",
+      "description": "Promo Of The Day",
+      "qty": 1.0,
+      "usd": 7.77
+    },
+    {
+      "spa": "Ellaidhoo",
+      "promo_code": "POTD",
+      "description": "Promo Of The Day",
+      "qty": 5.0,
+      "usd": 90.74
+    },
+    {
+      "spa": "Velifushi",
+      "promo_code": "RI15",
+      "description": "15% Discount",
+      "qty": 2.0,
+      "usd": 15.54
+    },
+    {
+      "spa": "Kunaavashi",
+      "promo_code": "RTL",
+      "description": "Retail 20% Discount",
+      "qty": 3.0,
+      "usd": 98.86
+    },
+    {
+      "spa": "Kunaavashi",
+      "promo_code": "T15",
+      "description": "15% Discount",
+      "qty": 2.0,
+      "usd": 125.49
+    }
+  ],
+  "totals": {
+    "total_qty": 374.0,
+    "guest": 269.0,
+    "nett": 9255.33,
+    "tax": 1730.4,
+    "service": 925.75,
+    "total_usd": 11911.48,
+    "per_spa": {
+      "Dhonveli": {
+        "qty": 2.0,
+        "usd": 40.41
+      },
+      "Hakuraa Huraa": {
+        "qty": 124.0,
+        "usd": 3256.28
+      },
+      "Rannalhi": {
+        "qty": 13.0,
+        "usd": 330.97
+      },
+      "Meedhupparu": {
+        "qty": 24.0,
+        "usd": 694.37
+      },
+      "Hudhuranfushi": {
+        "qty": 71.0,
+        "usd": 1334.26
+      },
+      "Ellaidhoo": {
+        "qty": 57.0,
+        "usd": 1198.55
+      },
+      "Vadoo": {
+        "qty": 8.0,
+        "usd": 232.45
+      },
+      "Velifushi": {
+        "qty": 40.0,
+        "usd": 1181.74
+      },
+      "Madifushi": {
+        "qty": 0.0,
+        "usd": 0.0
+      },
+      "Kunaavashi": {
+        "qty": 31.0,
+        "usd": 938.05
+      },
+      "Melia Whale Lagoon": {
+        "qty": 0.0,
+        "usd": 0.0
+      },
+      "Nasandhura": {
+        "qty": 4.0,
+        "usd": 48.25
+      }
+    }
+  }
+}

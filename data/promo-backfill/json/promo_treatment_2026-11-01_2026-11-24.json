@@ -1,0 +1,647 @@
+{
+  "period_from": "2026-11-01",
+  "period_to": "2026-11-24",
+  "kind": "treatment",
+  "currency": "USD",
+  "rows": [
+    {
+      "spa": "Nasandhura",
+      "promo_code": "AC",
+      "description": "AIRLINES CREW MEMBER",
+      "qty": 11.0,
+      "usd": 689.99
+    },
+    {
+      "spa": "Vadoo",
+      "promo_code": "AI30",
+      "description": "30 MINUTES TREATMENT",
+      "qty": 82.0,
+      "usd": 1596.74
+    },
+    {
+      "spa": "Vadoo",
+      "promo_code": "AI45",
+      "description": "45 MINUTES MASSAGE",
+      "qty": 58.0,
+      "usd": 1239.46
+    },
+    {
+      "spa": "Meedhupparu",
+      "promo_code": "AM",
+      "description": "Body Holiday at Adaaran Resort - 45 mins treatment",
+      "qty": 20.0,
+      "usd": 450.6
+    },
+    {
+      "spa": "Ellaidhoo",
+      "promo_code": "ASP",
+      "description": "Arrival Special Promo",
+      "qty": 2.0,
+      "usd": 154.63
+    },
+    {
+      "spa": "Dhonveli",
+      "promo_code": "ATOLL",
+      "description": "ATOLL SPA SURFERS",
+      "qty": 1.0,
+      "usd": 87.41
+    },
+    {
+      "spa": "Dhonveli",
+      "promo_code": "CD15",
+      "description": "Cinnamon Discovery 15%",
+      "qty": 4.0,
+      "usd": 369.86
+    },
+    {
+      "spa": "Hakuraa Huraa",
+      "promo_code": "CD15",
+      "description": "Cinnamon Discovery 15%",
+      "qty": 7.0,
+      "usd": 851.97
+    },
+    {
+      "spa": "Ellaidhoo",
+      "promo_code": "CD15",
+      "description": "Cinnamon Discovery 15%",
+      "qty": 6.0,
+      "usd": 617.51
+    },
+    {
+      "spa": "Dhonveli",
+      "promo_code": "CP",
+      "description": "Couple Promo",
+      "qty": 32.0,
+      "usd": 3717.27
+    },
+    {
+      "spa": "Kunaavashi",
+      "promo_code": "CPL",
+      "description": "Couple Promotion",
+      "qty": 2.0,
+      "usd": 278.95
+    },
+    {
+      "spa": "Rannalhi",
+      "promo_code": "CR50",
+      "description": "Spa Credit $50",
+      "qty": 51.0,
+      "usd": 6511.24
+    },
+    {
+      "spa": "Meedhupparu",
+      "promo_code": "CR50",
+      "description": "Spa Credit $50",
+      "qty": 131.0,
+      "usd": 16204.62
+    },
+    {
+      "spa": "Vadoo",
+      "promo_code": "CR50",
+      "description": "Spa Credit $50",
+      "qty": 21.0,
+      "usd": 2704.03
+    },
+    {
+      "spa": "Kunaavashi",
+      "promo_code": "CR50",
+      "description": "Spa Credit $50",
+      "qty": 13.0,
+      "usd": 1701.65
+    },
+    {
+      "spa": "Meedhupparu",
+      "promo_code": "EB",
+      "description": "Early Bird Promotion",
+      "qty": 14.0,
+      "usd": 1076.88
+    },
+    {
+      "spa": "Dhonveli",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 56.0,
+      "usd": 6915.24
+    },
+    {
+      "spa": "Hakuraa Huraa",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 50.0,
+      "usd": 4665.54
+    },
+    {
+      "spa": "Rannalhi",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 2.0,
+      "usd": 163.17
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 54.0,
+      "usd": 8477.13
+    },
+    {
+      "spa": "Ellaidhoo",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 28.0,
+      "usd": 3073.03
+    },
+    {
+      "spa": "Vadoo",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 12.0,
+      "usd": 1670.57
+    },
+    {
+      "spa": "Velifushi",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 9.0,
+      "usd": 1208.25
+    },
+    {
+      "spa": "Kunaavashi",
+      "promo_code": "FP",
+      "description": "Full Price Paying Guest",
+      "qty": 7.0,
+      "usd": 827.11
+    },
+    {
+      "spa": "Nasandhura",
+      "promo_code": "GC",
+      "description": "GIFT CERTIFICATE",
+      "qty": 2.0,
+      "usd": 163.17
+    },
+    {
+      "spa": "Dhonveli",
+      "promo_code": "GHA",
+      "description": "CINNAMON DISCOVERY MEMBER",
+      "qty": 51.0,
+      "usd": 1109.56
+    },
+    {
+      "spa": "Nasandhura",
+      "promo_code": "GM",
+      "description": "GYM MEMBERSHIP",
+      "qty": 3.0,
+      "usd": 223.78
+    },
+    {
+      "spa": "Meedhupparu",
+      "promo_code": "HMOON",
+      "description": "Honeymooners",
+      "qty": 20.0,
+      "usd": 2000.4
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "HNY20",
+      "description": "20% DISCOUNT - HONEYMOONERS",
+      "qty": 1.0,
+      "usd": 115.0
+    },
+    {
+      "spa": "Dhonveli",
+      "promo_code": "JLR",
+      "description": "Jet Lag Recovery, duration 90mins.",
+      "qty": 35.0,
+      "usd": 3629.34
+    },
+    {
+      "spa": "Hakuraa Huraa",
+      "promo_code": "JLR",
+      "description": "Jet Lag Recovery, duration 90mins.",
+      "qty": 5.0,
+      "usd": 617.74
+    },
+    {
+      "spa": "Rannalhi",
+      "promo_code": "JLR",
+      "description": "Jet Lag Recovery, duration 90mins.",
+      "qty": 48.0,
+      "usd": 4288.98
+    },
+    {
+      "spa": "Meedhupparu",
+      "promo_code": "JLR",
+      "description": "Jet Lag Recovery, duration 90mins.",
+      "qty": 50.0,
+      "usd": 4489.62
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "JLR",
+      "description": "Jet Lag Recovery, duration 90mins.",
+      "qty": 7.0,
+      "usd": 788.65
+    },
+    {
+      "spa": "Ellaidhoo",
+      "promo_code": "JLR",
+      "description": "Jet Lag Recovery, duration 90mins.",
+      "qty": 65.0,
+      "usd": 5504.85
+    },
+    {
+      "spa": "Vadoo",
+      "promo_code": "JLR",
+      "description": "Jet Lag Recovery, duration 90mins.",
+      "qty": 2.0,
+      "usd": 209.8
+    },
+    {
+      "spa": "Velifushi",
+      "promo_code": "JLR",
+      "description": "Jet Lag Recovery, duration 90mins.",
+      "qty": 32.0,
+      "usd": 3123.26
+    },
+    {
+      "spa": "Kunaavashi",
+      "promo_code": "JLR",
+      "description": "Jet Lag Recovery, duration 90mins.",
+      "qty": 13.0,
+      "usd": 1262.63
+    },
+    {
+      "spa": "Dhonveli",
+      "promo_code": "MC",
+      "description": "Massage Credit",
+      "qty": 17.0,
+      "usd": 1436.66
+    },
+    {
+      "spa": "Hakuraa Huraa",
+      "promo_code": "MC",
+      "description": "Massage Credit",
+      "qty": 263.0,
+      "usd": 24341.93
+    },
+    {
+      "spa": "Meedhupparu",
+      "promo_code": "MC",
+      "description": "Massage Credit",
+      "qty": 16.0,
+      "usd": 1915.33
+    },
+    {
+      "spa": "Ellaidhoo",
+      "promo_code": "MC",
+      "description": "Massage Credit",
+      "qty": 4.0,
+      "usd": 271.17
+    },
+    {
+      "spa": "Velifushi",
+      "promo_code": "MC",
+      "description": "Massage Credit",
+      "qty": 15.0,
+      "usd": 2327.15
+    },
+    {
+      "spa": "Nasandhura",
+      "promo_code": "MV",
+      "description": "SPA MEMBERSHIP VCR",
+      "qty": 11.0,
+      "usd": 1027.23
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "POTD",
+      "description": "",
+      "qty": 1.0,
+      "usd": 71.87
+    },
+    {
+      "spa": "Kunaavashi",
+      "promo_code": "PP",
+      "description": "Presales Package",
+      "qty": 10.0,
+      "usd": 691.55
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "PRIND",
+      "description": "PRE SALE 30 MINS IND/ASN MARKET",
+      "qty": 138.0,
+      "usd": 2680.92
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "PSIND",
+      "description": "PRE SALE 45 MINS IND/ASN MARKET",
+      "qty": 5.0,
+      "usd": 112.66
+    },
+    {
+      "spa": "Dhonveli",
+      "promo_code": "PSPR",
+      "description": "Pre Sale Package",
+      "qty": 2.0,
+      "usd": 101.01
+    },
+    {
+      "spa": "Hakuraa Huraa",
+      "promo_code": "PSPR",
+      "description": "Pre Sale Package",
+      "qty": 16.0,
+      "usd": 932.41
+    },
+    {
+      "spa": "Rannalhi",
+      "promo_code": "PSPR",
+      "description": "Pre Sale Package",
+      "qty": 2.0,
+      "usd": 38.85
+    },
+    {
+      "spa": "Ellaidhoo",
+      "promo_code": "PSPR",
+      "description": "Pre Sale Package",
+      "qty": 21.0,
+      "usd": 853.51
+    },
+    {
+      "spa": "Velifushi",
+      "promo_code": "PSPR",
+      "description": "Pre Sale Package",
+      "qty": 46.0,
+      "usd": 2340.9
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "PSSRF",
+      "description": "PRE SALE 30 MINS SURFER",
+      "qty": 3.0,
+      "usd": 46.62
+    },
+    {
+      "spa": "Dhonveli",
+      "promo_code": "RI15",
+      "description": "15% Discount",
+      "qty": 64.0,
+      "usd": 6645.93
+    },
+    {
+      "spa": "Hakuraa Huraa",
+      "promo_code": "RI15",
+      "description": "15% Discount",
+      "qty": 112.0,
+      "usd": 13873.54
+    },
+    {
+      "spa": "Meedhupparu",
+      "promo_code": "RI15",
+      "description": "15% Discount",
+      "qty": 4.0,
+      "usd": 550.52
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "RI15",
+      "description": "15% Discount",
+      "qty": 9.0,
+      "usd": 1215.26
+    },
+    {
+      "spa": "Ellaidhoo",
+      "promo_code": "RI15",
+      "description": "15% Discount",
+      "qty": 58.0,
+      "usd": 5887.81
+    },
+    {
+      "spa": "Vadoo",
+      "promo_code": "RI15",
+      "description": "15% Discount",
+      "qty": 30.0,
+      "usd": 3526.87
+    },
+    {
+      "spa": "Velifushi",
+      "promo_code": "RI15",
+      "description": "15% Discount",
+      "qty": 87.0,
+      "usd": 10409.21
+    },
+    {
+      "spa": "Nasandhura",
+      "promo_code": "RI15",
+      "description": "15% Discount",
+      "qty": 4.0,
+      "usd": 303.8
+    },
+    {
+      "spa": "Hakuraa Huraa",
+      "promo_code": "RI20",
+      "description": "Room Inclusion 20% for Honeymooners",
+      "qty": 25.0,
+      "usd": 2694.7
+    },
+    {
+      "spa": "Rannalhi",
+      "promo_code": "RI20",
+      "description": "Room Inclusion 20% for Honeymooners",
+      "qty": 10.0,
+      "usd": 994.54
+    },
+    {
+      "spa": "Ellaidhoo",
+      "promo_code": "RI20",
+      "description": "Room Inclusion 20% for Honeymooners",
+      "qty": 2.0,
+      "usd": 149.18
+    },
+    {
+      "spa": "Vadoo",
+      "promo_code": "RI20",
+      "description": "Room Inclusion 20% for Honeymooners",
+      "qty": 6.0,
+      "usd": 739.7
+    },
+    {
+      "spa": "Velifushi",
+      "promo_code": "RI20",
+      "description": "Room Inclusion 20% for Honeymooners",
+      "qty": 11.0,
+      "usd": 1426.56
+    },
+    {
+      "spa": "Kunaavashi",
+      "promo_code": "RI20",
+      "description": "Room Inclusion 20% for Honeymooners",
+      "qty": 5.0,
+      "usd": 655.4
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "RIY",
+      "description": "ROMANTIC IN YOU",
+      "qty": 2.0,
+      "usd": 116.55
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "SCPAI",
+      "description": "SPA CREDIT PAI",
+      "qty": 118.0,
+      "usd": 18737.49
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "SCSF",
+      "description": "SPA CREDIT SURFER",
+      "qty": 3.0,
+      "usd": 361.32
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "SCSP",
+      "description": "SPA CREDIT SURFER PARTNER",
+      "qty": 12.0,
+      "usd": 1647.27
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "SR20",
+      "description": "SURFER DISCOUNT",
+      "qty": 9.0,
+      "usd": 1159.3
+    },
+    {
+      "spa": "Kunaavashi",
+      "promo_code": "STAFF",
+      "description": "Staff Price",
+      "qty": 4.0,
+      "usd": 183.39
+    },
+    {
+      "spa": "Kunaavashi",
+      "promo_code": "T15",
+      "description": "15% Discount",
+      "qty": 69.0,
+      "usd": 9691.21
+    },
+    {
+      "spa": "Dhonveli",
+      "promo_code": "TOP",
+      "description": "TOP UP 30",
+      "qty": 19.0,
+      "usd": 959.61
+    },
+    {
+      "spa": "Hakuraa Huraa",
+      "promo_code": "UPG",
+      "description": "UpGrade Package",
+      "qty": 9.0,
+      "usd": 570.33
+    },
+    {
+      "spa": "Rannalhi",
+      "promo_code": "UPG",
+      "description": "UpGrade Package",
+      "qty": 2.0,
+      "usd": 108.78
+    },
+    {
+      "spa": "Hudhuranfushi",
+      "promo_code": "UPG",
+      "description": "UpGrade Package",
+      "qty": 6.0,
+      "usd": 592.08
+    },
+    {
+      "spa": "Ellaidhoo",
+      "promo_code": "UPG",
+      "description": "UpGrade Package",
+      "qty": 3.0,
+      "usd": 139.86
+    },
+    {
+      "spa": "Vadoo",
+      "promo_code": "UPG",
+      "description": "UpGrade Package",
+      "qty": 33.0,
+      "usd": 1736.61
+    },
+    {
+      "spa": "Velifushi",
+      "promo_code": "UPG",
+      "description": "UpGrade Package",
+      "qty": 6.0,
+      "usd": 233.1
+    },
+    {
+      "spa": "Rannalhi",
+      "promo_code": "WOTM",
+      "description": "What's On This Month",
+      "qty": 5.0,
+      "usd": 345.79
+    }
+  ],
+  "totals": {
+    "total_qty": 2304.0,
+    "guest": 2570.0,
+    "nett": 217625.11,
+    "tax": 40694.44,
+    "service": 21762.46,
+    "total_usd": 280082.01,
+    "per_spa": {
+      "Dhonveli": {
+        "qty": 281.0,
+        "usd": 24971.89
+      },
+      "Hakuraa Huraa": {
+        "qty": 487.0,
+        "usd": 48548.16
+      },
+      "Rannalhi": {
+        "qty": 120.0,
+        "usd": 12451.35
+      },
+      "Meedhupparu": {
+        "qty": 255.0,
+        "usd": 26687.97
+      },
+      "Hudhuranfushi": {
+        "qty": 368.0,
+        "usd": 36122.12
+      },
+      "Ellaidhoo": {
+        "qty": 189.0,
+        "usd": 16651.55
+      },
+      "Vadoo": {
+        "qty": 244.0,
+        "usd": 13423.78
+      },
+      "Velifushi": {
+        "qty": 206.0,
+        "usd": 21068.43
+      },
+      "Madifushi": {
+        "qty": 0.0,
+        "usd": 0.0
+      },
+      "Kunaavashi": {
+        "qty": 123.0,
+        "usd": 15291.89
+      },
+      "Melia Whale Lagoon": {
+        "qty": 0.0,
+        "usd": 0.0
+      },
+      "Nasandhura": {
+        "qty": 31.0,
+        "usd": 2407.97
+      }
+    }
+  }
+}
