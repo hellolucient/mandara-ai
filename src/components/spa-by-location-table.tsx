@@ -20,7 +20,7 @@ const DIVIDER = "border-l border-black/[0.14] dark:border-white/[0.16]";
 
 /** Alternating column-band tints and dividers between metric groups. */
 const COL = {
-  spa: "bg-card py-3 pr-3 pl-4 sm:pl-5",
+  spa: "bg-card py-3 pr-3 pl-4 whitespace-nowrap sm:pl-5",
   dayStart: `${DIVIDER} ${BAND.card} px-3 py-3`,
   dayCell: `${BAND.card} px-3 py-3`,
   mtdStart: `${DIVIDER} ${BAND.sage} px-3 py-3`,
