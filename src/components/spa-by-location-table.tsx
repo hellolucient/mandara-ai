@@ -9,24 +9,32 @@ import { SpaDrilldownPanel } from "@/components/spa-drilldown-panel";
 import { addDays, latestDayColumnLabels } from "@/lib/dates";
 import { TyLyVarianceCells } from "@/components/spa-comparison-cells";
 
-/** Column-band fills: card (neutral), sage (MTD), sand (YTD) — tuned for AA text on `--foreground`. */
+/**
+ * Paper-tone column bands from the app stone palette (`--background` oklch(0.965 0.012 92), `--card`).
+ * MTD: page background ~50% over card. YTD: warm greige oklch(0.925 0.015 90) ~40% over card.
+ */
+const BAND_MTD_FILL =
+  "bg-[linear-gradient(180deg,color-mix(in_oklch,var(--background)_52%,var(--card)),color-mix(in_oklch,var(--background)_48%,var(--card)))] dark:bg-[color-mix(in_oklch,var(--background)_46%,var(--card))]";
+const BAND_YTD_FILL =
+  "bg-[linear-gradient(180deg,color-mix(in_oklch,oklch(0.925_0.015_90)_42%,var(--card)),color-mix(in_oklch,oklch(0.925_0.015_90)_38%,var(--card)))] dark:bg-[color-mix(in_oklch,oklch(0.26_0.012_90)_40%,var(--card))]";
+
 const BAND = {
   card: "bg-card",
-  sage: "bg-[oklch(0.86_0.048_168)] dark:bg-[oklch(0.29_0.038_168)]",
-  sand: "bg-[oklch(0.9_0.038_78)] dark:bg-[oklch(0.31_0.032_75)]",
+  mtd: BAND_MTD_FILL,
+  ytd: BAND_YTD_FILL,
 } as const;
 
-const DIVIDER = "border-l border-black/[0.14] dark:border-white/[0.16]";
+const DIVIDER = "border-l border-black/[0.09] dark:border-white/10";
 
 /** Alternating column-band tints and dividers between metric groups. */
 const COL = {
   spa: "bg-card py-3 pr-3 pl-4 whitespace-nowrap sm:pl-5",
   dayStart: `${DIVIDER} ${BAND.card} px-3 py-3`,
   dayCell: `${BAND.card} px-3 py-3`,
-  mtdStart: `${DIVIDER} ${BAND.sage} px-3 py-3`,
-  mtdCell: `${BAND.sage} px-3 py-3`,
-  ytdStart: `${DIVIDER} ${BAND.sand} px-3 py-3`,
-  ytdCell: `${BAND.sand} px-3 py-3`,
+  mtdStart: `${DIVIDER} ${BAND.mtd} px-3 py-3`,
+  mtdCell: `${BAND.mtd} px-3 py-3`,
+  ytdStart: `${DIVIDER} ${BAND.ytd} px-3 py-3`,
+  ytdCell: `${BAND.ytd} px-3 py-3`,
   budgetStart: `${DIVIDER} ${BAND.card} px-3 py-3`,
   sparkStart: `${DIVIDER} ${BAND.card} py-3 pr-4 pl-3 sm:pr-5`,
 } as const;
@@ -52,7 +60,6 @@ export function SpaByLocationTable({ spas, currency, latestDate, today, comparis
     latestDate && latestDate === addDays(today, -1) ? "Yesterday" : latestDate ? headings.day : "Latest day";
   const comparisonBySpa = new Map(comparison?.rows.map((r) => [r.location, r]) ?? []);
   const grouped = groupSpasByBrand(spas, (s) => s.mtdRevenue, (s) => s.locationName);
-  const dataColCount = 10;
 
   return (
     <section className="mt-12">
