@@ -1,7 +1,5 @@
 import { PromoCategoryStackedBar } from "@/components/promo-category-cell";
 import type { SpaCategoryBarRow } from "@/lib/promo-analytics";
-import { money } from "@/lib/dates";
-
 export function PromoSpaCategoryBars({ rows, title }: { rows: SpaCategoryBarRow[]; title?: string }) {
   if (rows.length === 0) return null;
 
@@ -11,10 +9,7 @@ export function PromoSpaCategoryBars({ rows, title }: { rows: SpaCategoryBarRow[
       <ul className="space-y-3">
         {rows.map((row) => (
           <li key={row.spa}>
-            <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
-              <span className="font-medium">{row.spa}</span>
-              <span className="text-muted-foreground">{money(row.totalUsd, "USD")}</span>
-            </div>
+            <p className="mb-1 text-sm font-medium">{row.spa}</p>
             <PromoCategoryStackedBar slices={row.slices} totalUsd={row.totalUsd} />
           </li>
         ))}
