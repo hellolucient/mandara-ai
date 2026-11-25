@@ -1,6 +1,7 @@
 import type { Role } from "@/lib/membership";
 import { canSeeProspects } from "@/lib/prospects-access";
 import { canSeePromotions, resolveAppAccess, type AppAccess, type AccessSubject } from "@/lib/access";
+import { canSeeRevenueMix } from "@/lib/revenue-mix-access";
 
 export type NavItem = { href: string; label: string };
 
@@ -27,6 +28,7 @@ export function navItems(role: Role, chatOnly = false, appAccess?: AppAccess | s
     { href: "/chat", label: "Chat" },
     { href: "/knowledge", label: "Knowledge" },
     { href: "/sales", label: "Sales" },
+    ...(canSeeRevenueMix(role) ? [{ href: "/revenue-mix", label: "Revenue mix" } as NavItem] : []),
     { href: "/promotions", label: "Promotions" },
     { href: "/agents", label: "Agents" },
     { href: "/memories", label: "Memories" },

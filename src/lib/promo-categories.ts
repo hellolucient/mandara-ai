@@ -1,23 +1,23 @@
 /**
  * Promo code families for reporting (Tenille / spa director view).
- * Edit this map when standing offers change; unmapped codes fall into "other".
+ * Six categories in fixed order. Full price (FP) is never part of discount / low-rate totals.
  */
 
 export type PromoCategoryId =
   | "stay_discounts"
-  | "cinnamon_discovery"
-  | "adaaran_spa_credit"
+  | "spa_credit"
+  | "jet_lag_recovery"
   | "massage_credit"
-  | "full_price"
-  | "other";
+  | "other"
+  | "full_price";
 
 export const PROMO_CATEGORY_COLORS: Record<PromoCategoryId, string> = {
   stay_discounts: "#1B5E20",
-  cinnamon_discovery: "#F57C00",
-  adaaran_spa_credit: "#1565C0",
+  spa_credit: "#1565C0",
+  jet_lag_recovery: "#00838F",
   massage_credit: "#7B1FA2",
-  full_price: "#F9A825",
   other: "#BDBDBD",
+  full_price: "#F9A825",
 };
 
 export type PromoCategoryDef = {
@@ -30,55 +30,57 @@ export type PromoCategoryDef = {
 export const PROMO_CATEGORIES: readonly PromoCategoryDef[] = [
   {
     id: "stay_discounts",
-    label: "Stay discounts",
+    label: "Stay discounts 15%, 20%, 15% Discovery",
     color: PROMO_CATEGORY_COLORS.stay_discounts,
-    codes: ["RI15", "T15", "RI20", "HNY20", "SR20"],
+    codes: ["RI15", "T15", "RI20", "HNY20", "SR20", "CD15", "GHA"],
   },
   {
-    id: "cinnamon_discovery",
-    label: "Cinnamon Discovery",
-    color: PROMO_CATEGORY_COLORS.cinnamon_discovery,
-    codes: ["CD15", "GHA"],
-  },
-  {
-    id: "adaaran_spa_credit",
-    label: "Adaaran spa credit",
-    color: PROMO_CATEGORY_COLORS.adaaran_spa_credit,
+    id: "spa_credit",
+    label: "$50 Spa Credit",
+    color: PROMO_CATEGORY_COLORS.spa_credit,
     codes: ["CR50", "CRD20", "SCPAI", "SCSP", "SCSF"],
   },
   {
+    id: "jet_lag_recovery",
+    label: "Jet Lag Recovery",
+    color: PROMO_CATEGORY_COLORS.jet_lag_recovery,
+    codes: ["JLR"],
+  },
+  {
     id: "massage_credit",
-    label: "Massage credit",
+    label: "Massage Credit Packages",
     color: PROMO_CATEGORY_COLORS.massage_credit,
     codes: ["MC"],
   },
   {
+    id: "other",
+    label: "Other (pre-sale, low-rate, off-list)",
+    color: PROMO_CATEGORY_COLORS.other,
+    codes: ["PSPR", "ASP", "CP", "TOP", "WOTM", "DEPRO", "POTD", "UPG", "AI30", "AI45", "AM", "SD"],
+  },
+  {
     id: "full_price",
-    label: "Full price",
+    label: "Full Price",
     color: PROMO_CATEGORY_COLORS.full_price,
     codes: ["FP"],
   },
-  {
-    id: "other",
-    label: "Other",
-    color: PROMO_CATEGORY_COLORS.other,
-    codes: [
-      "JLR",
-      "PSPR",
-      "ASP",
-      "CP",
-      "TOP",
-      "WOTM",
-      "DEPRO",
-      "POTD",
-      "UPG",
-      "AI30",
-      "AI45",
-      "AM",
-      "SD",
-    ],
-  },
 ] as const;
+
+/** Categories 1–5: discounted / low-rate (excludes Full Price). */
+export const PROMO_DISCOUNT_CATEGORY_ORDER: readonly PromoCategoryId[] = [
+  "stay_discounts",
+  "spa_credit",
+  "jet_lag_recovery",
+  "massage_credit",
+  "other",
+];
+
+export const PROMO_FULL_PRICE_CATEGORY: PromoCategoryId = "full_price";
+
+export const PROMO_CATEGORY_ORDER: readonly PromoCategoryId[] = [
+  ...PROMO_DISCOUNT_CATEGORY_ORDER,
+  PROMO_FULL_PRICE_CATEGORY,
+];
 
 const CODE_TO_CATEGORY = new Map<string, PromoCategoryId>();
 for (const cat of PROMO_CATEGORIES) {
@@ -107,8 +109,29 @@ export function promoCategoryColor(promoCode: string): string {
   return promoCategoryDef(promoCategoryForCode(promoCode)).color;
 }
 
-/** Stable stack order for bars and legends (excludes zero segments at render time). */
-export const PROMO_CATEGORY_ORDER: readonly PromoCategoryId[] = PROMO_CATEGORIES.map((c) => c.id);
+export function isFullPriceCategory(id: PromoCategoryId): boolean {
+  return id === PROMO_FULL_PRICE_CATEGORY;
+}
+
+export function isFullPriceCode(promoCode: string): boolean {
+  return isFullPriceCategory(promoCategoryForCode(promoCode));
+}
+
+export function discountedPromoUsd(totals: Partial<Record<PromoCategoryId, number>>): number {
+  return PROMO_DISCOUNT_CATEGORY_ORDER.reduce((s, id) => s + (totals[id] ?? 0), 0);
+}
+
+export function fullPricePromoUsd(totals: Partial<Record<PromoCategoryId, number>>): number {
+  return totals[PROMO_FULL_PRICE_CATEGORY] ?? 0;
+}
+
+export function promoUsdForShare(totals: Partial<Record<PromoCategoryId, number>>): number {
+  return discountedPromoUsd(totals);
+}
+
+export function promoUsdAllCategories(totals: Partial<Record<PromoCategoryId, number>>): number {
+  return discountedPromoUsd(totals) + fullPricePromoUsd(totals);
+}
 
 export type CategoryUsdSlice = {
   id: PromoCategoryId;
@@ -116,23 +139,32 @@ export type CategoryUsdSlice = {
   color: string;
   usd: number;
   sharePct: number;
+  segment: "discount" | "full_price";
 };
+
+function sliceForId(id: PromoCategoryId, usd: number, shareBasis: number): CategoryUsdSlice {
+  const def = promoCategoryDef(id);
+  const segment = isFullPriceCategory(id) ? "full_price" : "discount";
+  return {
+    id,
+    label: def.label,
+    color: def.color,
+    usd,
+    sharePct: shareBasis > 0 ? Math.round((usd / shareBasis) * 1000) / 10 : 0,
+    segment,
+  };
+}
 
 export function slicesFromUsdByCategory(
   totals: Partial<Record<PromoCategoryId, number>>,
 ): CategoryUsdSlice[] {
-  const grand = PROMO_CATEGORY_ORDER.reduce((s, id) => s + (totals[id] ?? 0), 0);
-  return PROMO_CATEGORY_ORDER.map((id) => {
-    const def = promoCategoryDef(id);
-    const usd = totals[id] ?? 0;
-    return {
-      id,
-      label: def.label,
-      color: def.color,
-      usd,
-      sharePct: grand > 0 ? Math.round((usd / grand) * 1000) / 10 : 0,
-    };
-  }).filter((s) => s.usd > 0);
+  const allTotal = promoUsdAllCategories(totals);
+  const discountSlices = PROMO_DISCOUNT_CATEGORY_ORDER.map((id) => sliceForId(id, totals[id] ?? 0, allTotal)).filter(
+    (s) => s.usd > 0,
+  );
+  const fullUsd = fullPricePromoUsd(totals);
+  const fullSlice = fullUsd > 0 ? [sliceForId(PROMO_FULL_PRICE_CATEGORY, fullUsd, allTotal)] : [];
+  return [...discountSlices, ...fullSlice];
 }
 
 export function addUsdToCategory(
@@ -142,4 +174,21 @@ export function addUsdToCategory(
 ): void {
   const id = promoCategoryForCode(promoCode);
   bucket[id] = (bucket[id] ?? 0) + usd;
+}
+
+/** Table sort: categories 1–5 first (PROMO_CATEGORY_ORDER), Full Price last. */
+export function promoCategorySortKey(promoCode: string): string {
+  const id = promoCategoryForCode(promoCode);
+  const index = PROMO_CATEGORY_ORDER.indexOf(id);
+  const rank = index >= 0 ? index : PROMO_DISCOUNT_CATEGORY_ORDER.length;
+  return `${String(rank).padStart(2, "0")}-${promoCategoryLabel(promoCode)}`;
+}
+
+export function promoCategoriesForLegend(): {
+  discount: readonly PromoCategoryDef[];
+  fullPrice: PromoCategoryDef;
+} {
+  const fullPrice = promoCategoryDef(PROMO_FULL_PRICE_CATEGORY);
+  const discount = PROMO_CATEGORIES.filter((c) => c.id !== PROMO_FULL_PRICE_CATEGORY);
+  return { discount, fullPrice };
 }

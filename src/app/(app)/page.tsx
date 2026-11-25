@@ -27,6 +27,8 @@ import { listPromoPeriods, loadAllPromoLines } from "@/lib/promo-store";
 import { loadDays } from "@/lib/sales-store";
 import { canSeeProspects } from "@/lib/prospects-access";
 import { prospectSummary } from "@/lib/prospects-store";
+import { canSeeRevenueMix } from "@/lib/revenue-mix-access";
+import { RevenueMixHomeLoader } from "@/components/revenue-mix/home-loader";
 
 export const dynamic = "force-dynamic";
 
@@ -95,6 +97,10 @@ export default async function HomePage() {
       {kpis ? <Overview kpis={kpis} spas={spas} today={today} /> : <EmptyOverview />}
 
       {promoCard ? <HomePromoCard data={promoCard} /> : null}
+
+      {kpis && canSeeRevenueMix(member.role) ? (
+        <RevenueMixHomeLoader stage={member.stage} latestDate={kpis.latestDate} />
+      ) : null}
 
       {/* Ask + apps. Dashboard + chat people get Ask across the full width, without Quick access. */}
       <section className={showApps ? "mt-10 grid gap-5 lg:grid-cols-12" : "mt-10"}>
