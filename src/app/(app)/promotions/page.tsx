@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { SalesActions } from "@/components/sales-actions";
 import { Badge } from "@/components/ui/badge";
-import { buildDailyView, buildMonthlySummaries, buildWeeklyView } from "@/lib/promo-analytics";
+import {
+  buildDailyView,
+  buildMonthlySummaries,
+  buildSpaCategoryBarsForPeriod,
+  buildSpaCategoryBarsForWeek,
+  buildWeeklyView,
+} from "@/lib/promo-analytics";
+import { PromoCategoryCell } from "@/components/promo-category-cell";
+import { PromoCategoryLegend } from "@/components/promo-category-legend";
+import { PromoSpaCategoryBars } from "@/components/promo-spa-category-bars";
 import { loadApprovedPromoCodes } from "@/lib/promo-approved-codes";
 import { seedPromoBackfill } from "@/lib/promo-backfill-seed";
 import { listPromoPeriods, loadAllPromoLines } from "@/lib/promo-store";
@@ -36,6 +45,21 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
   const weekly = buildWeeklyView(allLines, approved, "treatment");
   const monthly = buildMonthlySummaries(periods, allLines, salesDays, approved, "treatment");
   const retailMonthly = buildMonthlySummaries(periods, allLines, salesDays, approved, "retail");
+
+  const dailyPeriod =
+    daily.date != null
+      ? periods.find((p) => p.kind === "treatment" && p.periodFrom === daily.date && p.periodTo === daily.date)
+      : null;
+  const dailyBars =
+    dailyPeriod != null
+      ? buildSpaCategoryBarsForPeriod(lines, dailyPeriod.periodFrom, dailyPeriod.periodTo)
+      : [];
+  const weeklyBars = weekly.weekKey ? buildSpaCategoryBarsForWeek(lines, weekly.weekKey) : [];
+  const latestMonthly = monthly.at(-1);
+  const monthlyBars =
+    latestMonthly != null
+      ? buildSpaCategoryBarsForPeriod(lines, latestMonthly.periodFrom, latestMonthly.periodTo)
+      : [];
 
   const offList = [
     ...new Set(
@@ -75,6 +99,10 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
         ))}
       </div>
 
+      <div className="mt-4 rounded-xl border bg-card px-4 py-3">
+        <PromoCategoryLegend />
+      </div>
+
       {periods.length === 0 ? (
         <p className="mt-8 rounded-xl border bg-card px-4 py-6 text-sm">
           No promotion data yet. Run{" "}
@@ -97,6 +125,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
           ) : (
             <p className="text-sm text-muted-foreground">Promo day {daily.date} (promo USD as % of stored DSR treatment revenue where available).</p>
           )}
+          <PromoSpaCategoryBars rows={dailyBars} title="Treatment promo by category (per spa)" />
           {daily.spas.map((spa) => (
             <article key={spa.spa} className="overflow-hidden rounded-xl border bg-card">
               <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
@@ -113,6 +142,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                 <thead className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                   <tr>
                     <th className="py-2 pl-3 font-medium">Code</th>
+                    <th className="px-2 py-2 font-medium">Category</th>
                     <th className="px-2 py-2 font-medium">Description</th>
                     <th className="px-2 py-2 text-right font-medium">Qty</th>
                     <th className="py-2 pr-3 text-right font-medium">USD</th>
@@ -128,6 +158,9 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                             Off list
                           </Badge>
                         ) : null}
+                      </td>
+                      <td className="px-2 py-2">
+                        <PromoCategoryCell promoCode={row.promoCode} />
                       </td>
                       <td className="px-2 py-2 text-muted-foreground">{row.description || "—"}</td>
                       <td className="px-2 py-2 text-right">{row.qty}</td>
@@ -148,11 +181,13 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
             Week {weekly.weekKey || "—"}
             {weekly.priorWeekKey ? ` vs ${weekly.priorWeekKey}` : ""} — treatment promos assigned by ISO week of period end.
           </p>
+          <PromoSpaCategoryBars rows={weeklyBars} title="Treatment promo by category · this week" />
           <div className="mt-4 overflow-hidden rounded-xl border bg-card">
             <table className="w-full text-sm">
               <thead className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                 <tr>
                   <th className="py-3 pl-3 font-medium">Spa</th>
+                  <th className="px-2 py-3 font-medium">Category</th>
                   <th className="px-2 py-3 font-medium">Code</th>
                   <th className="px-2 py-3 text-right font-medium">This wk</th>
                   <th className="px-2 py-3 text-right font-medium">Prior wk</th>
@@ -163,6 +198,9 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                 {weekly.rows.slice(0, 80).map((row) => (
                   <tr key={`${row.spa}-${row.promoCode}`} className="border-b last:border-0">
                     <td className="py-2 pl-3">{row.spa}</td>
+                    <td className="px-2 py-2">
+                      <PromoCategoryCell promoCode={row.promoCode} />
+                    </td>
                     <td className="px-2 py-2">
                       {row.promoCode}
                       {row.offList ? (
@@ -188,6 +226,12 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
       {view === "monthly" ? (
         <section className="mt-6 space-y-8">
           <h2 className="font-heading text-xl">Monthly summary</h2>
+          {monthlyBars.length > 0 ? (
+            <PromoSpaCategoryBars
+              rows={monthlyBars}
+              title={latestMonthly ? `Treatment promo by category · ${latestMonthly.label}` : undefined}
+            />
+          ) : null}
           {monthly.map((block) => (
             <article key={block.periodFrom} className="rounded-xl border bg-card p-4">
               <header className="flex flex-wrap items-baseline justify-between gap-2">
@@ -211,6 +255,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                     <th className="py-2 font-medium">Spa</th>
                     <th className="py-2 text-right font-medium">Promo USD</th>
                     <th className="py-2 text-right font-medium">Promo % rev</th>
+                    <th className="hidden py-2 font-medium sm:table-cell">Category mix</th>
                     <th className="py-2 pr-1 font-medium">Top codes</th>
                   </tr>
                 </thead>
@@ -220,8 +265,25 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                       <td className="py-2">{spa.spa}</td>
                       <td className="py-2 text-right">{money(spa.promoUsd, "USD")}</td>
                       <td className="py-2 text-right">{spa.promoSharePct != null ? `${spa.promoSharePct}%` : "—"}</td>
+                      <td className="hidden py-2 sm:table-cell">
+                        <div className="flex h-2 w-28 overflow-hidden rounded-full bg-black/[0.06]">
+                          {spa.categorySlices.map((slice) => (
+                            <div
+                              key={slice.id}
+                              className={`h-full ${slice.barClass}`}
+                              style={{
+                                width:
+                                  spa.promoUsd > 0 ? `${(slice.usd / spa.promoUsd) * 100}%` : "0%",
+                              }}
+                              title={`${slice.label}: ${money(slice.usd, "USD")}`}
+                            />
+                          ))}
+                        </div>
+                      </td>
                       <td className="py-2 pr-1 text-xs text-muted-foreground">
-                        {spa.topCodes.map((c) => `${c.promoCode} ${money(c.usd, "USD")}${c.offList ? "⚠" : ""}`).join(" · ")}
+                        {spa.topCodes
+                          .map((c) => `${c.categoryLabel}: ${c.promoCode} ${money(c.usd, "USD")}${c.offList ? "⚠" : ""}`)
+                          .join(" · ")}
                       </td>
                     </tr>
                   ))}
