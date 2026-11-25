@@ -113,11 +113,11 @@ export function compareSides(ty: RevenueTriple, ly: RevenueTriple | null): Compa
 }
 
 export function sumPeriodTotals(
-  maps: Array<Partial<Record<string, Partial<Record<PeriodKind, number>>>>>,
+  maps: Array<Map<string, Partial<Record<PeriodKind, number>>>>,
 ): Map<string, RevenueTriple> {
   const out = new Map<string, RevenueTriple>();
   for (const map of maps) {
-    for (const [location, kinds] of Object.entries(map)) {
+    for (const [location, kinds] of map) {
       const existing = out.get(location) ?? { treatment: null, retail: null, total: null };
       const treatment = sumNullable(existing.treatment, kinds?.treatment ?? null);
       const retail = sumNullable(existing.retail, kinds?.retail ?? null);
