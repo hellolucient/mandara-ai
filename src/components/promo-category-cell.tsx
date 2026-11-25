@@ -39,7 +39,7 @@ function PromoBarBreakdown({
 }) {
   if (items.length === 0) return null;
   return (
-    <ul className={`mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5 ${className ?? ""}`}>
+    <ul className={`mt-1 flex flex-wrap gap-x-3.5 gap-y-1 ${className ?? ""}`}>
       {items.map((item) => (
         <li key={item.id} className="inline-flex items-center gap-1 text-[10px] leading-snug text-muted-foreground md:text-[11px]">
           <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} aria-hidden />

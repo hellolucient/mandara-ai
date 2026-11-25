@@ -30,6 +30,6 @@ describe("spa comparison variance", () => {
   it("formats variance pct and handles null LY", () => {
     assert.deepEqual(variance(120, 100), { usd: 20, pct: 20 });
     assert.equal(formatVariancePct(null), "n/a");
-    assert.equal(formatPromoSegmentCaption(100, 25), "$100 · 25%");
+    assert.equal(formatPromoSegmentCaption(100, 25), "$100  (25%)");
   });
 });
