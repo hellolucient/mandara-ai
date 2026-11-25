@@ -10,13 +10,14 @@ import { addDays, latestDayColumnLabels } from "@/lib/dates";
 import { TyLyVarianceCells } from "@/components/spa-comparison-cells";
 
 /**
- * Paper-tone column bands from the app stone palette (`--background` oklch(0.965 0.012 92), `--card`).
- * MTD: page background ~50% over card. YTD: warm greige oklch(0.925 0.015 90) ~40% over card.
+ * Paper-tone column bands from the app stone palette (`--background` oklch(0.965 0.012 92), `--card` 0.985).
+ * A 50% page-over-card mix read as ~L 0.975 and almost vanished on the card; use the full page
+ * background for MTD and a slightly deeper greige for YTD so the bands stay soft but distinct.
  */
 const BAND_MTD_FILL =
-  "bg-[linear-gradient(180deg,color-mix(in_oklch,var(--background)_52%,var(--card)),color-mix(in_oklch,var(--background)_48%,var(--card)))] dark:bg-[color-mix(in_oklch,var(--background)_46%,var(--card))]";
+  "bg-[var(--background)] dark:bg-[color-mix(in_oklch,var(--background)_80%,var(--card))]";
 const BAND_YTD_FILL =
-  "bg-[linear-gradient(180deg,color-mix(in_oklch,oklch(0.925_0.015_90)_42%,var(--card)),color-mix(in_oklch,oklch(0.925_0.015_90)_38%,var(--card)))] dark:bg-[color-mix(in_oklch,oklch(0.26_0.012_90)_40%,var(--card))]";
+  "bg-[oklch(0.945_0.016_85)] dark:bg-[oklch(0.165_0.014_85)]";
 
 const BAND = {
   card: "bg-card",

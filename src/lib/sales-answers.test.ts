@@ -204,8 +204,8 @@ describe("sales answer layout and sparkline polish", () => {
     assert.match(page, /overflow-x-auto/);
     assert.match(page, /whitespace-nowrap/);
     assert.match(page, /min-w-\[1040px\]/);
-    assert.match(page, /color-mix\(in_oklch,var\(--background\)_52%/);
-    assert.match(page, /oklch\(0\.925_0\.015_90\)_42%/);
+    assert.match(page, /bg-\[var\(--background\)\]/);
+    assert.match(page, /oklch\(0\.945_0\.016_85\)/);
     assert.match(page, /border-black\/\[0\.09\]/);
     assert.doesNotMatch(page, /0\.048_168/);
   });
