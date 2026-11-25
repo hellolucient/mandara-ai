@@ -34,8 +34,8 @@ export function HomePromoCard({ data }: { data: HomePromoCardData }) {
         ) : (
           <ul className="mt-4 space-y-2.5">
             {data.spaBars.map((row) => (
-              <li key={row.spa} className="grid grid-cols-[minmax(0,6.5rem)_1fr] items-center gap-3">
-                <span className="truncate text-[13px] font-medium">{row.spa}</span>
+              <li key={row.spa} className="grid grid-cols-[minmax(0,5.5rem)_1fr] items-start gap-2 md:gap-3">
+                <span className="truncate pt-0.5 text-[13px] font-medium">{row.spa}</span>
                 <PromoCategoryStackedBar slices={row.slices} totalUsd={row.totalUsd} />
               </li>
             ))}
