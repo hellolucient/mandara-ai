@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
-import type { RevenueMixHomeSnapshot, RevenueMixPeriod } from "@/lib/revenue-mix";
-import { buildRevenueMixPeriod } from "@/lib/revenue-mix";
+import type { RevenueMixHomeSnapshot, RevenueMixPeriod } from "@/lib/revenue-mix-view";
+import { buildRevenueMixPeriod } from "@/lib/revenue-mix-view";
 import type { StoredItemLine } from "@/lib/sales-item-types";
 import { RevenueMixCategoryBar } from "@/components/revenue-mix/revenue-mix-bars";
 
