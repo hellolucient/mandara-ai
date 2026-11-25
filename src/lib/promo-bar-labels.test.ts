@@ -16,17 +16,23 @@ describe("promo bar labels", () => {
   it("plans in-bar vs breakdown segments on desktop", () => {
     const plan = planPromoBarSegmentLabels(
       [
-        { id: "a", label: "Category A", color: "#000", usd: 1310 },
-        { id: "b", label: "Category B", color: "#111", usd: 200 },
+        { id: "elemis", label: "Elemis", color: "#000", usd: 80 },
+        { id: "enhancements", label: "Enhancements", color: "#111", usd: 50 },
+        { id: "tiny", label: "Tiny", color: "#222", usd: 20 },
+        { id: "rest", label: "Rest", color: "#333", usd: 850 },
       ],
-      1510,
+      1000,
     );
-    assert.equal(plan.length, 2);
-    const large = plan.find((p) => p.id === "a");
-    assert.ok(large && large.showInBar);
-    const small = plan.find((p) => p.id === "b");
-    assert.ok(small && !small.showInBar);
-    assert.ok(small.sharePct < PROMO_IN_BAR_LABEL_MIN_PCT);
+    assert.equal(plan.length, 4);
+    const eight = plan.find((p) => p.id === "elemis");
+    const five = plan.find((p) => p.id === "enhancements");
+    const under = plan.find((p) => p.id === "tiny");
+    assert.ok(eight && eight.showInBar);
+    assert.equal(Math.round(eight.sharePct), 8);
+    assert.ok(five && five.showInBar);
+    assert.equal(Math.round(five.sharePct), 5);
+    assert.ok(under && !under.showInBar);
+    assert.ok(under.sharePct < PROMO_IN_BAR_LABEL_MIN_PCT);
   });
 
   it("forces all segments to breakdown on mobile", () => {

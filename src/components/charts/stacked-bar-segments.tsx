@@ -6,12 +6,15 @@ export type BarSegment = {
   sharePct?: number;
 };
 
-/** Mobile: compact flush bar (~8px). Desktop (md+): ~22px tall segments with gaps and in-bar labels when wide enough. */
+/** Minimum share (0–100) before an in-bar % label is shown on desktop. */
+export const IN_BAR_LABEL_MIN_PCT = 5;
+
+/** Mobile: compact flush bar (~8px). Desktop (md+): ~22px tall segments with gaps and in-bar labels from 5% share. */
 export function StackedBarSegments({
   segments,
   total,
   widthClass = "w-full",
-  inBarLabelMinPct = 12,
+  inBarLabelMinPct = IN_BAR_LABEL_MIN_PCT,
   ariaLabel = "Stacked category bar",
   formatInBarLabel,
 }: {
@@ -45,7 +48,13 @@ export function StackedBarSegments({
             title={`${seg.label}: ${inBarText}`}
           >
             {showInBar ? (
-              <span className="pointer-events-none absolute inset-0 hidden items-center justify-center px-0.5 text-[9px] font-semibold leading-none text-white tabular-nums drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)] md:flex md:text-[10px]">
+              <span
+                className={`pointer-events-none absolute inset-0 hidden items-center justify-center font-semibold leading-none text-white tabular-nums drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)] md:flex ${
+                  labelPct < 12
+                    ? "px-0 text-[8px] md:text-[8px]"
+                    : "px-0.5 text-[9px] md:text-[10px]"
+                }`}
+              >
                 {inBarText}
               </span>
             ) : null}

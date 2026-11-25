@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { RevenueMixCategoryBar, RevenueMixLegend } from "@/components/revenue-mix/revenue-mix-bars";
+import { spaDisplayName } from "@/lib/spa-groups";
 import { formatBusinessDate } from "@/lib/dates";
 import { canSeeRevenueMix } from "@/lib/revenue-mix-access";
 import {
@@ -80,7 +81,7 @@ export default async function RevenueMixPage({ searchParams }: { searchParams: P
             <option value="">All spas</option>
             {spas.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.name}
+                {spaDisplayName(s.name)}
               </option>
             ))}
           </select>
@@ -139,7 +140,7 @@ export default async function RevenueMixPage({ searchParams }: { searchParams: P
               <ul className="mt-4 space-y-6">
                 {spaRows.map((row) => (
                   <li key={row.locationId} className="rounded-xl border bg-card p-4">
-                    <p className="mb-3 text-sm font-medium">{row.spa}</p>
+                    <p className="mb-3 text-sm font-medium">{spaDisplayName(row.spa)}</p>
                     <div className="grid gap-6 md:grid-cols-2">
                       <RevenueMixCategoryBar
                         label="Treatments"

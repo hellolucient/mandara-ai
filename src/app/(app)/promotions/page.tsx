@@ -11,6 +11,7 @@ import {
 import { PromoCategoryCell, PromoCategoryStackedBar } from "@/components/promo-category-cell";
 import { PromoCategoryLegend } from "@/components/promo-category-legend";
 import { PromoSpaCategoryBars } from "@/components/promo-spa-category-bars";
+import { spaDisplayName } from "@/lib/spa-groups";
 import { loadApprovedPromoCodes } from "@/lib/promo-approved-codes";
 import { seedPromoBackfill } from "@/lib/promo-backfill-seed";
 import { listPromoPeriods, loadAllPromoLines } from "@/lib/promo-store";
@@ -130,7 +131,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
             <article key={spa.spa} className="overflow-hidden rounded-xl border bg-card">
               <header className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
                 <div>
-                  <h3 className="font-medium">{spa.spa}</h3>
+                  <h3 className="font-medium">{spaDisplayName(spa.spa)}</h3>
                   <p className="text-xs text-muted-foreground">
                     Discounted promo {money(spa.promoUsd, "USD")}
                     {spa.fullPricePromoUsd > 0 ? ` · Full price ${money(spa.fullPricePromoUsd, "USD")}` : ""}
@@ -200,7 +201,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
               <tbody>
                 {weekly.rows.slice(0, 80).map((row) => (
                   <tr key={`${row.spa}-${row.promoCode}`} className="border-b last:border-0">
-                    <td className="py-2 pl-3">{row.spa}</td>
+                    <td className="py-2 pl-3">{spaDisplayName(row.spa)}</td>
                     <td className="px-2 py-2">
                       <PromoCategoryCell promoCode={row.promoCode} />
                     </td>
@@ -266,7 +267,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                 <tbody>
                   {block.spas.map((spa) => (
                     <tr key={spa.spa} className="border-b last:border-0">
-                      <td className="py-2">{spa.spa}</td>
+                      <td className="py-2">{spaDisplayName(spa.spa)}</td>
                       <td className="py-2 text-right">{money(spa.promoUsd, "USD")}</td>
                       <td className="py-2 text-right">
                         {spa.fullPricePromoUsd > 0 ? money(spa.fullPricePromoUsd, "USD") : "—"}

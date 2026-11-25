@@ -87,7 +87,9 @@ export function PromoCategoryStackedBar({
   const mobilePlan = planPromoBarSegmentLabels(labelSegments, barTotal, { forceBreakdown: true });
 
   const formatInBar = (seg: BarSegment, sharePct: number) =>
-    formatPromoSegmentCaption(seg.value, sharePct, currency);
+    sharePct < 12
+      ? `(${Math.round(sharePct)}%)`
+      : formatPromoSegmentCaption(seg.value, sharePct, currency);
 
   const showDesktopBreakdown = desktopPlan.some((p) => !p.showInBar);
 
