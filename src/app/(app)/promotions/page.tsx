@@ -275,9 +275,8 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                       <td className="hidden py-2 sm:table-cell">
                         <PromoCategoryStackedBar
                           slices={spa.categorySlices}
-                          totalUsd={spa.promoUsd}
-                          heightClass="h-2"
-                          widthClass="w-28"
+                          totalUsd={spa.promoUsd + spa.fullPricePromoUsd}
+                          widthClass="w-28 md:w-44"
                         />
                       </td>
                       <td className="py-2 pr-1 text-xs text-muted-foreground">

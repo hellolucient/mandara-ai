@@ -36,7 +36,7 @@ export function HomePromoCard({ data }: { data: HomePromoCardData }) {
             {data.spaBars.map((row) => (
               <li key={row.spa} className="grid grid-cols-[minmax(0,6.5rem)_1fr] items-center gap-3">
                 <span className="truncate text-[13px] font-medium">{row.spa}</span>
-                <PromoCategoryStackedBar slices={row.slices} totalUsd={row.totalUsd} heightClass="h-2" />
+                <PromoCategoryStackedBar slices={row.slices} totalUsd={row.totalUsd} />
               </li>
             ))}
           </ul>
