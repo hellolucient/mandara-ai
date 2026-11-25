@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { groupSpasByBrand } from "@/lib/spa-groups";
 import { num } from "@/lib/home-kpis";
 import type { ItemCategory } from "@/lib/sales-item-types";
 import type { StoredItemLine } from "@/lib/sales-item-types";
@@ -80,11 +81,16 @@ export async function loadRevenueMixHomeSnapshot(
   latestDate: string,
 ): Promise<RevenueMixHomeSnapshot | null> {
   const monthStart = `${latestDate.slice(0, 7)}-01`;
-  const spas = await listSpasWithItemLines(stage);
+  const spaList = await listSpasWithItemLines(stage);
   const [yesterdayLines, mtdLines] = await Promise.all([
     loadItemLinesForMix(stage, latestDate, latestDate),
     loadItemLinesForMix(stage, monthStart, latestDate),
   ]);
+  const mtdBySpa = new Map<string, number>();
+  for (const line of mtdLines) {
+    mtdBySpa.set(line.locationName, (mtdBySpa.get(line.locationName) ?? 0) + line.netSales);
+  }
+  const spas = groupSpasByBrand(spaList, (s) => mtdBySpa.get(s.name) ?? 0, (s) => s.name).flatMap((g) => g.items);
   if (yesterdayLines.length === 0 && mtdLines.length === 0) return null;
   return {
     latestDate,

@@ -99,4 +99,8 @@ export const SCHEMA_MIGRATIONS: Array<{ name: string; sql: string }> = [
     name: "023_sales_item_line_code_supplier.sql",
     sql: "-- Optional SKU and supplier from Steiners Statistic Retail/Treatment Summary imports.\nalter table sales_item_lines add column if not exists item_code text;\nalter table sales_item_lines add column if not exists supplier text;",
   },
+  {
+    name: "024_sales_period_items.sql",
+    sql: "-- Steiners Statistic Entry range exports (Treatment / Retail Summary) by period and spa.\ncreate table if not exists sales_period_items (\n  id text primary key,\n  stage text not null,\n  period_from date not null,\n  period_to date not null,\n  location text not null,\n  kind text not null check (kind in ('treatment', 'retail')),\n  item_code text not null default '',\n  item_name text not null,\n  supplier text not null default '',\n  qty double precision not null default 0,\n  nett double precision not null default 0,\n  imported_at timestamptz not null default now(),\n  unique (stage, period_from, period_to, location, kind, item_code, item_name)\n);\n\ncreate index if not exists sales_period_items_stage_range on sales_period_items (stage, period_from, period_to, kind);\ncreate index if not exists sales_period_items_stage_location on sales_period_items (stage, location, period_from, period_to);",
+  },
 ];

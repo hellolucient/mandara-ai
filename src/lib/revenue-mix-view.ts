@@ -10,6 +10,7 @@ import {
 } from "@/lib/item-groups";
 import type { StoredItemLine } from "@/lib/sales-item-types";
 import { addDays } from "@/lib/dates";
+import { groupSpasByBrand } from "@/lib/spa-groups";
 
 export type RevenueMixPeriod = {
   currency: string;
@@ -85,7 +86,7 @@ export function buildSpaMixRows(lines: StoredItemLine[]): SpaMixRow[] {
       total: period.treatmentTotal + period.retailTotal,
     });
   }
-  return rows.sort((a, b) => b.total - a.total);
+  return groupSpasByBrand(rows, (r) => r.total, (r) => r.spa).flatMap((g) => g.items);
 }
 
 /** Monday-based week containing `iso` (UTC date string). */

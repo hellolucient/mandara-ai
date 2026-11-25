@@ -135,8 +135,8 @@ describe("Home By spa latest-day column labels", () => {
     assert.match(page, /latestDayColumnLabels/);
     assert.match(page, /headings\.treatment/);
     assert.match(page, /headings\.retail/);
-    assert.match(page, /Month to date/);
-    assert.match(page, /Month to date is treatment \+ retail/);
+    assert.match(page, /Mtd ty/i);
+    assert.match(page, /TY from DSR and period imports/);
     assert.match(page, /latestTreatmentSales/);
     assert.match(page, /latestRetailSales/);
     assert.doesNotMatch(page, />Latest day</);
