@@ -1,11 +1,12 @@
 import { PROMO_CATEGORIES } from "@/lib/promo-categories";
+import { PromoCategorySwatch } from "@/components/promo-category-swatch";
 
-export function PromoCategoryLegend() {
+export function PromoCategoryLegend({ compact }: { compact?: boolean }) {
   return (
-    <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+    <ul className={`flex flex-wrap gap-x-3 gap-y-1.5 text-muted-foreground ${compact ? "text-[10px]" : "text-xs"}`}>
       {PROMO_CATEGORIES.map((cat) => (
         <li key={cat.id} className="flex items-center gap-1.5">
-          <span className={`inline-block size-2.5 shrink-0 rounded-sm ${cat.barClass}`} aria-hidden />
+          <PromoCategorySwatch color={cat.color} className={compact ? "size-2" : "size-2.5"} />
           <span>{cat.label}</span>
         </li>
       ))}

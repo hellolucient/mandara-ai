@@ -68,8 +68,17 @@ export function chatOnlyApiAllowed(pathname: string): boolean {
   );
 }
 
+/** Management and full-app users see Promotions; spa staff on dashboard-only do not. */
+export function canSeePromotions(subject: AccessSubject): boolean {
+  if (subject.role === "admin" || subject.role === "manager") return true;
+  return resolveAppAccess(subject) === "full";
+}
+
 /** Pages a Dashboard + chat person may open. */
-export function dashboardPageAllowed(pathname: string): boolean {
+export function dashboardPageAllowed(pathname: string, subject?: AccessSubject): boolean {
+  if (pathname === "/promotions" || pathname.startsWith("/promotions/")) {
+    return subject ? canSeePromotions(subject) : false;
+  }
   return pathname === "/" || chatOnlyPageAllowed(pathname);
 }
 
@@ -88,7 +97,7 @@ export function dashboardApiAllowed(pathname: string): boolean {
 export function pageAllowed(subject: AccessSubject, pathname: string): boolean {
   const access = resolveAppAccess(subject);
   if (access === "chat") return chatOnlyPageAllowed(pathname);
-  if (access === "dashboard") return dashboardPageAllowed(pathname);
+  if (access === "dashboard") return dashboardPageAllowed(pathname, subject);
   return true;
 }
 

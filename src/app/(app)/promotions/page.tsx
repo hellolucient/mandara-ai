@@ -8,7 +8,7 @@ import {
   buildSpaCategoryBarsForWeek,
   buildWeeklyView,
 } from "@/lib/promo-analytics";
-import { PromoCategoryCell } from "@/components/promo-category-cell";
+import { PromoCategoryCell, PromoCategoryStackedBar } from "@/components/promo-category-cell";
 import { PromoCategoryLegend } from "@/components/promo-category-legend";
 import { PromoSpaCategoryBars } from "@/components/promo-spa-category-bars";
 import { loadApprovedPromoCodes } from "@/lib/promo-approved-codes";
@@ -266,19 +266,12 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                       <td className="py-2 text-right">{money(spa.promoUsd, "USD")}</td>
                       <td className="py-2 text-right">{spa.promoSharePct != null ? `${spa.promoSharePct}%` : "—"}</td>
                       <td className="hidden py-2 sm:table-cell">
-                        <div className="flex h-2 w-28 overflow-hidden rounded-full bg-black/[0.06]">
-                          {spa.categorySlices.map((slice) => (
-                            <div
-                              key={slice.id}
-                              className={`h-full ${slice.barClass}`}
-                              style={{
-                                width:
-                                  spa.promoUsd > 0 ? `${(slice.usd / spa.promoUsd) * 100}%` : "0%",
-                              }}
-                              title={`${slice.label}: ${money(slice.usd, "USD")}`}
-                            />
-                          ))}
-                        </div>
+                        <PromoCategoryStackedBar
+                          slices={spa.categorySlices}
+                          totalUsd={spa.promoUsd}
+                          heightClass="h-2"
+                          widthClass="w-28"
+                        />
                       </td>
                       <td className="py-2 pr-1 text-xs text-muted-foreground">
                         {spa.topCodes

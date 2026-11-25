@@ -375,6 +375,47 @@ function formatMonthLabel(from: string, to: string): string {
   return `${from} → ${to}`;
 }
 
+export type HomePromoCardData = {
+  date: string | null;
+  spaBars: SpaCategoryBarRow[];
+  offListCodes: string[];
+  shareJumpSpas: string[];
+};
+
+/** Compact Home snapshot: latest single-day treatment promos. */
+export function buildHomePromoCardData(
+  periods: StoredPromoPeriod[],
+  lines: StoredPromoLine[],
+  salesDays: LoadedDay[],
+  approved: Set<string>,
+): HomePromoCardData | null {
+  const daily = buildDailyView(periods, lines, salesDays, approved);
+  if (!daily.date) return null;
+
+  const period = periods.find(
+    (p) => p.kind === "treatment" && p.periodFrom === daily.date && p.periodTo === daily.date,
+  );
+  const spaBars = (
+    period ? buildSpaCategoryBarsForPeriod(lines, period.periodFrom, period.periodTo) : []
+  ).slice(0, 12);
+
+  const dayLines = lines.filter(
+    (l) =>
+      l.kind === "treatment" &&
+      l.periodFrom === daily.date &&
+      l.periodTo === daily.date,
+  );
+  const offListCodes = [
+    ...new Set(
+      dayLines.map((l) => l.promoCode.toUpperCase()).filter((c) => c && !approved.has(c)),
+    ),
+  ].sort();
+
+  const shareJumpSpas = daily.spas.filter((s) => s.shareAlert).map((s) => s.spa);
+
+  return { date: daily.date, spaBars, offListCodes, shareJumpSpas };
+}
+
 function sumTreatmentRevenueInRange(days: LoadedDay[], spa: string, from: string, to: string): number | null {
   const inRange = days.filter((d) => d.businessDate >= from && d.businessDate <= to);
   if (inRange.length === 0) return null;
