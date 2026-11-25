@@ -15,7 +15,7 @@ export function PromoSpaCategoryBars({ rows, title }: { rows: SpaCategoryBarRow[
               <span className="font-medium">{row.spa}</span>
               <span className="text-muted-foreground">{money(row.totalUsd, "USD")}</span>
             </div>
-            <PromoCategoryStackedBar slices={row.slices} totalUsd={row.totalUsd} heightClass="h-2.5" />
+            <PromoCategoryStackedBar slices={row.slices} totalUsd={row.totalUsd} />
           </li>
         ))}
       </ul>
