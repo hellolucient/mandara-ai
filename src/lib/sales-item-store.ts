@@ -13,6 +13,8 @@ type ItemRow = {
   quantity: number;
   net_sales: number;
   currency: string;
+  item_code: string | null;
+  supplier: string | null;
 };
 
 type SpaDayTotals = {
@@ -38,10 +40,14 @@ export async function saveItemLines(stage: string, extract: SalesItemsExtract): 
     const locationId = await ensureLocation(stage, row.location);
     await sql(
       `insert into sales_item_lines
-         (id, stage, business_date, location_id, location_name, category, item_name, quantity, net_sales, currency)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         (id, stage, business_date, location_id, location_name, category, item_name, quantity, net_sales, currency, item_code, supplier)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        on conflict (stage, business_date, location_id, category, item_name)
-       do update set quantity = excluded.quantity, net_sales = excluded.net_sales, currency = excluded.currency`,
+       do update set quantity = excluded.quantity,
+                     net_sales = excluded.net_sales,
+                     currency = excluded.currency,
+                     item_code = excluded.item_code,
+                     supplier = excluded.supplier`,
       [
         newId(),
         stage,
@@ -53,6 +59,8 @@ export async function saveItemLines(stage: string, extract: SalesItemsExtract): 
         row.quantity,
         row.netSales,
         extract.currency,
+        row.itemCode ?? null,
+        row.supplier ?? null,
       ],
     );
   }
@@ -83,7 +91,8 @@ export async function loadItemLinesForSpa(
 ): Promise<StoredItemLine[]> {
   const rows = await sql<ItemRow>(
     `select id, to_char(business_date, 'YYYY-MM-DD') as business_date,
-            location_id, location_name, category, item_name, quantity, net_sales, currency
+            location_id, location_name, category, item_name, quantity, net_sales, currency,
+            item_code, supplier
      from sales_item_lines
      where stage = $1 and location_id = $2
        and business_date >= $3 and business_date <= $4
@@ -100,6 +109,8 @@ export async function loadItemLinesForSpa(
     quantity: Number(row.quantity),
     netSales: num(row.net_sales) ?? 0,
     currency: row.currency,
+    itemCode: row.item_code,
+    supplier: row.supplier,
   }));
 }
 

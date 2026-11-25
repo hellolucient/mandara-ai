@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { aggregateMixTotals, mapRetailBrand, mapTreatmentSection, UNMAPPED_LABEL } from "@/lib/item-groups";
+import {
+  aggregateMixTotals,
+  mapRetailBrand,
+  mapRetailBrandByCode,
+  mapTreatmentSection,
+  UNMAPPED_LABEL,
+} from "@/lib/item-groups";
 
 const KNOWN_TREATMENTS = [
   "AI Stress Relief",
@@ -36,10 +42,27 @@ const KNOWN_TREATMENTS = [
   "Yin and Yang",
 ] as const;
 
-const KNOWN_RETAIL = [
+/** Names that still map via explicit overrides or clear family keywords (no SKU). */
+const KNOWN_RETAIL_BY_NAME = [
+  "balinese herbal massage oil 100ml with box",
+  "kit: pro-collagen prep & replenish routine",
+  "mandara lavender massage & body oil 100ml",
+  "mandara lemongrass massage & body oil 100ml",
+  "mandara mango massage & body oil 100ml",
+  "mandara sakura massage & body oil 100ml",
+  "mandara spice massage",
+  "ms flower power conditioner 300ml",
+  "ms flower power shampoo 300ml",
+  "ms flower power spray 350ml",
+  "pro-collagen black cherry cleansing balm 100g",
+  "pro-collagen energising marine cleanser 150ml",
+  "pro-radiance hand and nail cream 100 ml",
+] as const;
+
+/** Legacy name-only rows that should no longer fall through to Elemis. */
+const NAME_ONLY_UNMAPPED_RETAIL = [
   "aloe vera after sun body gel 200g",
   "balancing lavender toner 200ml",
-  "balinese herbal massage oil 100ml with box",
   "calm sea salt bath 200 g",
   "coconut body scrub cream 200g",
   "frangipani fragrant oil 15ml",
@@ -49,22 +72,10 @@ const KNOWN_RETAIL = [
   "instant refreshing gel 150 ml",
   "jasmine body lotion 250ml",
   "kakadu plum lip balm spf50+ 10ml",
-  "kit: pro-collagen prep & replenish routine",
   "lemongrass essential oil 15ml",
-  "mandara lavender massage & body oil 100ml",
-  "mandara lemongrass massage & body oil 100ml",
-  "mandara mango massage & body oil 100ml",
-  "mandara sakura massage & body oil 100ml",
-  "mandara spice massage",
   "mango body lotion 250ml",
   "mango body scrub cream 200g",
   "mango hand & body wash 200ml",
-  "ms flower power conditioner 300ml",
-  "ms flower power shampoo 300ml",
-  "ms flower power spray 350ml",
-  "pro-collagen black cherry cleansing balm 100g",
-  "pro-collagen energising marine cleanser 150ml",
-  "pro-radiance hand and nail cream 100 ml",
   "rose geranium essential oil 15ml",
   "skin nourishing shower cream 300 ml",
   "tropical blossom sea salt bath 200 g",
@@ -93,19 +104,41 @@ describe("item-groups treatment mapping", () => {
 });
 
 describe("item-groups retail mapping", () => {
-  it("maps Mandara, Elemis, and Milk Shake lines", () => {
+  it("maps Mandara, Elemis, and Milk Shake lines by name", () => {
     assert.equal(mapRetailBrand("mandara mango massage & body oil 100ml"), "Mandara Spa (Alodia)");
     assert.equal(mapRetailBrand("pro-collagen energising marine cleanser 150ml"), "Elemis");
     assert.equal(mapRetailBrand("ms flower power shampoo 300ml"), "Milk Shake");
   });
 
-  it("maps every known retail name away from Unmapped", () => {
+  it("maps retail by SKU prefix when present", () => {
+    assert.equal(mapRetailBrand("tropical blossom sea salt bath 200 g", { itemCode: "26MS34" }), "Mandara Spa (Alodia)");
+    assert.equal(mapRetailBrand("glow sea salt bath 200 g", { itemCode: "26MS33" }), "Mandara Spa (Alodia)");
+    assert.equal(
+      mapRetailBrand("kakadu plum lip balm spf50+ 10ml", { itemCode: "WAFG003" }),
+      "We Are Feel Good",
+    );
+    assert.equal(mapRetailBrand("pro-collagen energising marine cleanser 150ml", { itemCode: "ELMRRP001" }), "Elemis");
+    assert.equal(
+      mapRetailBrand("ms flower power conditioner 300ml", { itemCode: "MSH002", supplier: "Mandaraspa" }),
+      "Milk Shake",
+    );
+    assert.equal(mapRetailBrandByCode("ALO1001"), "Mandara Spa (Alodia)");
+    assert.equal(mapRetailBrandByCode("782910"), "Elemis");
+  });
+
+  it("maps every known retail name (clear families) away from Unmapped", () => {
     const unmapped: string[] = [];
-    for (const name of KNOWN_RETAIL) {
+    for (const name of KNOWN_RETAIL_BY_NAME) {
       const brand = mapRetailBrand(name);
       if (brand === UNMAPPED_LABEL) unmapped.push(name);
     }
     assert.deepEqual(unmapped, [], `Unmapped retail: ${unmapped.join(", ")}`);
+  });
+
+  it("leaves ambiguous legacy name-only rows as Unmapped", () => {
+    for (const name of NAME_ONLY_UNMAPPED_RETAIL) {
+      assert.equal(mapRetailBrand(name), UNMAPPED_LABEL, name);
+    }
   });
 });
 
@@ -119,6 +152,19 @@ describe("aggregateMixTotals", () => {
     assert.equal(result.treatments["Body of Mandara"], 100);
     assert.equal(result.retail["Mandara Spa (Alodia)"], 40);
     assert.deepEqual(result.unmappedTreatmentNames, ["Unknown Menu Line"]);
+    assert.deepEqual(result.unmappedRetailNames, []);
+  });
+
+  it("uses SKU when aggregating retail mix", () => {
+    const result = aggregateMixTotals([
+      {
+        category: "retail",
+        itemName: "glow sea salt bath 200 g",
+        itemCode: "26MS33",
+        netSales: 25,
+      },
+    ]);
+    assert.equal(result.retail["Mandara Spa (Alodia)"], 25);
     assert.deepEqual(result.unmappedRetailNames, []);
   });
 });

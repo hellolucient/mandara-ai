@@ -21,7 +21,9 @@
       "category": "retail",
       "name": "Mandara Body Lotion",
       "quantity": 3,
-      "netSales": 78.0
+      "netSales": 78.0,
+      "code": "26MS01",
+      "supplier": "Mandara Spa"
     },
     {
       "location": "Vadoo",

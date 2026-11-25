@@ -80,6 +80,11 @@ export const TREATMENT_SECTION_COLORS: Record<TreatmentSection, GroupColorDef> =
 
 type KeywordRule<T extends string> = { pattern: RegExp; group: T };
 
+export type RetailBrandContext = {
+  itemCode?: string | null;
+  supplier?: string | null;
+};
+
 /** Case-insensitive explicit overrides (normalized key = trim + lower). */
 const TREATMENT_OVERRIDES: Record<string, TreatmentSection> = {
   "couples ritual 90": "Packages",
@@ -127,15 +132,44 @@ const RETAIL_KEYWORD_RULES: KeywordRule<RetailBrand>[] = [
   { pattern: /\bcosmerc\b/i, group: "Cosmerc" },
   { pattern: /\bsud\b/i, group: "SUD" },
   { pattern: /\bmandara\b/i, group: "Mandara Spa (Alodia)" },
-  {
-    pattern:
-      /\b(frangipani|monoi|kakadu|sea\s*salt\s*bath|toner|cleansing\s*balm|marine\s*cleanser|shower\s*cream|body\s*scrub\s*cream|body\s*lotion|body\s*mask|lip\s*balm|essential\s*oil|after\s*sun|refreshing\s*gel|hand\s*&\s*body\s*wash)\b/i,
-    group: "Elemis",
-  },
 ];
+
+const MANDARA_CODE_PREFIXES = ["26MS", "ALO", "BL-MOR"] as const;
+const MILK_SHAKE_CODE_PREFIX = "MSH";
+const FEEL_GOOD_CODE_PREFIX = "WAFG";
+const ELEMIS_CODE_PREFIX = "ELMRRP";
+// TODO(Tenille): Confirm Cosmerc SKU prefix from Steiners Statistic export.
+const COSMERC_CODE_PREFIXES = ["COS"] as const;
+// TODO(Tenille): Confirm SUD SKU prefix from Steiners Statistic export.
+const SUD_CODE_PREFIXES = ["SUD"] as const;
 
 function normalizeItemName(name: string): string {
   return name.trim().toLowerCase();
+}
+
+function normalizeItemCode(code: string): string {
+  return code.trim().toUpperCase();
+}
+
+function startsWithAny(code: string, prefixes: readonly string[]): boolean {
+  return prefixes.some((prefix) => code.startsWith(prefix));
+}
+
+/** Steiners numeric product codes for Elemis retail (when no Mandara/WAFG/MSH prefix applies). */
+function isNumericElemisSku(code: string): boolean {
+  return /^\d{4,}$/.test(code);
+}
+
+export function mapRetailBrandByCode(itemCode: string): RetailBrand | null {
+  const code = normalizeItemCode(itemCode);
+  if (!code) return null;
+  if (startsWithAny(code, MANDARA_CODE_PREFIXES)) return "Mandara Spa (Alodia)";
+  if (code.startsWith(MILK_SHAKE_CODE_PREFIX)) return "Milk Shake";
+  if (code.startsWith(FEEL_GOOD_CODE_PREFIX)) return "We Are Feel Good";
+  if (code.startsWith(ELEMIS_CODE_PREFIX) || isNumericElemisSku(code)) return "Elemis";
+  if (startsWithAny(code, COSMERC_CODE_PREFIXES)) return "Cosmerc";
+  if (startsWithAny(code, SUD_CODE_PREFIXES)) return "SUD";
+  return null;
 }
 
 export function mapTreatmentSection(itemName: string): TreatmentSection {
@@ -148,7 +182,12 @@ export function mapTreatmentSection(itemName: string): TreatmentSection {
   return UNMAPPED_LABEL;
 }
 
-export function mapRetailBrand(itemName: string): RetailBrand {
+export function mapRetailBrand(itemName: string, context?: RetailBrandContext): RetailBrand {
+  const code = context?.itemCode?.trim() ?? "";
+  if (code) {
+    const fromCode = mapRetailBrandByCode(code);
+    if (fromCode) return fromCode;
+  }
   const key = normalizeItemName(itemName);
   const override = RETAIL_OVERRIDES[key];
   if (override) return override;
@@ -158,8 +197,12 @@ export function mapRetailBrand(itemName: string): RetailBrand {
   return UNMAPPED_LABEL;
 }
 
-export function mapItemToGroup(category: ItemCategory, itemName: string): RevenueMixGroup {
-  return category === "retail" ? mapRetailBrand(itemName) : mapTreatmentSection(itemName);
+export function mapItemToGroup(
+  category: ItemCategory,
+  itemName: string,
+  context?: RetailBrandContext,
+): RevenueMixGroup {
+  return category === "retail" ? mapRetailBrand(itemName, context) : mapTreatmentSection(itemName);
 }
 
 export type MixSlice = {
@@ -192,7 +235,13 @@ export function buildMixSlices(
     .filter((s) => s.netSales > 0);
 }
 
-export type ItemLineInput = { category: ItemCategory; itemName: string; netSales: number };
+export type ItemLineInput = {
+  category: ItemCategory;
+  itemName: string;
+  netSales: number;
+  itemCode?: string | null;
+  supplier?: string | null;
+};
 
 export function aggregateMixTotals(lines: ItemLineInput[]): {
   treatments: Partial<Record<TreatmentSection, number>>;
@@ -211,7 +260,10 @@ export function aggregateMixTotals(lines: ItemLineInput[]): {
       treatments[section] = (treatments[section] ?? 0) + line.netSales;
       if (section === UNMAPPED_LABEL) unmappedTreatments.add(line.itemName);
     } else {
-      const brand = mapRetailBrand(line.itemName);
+      const brand = mapRetailBrand(line.itemName, {
+        itemCode: line.itemCode,
+        supplier: line.supplier,
+      });
       retail[brand] = (retail[brand] ?? 0) + line.netSales;
       if (brand === UNMAPPED_LABEL) unmappedRetail.add(line.itemName);
     }

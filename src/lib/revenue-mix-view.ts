@@ -25,7 +25,13 @@ export type RevenueMixPeriod = {
 export function buildRevenueMixPeriod(lines: StoredItemLine[]): RevenueMixPeriod {
   const currency = lines[0]?.currency ?? "USD";
   const { treatments, retail, unmappedTreatmentNames, unmappedRetailNames } = aggregateMixTotals(
-    lines.map((l) => ({ category: l.category, itemName: l.itemName, netSales: l.netSales })),
+    lines.map((l) => ({
+      category: l.category,
+      itemName: l.itemName,
+      netSales: l.netSales,
+      itemCode: l.itemCode,
+      supplier: l.supplier,
+    })),
   );
   const treatmentSlices = buildMixSlices("treatment", treatments);
   const retailSlices = buildMixSlices("retail", retail);
