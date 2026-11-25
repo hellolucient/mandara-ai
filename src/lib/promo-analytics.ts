@@ -1,6 +1,20 @@
 import { addDays, businessToday } from "@/lib/dates";
+import {
+  addUsdToCategory,
+  promoCategoryForCode,
+  promoCategoryLabel,
+  slicesFromUsdByCategory,
+  type CategoryUsdSlice,
+  type PromoCategoryId,
+} from "@/lib/promo-categories";
 import type { PromoKind, StoredPromoLine, StoredPromoPeriod } from "@/lib/promo-types";
 import type { LoadedDay } from "@/lib/sales-types";
+
+export type SpaCategoryBarRow = {
+  spa: string;
+  totalUsd: number;
+  slices: CategoryUsdSlice[];
+};
 
 export type PromoCodeRow = {
   promoCode: string;
@@ -9,6 +23,8 @@ export type PromoCodeRow = {
   usd: number;
   offList: boolean;
   promoSharePct: number | null;
+  categoryId: PromoCategoryId;
+  categoryLabel: string;
 };
 
 export type DailySpaPromos = {
@@ -30,6 +46,8 @@ export type WeeklySpaDelta = {
   changeUsd: number;
   changePct: number | null;
   offList: boolean;
+  categoryId: PromoCategoryId;
+  categoryLabel: string;
 };
 
 export type MonthlySpaSummary = {
@@ -37,7 +55,14 @@ export type MonthlySpaSummary = {
   promoUsd: number;
   treatmentRevenue: number | null;
   promoSharePct: number | null;
-  topCodes: { promoCode: string; usd: number; offList: boolean }[];
+  categorySlices: CategoryUsdSlice[];
+  topCodes: {
+    promoCode: string;
+    usd: number;
+    offList: boolean;
+    categoryId: PromoCategoryId;
+    categoryLabel: string;
+  }[];
 };
 
 export type MonthlyPeriodCompare = {
@@ -77,6 +102,28 @@ function isoWeekKey(date: string): string {
 
 function linesInWeek(lines: StoredPromoLine[], weekKey: string): StoredPromoLine[] {
   return lines.filter((line) => isoWeekKey(line.periodTo) === weekKey);
+}
+
+export function buildSpaCategoryBars(
+  lines: StoredPromoLine[],
+  filter: (line: StoredPromoLine) => boolean,
+): SpaCategoryBarRow[] {
+  const bySpa = new Map<string, Partial<Record<PromoCategoryId, number>>>();
+  for (const line of lines) {
+    if (!filter(line)) continue;
+    if (line.kind !== "treatment") continue;
+    const spaBucket = bySpa.get(line.locationName) ?? {};
+    addUsdToCategory(spaBucket, line.promoCode, line.usd);
+    bySpa.set(line.locationName, spaBucket);
+  }
+  return [...bySpa.entries()]
+    .map(([spa, totals]) => {
+      const slices = slicesFromUsdByCategory(totals);
+      const totalUsd = slices.reduce((s, x) => s + x.usd, 0);
+      return { spa, totalUsd, slices };
+    })
+    .filter((r) => r.totalUsd > 0)
+    .sort((a, b) => b.totalUsd - a.totalUsd);
 }
 
 function sumBySpaCode(lines: StoredPromoLine[]): Map<string, { spa: string; code: string; description: string; usd: number }> {
@@ -156,7 +203,11 @@ export function buildDailyView(
         promoSharePct,
         shareAlert,
         codes: codes
-          .sort((a, b) => b.usd - a.usd)
+          .sort(
+            (a, b) =>
+              promoCategoryLabel(a.promoCode).localeCompare(promoCategoryLabel(b.promoCode)) ||
+              b.usd - a.usd,
+          )
           .map((c) => ({
             promoCode: c.promoCode,
             description: c.description,
@@ -167,10 +218,27 @@ export function buildDailyView(
               treatmentRevenue != null && treatmentRevenue > 0
                 ? Math.round((c.usd / treatmentRevenue) * 1000) / 10
                 : null,
+            categoryId: promoCategoryForCode(c.promoCode),
+            categoryLabel: promoCategoryLabel(c.promoCode),
           })),
       };
     }),
   };
+}
+
+export function buildSpaCategoryBarsForPeriod(
+  lines: StoredPromoLine[],
+  periodFrom: string,
+  periodTo: string,
+): SpaCategoryBarRow[] {
+  return buildSpaCategoryBars(
+    lines,
+    (l) => l.kind === "treatment" && l.periodFrom === periodFrom && l.periodTo === periodTo,
+  );
+}
+
+export function buildSpaCategoryBarsForWeek(lines: StoredPromoLine[], weekKey: string): SpaCategoryBarRow[] {
+  return buildSpaCategoryBars(lines, (l) => l.kind === "treatment" && isoWeekKey(l.periodTo) === weekKey);
 }
 
 export function buildWeeklyView(
@@ -196,19 +264,25 @@ export function buildWeeklyView(
     const changeUsd = thisWeekUsd - priorWeekUsd;
     const changePct =
       priorWeekUsd > 0 ? Math.round((changeUsd / priorWeekUsd) * 1000) / 10 : thisWeekUsd > 0 ? null : 0;
+    const code = cur?.code ?? prev?.code ?? "";
     return {
       spa: cur?.spa ?? prev?.spa ?? "",
-      promoCode: cur?.code ?? prev?.code ?? "",
+      promoCode: code,
       description: cur?.description ?? prev?.description ?? "",
       thisWeekUsd,
       priorWeekUsd,
       changeUsd,
       changePct,
-      offList: !approved.has((cur?.code ?? prev?.code ?? "").toUpperCase()),
+      offList: !approved.has(code.toUpperCase()),
+      categoryId: promoCategoryForCode(code),
+      categoryLabel: promoCategoryLabel(code),
     };
   });
 
-  rows.sort((a, b) => Math.abs(b.changeUsd) - Math.abs(a.changeUsd));
+  rows.sort(
+    (a, b) =>
+      a.categoryLabel.localeCompare(b.categoryLabel) || Math.abs(b.changeUsd) - Math.abs(a.changeUsd),
+  );
   return { weekKey, priorWeekKey, rows };
 }
 
@@ -241,8 +315,10 @@ export function buildMonthlySummaries(
       const promoUsd = spaLines.reduce((s, l) => s + l.usd, 0);
       const treatmentRevenue = sumTreatmentRevenueInRange(salesDays, spa, period.periodFrom, period.periodTo);
       const byCode = new Map<string, number>();
+      const categoryTotals: Partial<Record<PromoCategoryId, number>> = {};
       for (const line of spaLines) {
         byCode.set(line.promoCode, (byCode.get(line.promoCode) ?? 0) + line.usd);
+        addUsdToCategory(categoryTotals, line.promoCode, line.usd);
       }
       const topCodes = [...byCode.entries()]
         .sort((a, b) => b[1] - a[1])
@@ -251,6 +327,8 @@ export function buildMonthlySummaries(
           promoCode,
           usd,
           offList: !approved.has(promoCode.toUpperCase()),
+          categoryId: promoCategoryForCode(promoCode),
+          categoryLabel: promoCategoryLabel(promoCode),
         }));
       return {
         spa,
@@ -260,6 +338,7 @@ export function buildMonthlySummaries(
           treatmentRevenue != null && treatmentRevenue > 0
             ? Math.round((promoUsd / treatmentRevenue) * 1000) / 10
             : null,
+        categorySlices: slicesFromUsdByCategory(categoryTotals),
         topCodes,
       };
     });
