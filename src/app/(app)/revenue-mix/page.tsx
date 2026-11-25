@@ -25,7 +25,7 @@ export default async function RevenueMixPage({ searchParams }: { searchParams: P
   if (!canSeeRevenueMix(member.role)) redirect("/");
 
   const query = await searchParams;
-  const view: View = query.view === "weekly" || query.view === "monthly" ? query.view : "daily";
+  const view: View = query.view === "daily" || query.view === "weekly" ? query.view : "monthly";
   const spaFilter = query.spa?.trim() || "";
 
   const today = new Date().toISOString().slice(0, 10);
@@ -63,8 +63,7 @@ export default async function RevenueMixPage({ searchParams }: { searchParams: P
         <div>
           <h1 className="font-heading text-3xl">Revenue mix</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Revenue by treatment menu section and retail brand, from imported item lines. Edit mappings in{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">src/lib/item-groups.ts</code>.
+            Revenue by treatment menu section and retail brand.
           </p>
         </div>
         <form className="flex flex-wrap items-center gap-2" method="get">
@@ -94,9 +93,9 @@ export default async function RevenueMixPage({ searchParams }: { searchParams: P
       <div className="mt-6 flex flex-wrap gap-2">
         {(
           [
-            { id: "daily", label: "Daily" },
-            { id: "weekly", label: "Weekly" },
             { id: "monthly", label: "Monthly" },
+            { id: "weekly", label: "Weekly" },
+            { id: "daily", label: "Daily" },
           ] as const
         ).map((tab) => (
           <Link
@@ -169,7 +168,7 @@ export default async function RevenueMixPage({ searchParams }: { searchParams: P
         <section className="mt-8 rounded-xl border border-dashed bg-muted/30 p-4">
           <h2 className="text-sm font-medium">Unmapped items</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Add explicit overrides or keyword rules in <code>src/lib/item-groups.ts</code> (TODO: Tenille to confirm).
+            These lines need a menu section or retail brand assignment before they appear in the mix.
           </p>
           <ul className="mt-3 list-inside list-disc text-sm">
             {unmapped.map((name) => (

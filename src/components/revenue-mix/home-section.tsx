@@ -77,14 +77,14 @@ export function RevenueMixHomeSection({ snapshot, linesJson }: Props) {
       </div>
 
       <div className="mt-5 grid gap-6 md:grid-cols-2">
-        <PeriodBlock title={`Latest day (${shortDate(snapshot.latestDate)})`} currency={snapshot.currency} period={filtered.yesterday} />
         <PeriodBlock title="Month to date" currency={snapshot.currency} period={filtered.mtd} />
+        <PeriodBlock title={`Latest day (${shortDate(snapshot.latestDate)})`} currency={snapshot.currency} period={filtered.yesterday} />
       </div>
 
       {unmapped.length > 0 ? (
         <p className="mt-4 text-[11.5px] leading-5 text-muted-foreground">
-          <span className="font-medium text-foreground">Unmapped items</span> in this view need a rule in{" "}
-          <code className="rounded bg-muted px-1 text-[10px]">src/lib/item-groups.ts</code>: {unmapped.join("; ")}
+          <span className="font-medium text-foreground">Unmapped items</span> are not yet assigned to a menu section or retail brand:{" "}
+          {unmapped.join("; ")}
         </p>
       ) : null}
     </section>

@@ -133,9 +133,11 @@ describe("Home By spa latest-day column labels", () => {
     const home = readFileSync("src/app/(app)/page.tsx", "utf8");
     assert.match(home, /SpaByLocationTable/);
     assert.match(page, /latestDayColumnLabels/);
-    assert.match(page, /headings\.treatment/);
-    assert.match(page, /headings\.retail/);
-    assert.match(page, /Mtd ty/i);
+    assert.match(page, />Treatment</);
+    assert.match(page, />Retail</);
+    assert.match(page, /headings\.day/);
+    assert.match(page, /Month to date/i);
+    assert.match(page, /Year to date/i);
     assert.match(page, /TY from DSR and period imports/);
     assert.match(page, /latestTreatmentSales/);
     assert.match(page, /latestRetailSales/);
@@ -195,15 +197,13 @@ describe("sales answer layout and sparkline polish", () => {
     assert.match(kpis, /sparkDates/);
   });
 
-  it("keeps By spa mobile stats in an even three-column grid with short labels", () => {
+  it("groups By spa columns with band headers and horizontal scroll on mobile", () => {
     const page = readFileSync("src/components/spa-by-location-table.tsx", "utf8");
-    assert.match(page, /function Stat\(/);
-    assert.match(page, /headings\.summary/);
-    assert.match(page, /grid grid-cols-3/);
-    assert.match(page, /<Stat label="Treatment"/);
-    assert.match(page, /<Stat label="Retail"/);
-    assert.match(page, /<Stat label="vs budget"/);
-    assert.match(page, /className="text-primary w-full"/);
+    assert.match(page, /rowSpan=\{2\}/);
+    assert.match(page, /Month to date/);
+    assert.match(page, /overflow-x-auto/);
+    assert.match(page, /whitespace-nowrap/);
+    assert.match(page, /min-w-\[1040px\]/);
   });
 });
 

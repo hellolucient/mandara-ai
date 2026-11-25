@@ -31,7 +31,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
   await seedPromoBackfill(member.stage);
 
   const query = await searchParams;
-  const view: Tab = query.view === "weekly" || query.view === "monthly" ? query.view : "daily";
+  const view: Tab = query.view === "daily" || query.view === "weekly" ? query.view : "monthly";
 
   const [periods, lines, salesDays, approved] = await Promise.all([
     listPromoPeriods(member.stage),
@@ -85,9 +85,9 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
       <div className="mt-6 flex flex-wrap gap-2">
         {(
           [
-            { id: "daily", label: "Daily" },
-            { id: "weekly", label: "Weekly" },
             { id: "monthly", label: "Monthly" },
+            { id: "weekly", label: "Weekly" },
+            { id: "daily", label: "Daily" },
           ] as const
         ).map((tab) => (
           <Link

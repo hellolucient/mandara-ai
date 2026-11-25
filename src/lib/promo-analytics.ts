@@ -264,6 +264,41 @@ export function buildSpaCategoryBarsForPeriod(
   );
 }
 
+function isTreatmentSingleDayOnOrBetween(line: StoredPromoLine, from: string, to: string): boolean {
+  return (
+    line.kind === "treatment" &&
+    line.periodFrom === line.periodTo &&
+    line.periodFrom >= from &&
+    line.periodFrom <= to
+  );
+}
+
+/** Sum single-day treatment promo lines across a calendar date range (inclusive). */
+export function buildSpaCategoryBarsForDateRange(
+  lines: StoredPromoLine[],
+  from: string,
+  to: string,
+): SpaCategoryBarRow[] {
+  return buildSpaCategoryBars(lines, (l) => isTreatmentSingleDayOnOrBetween(l, from, to));
+}
+
+export function formatHomePromoHeading(mode: "mtd" | "daily", periodFrom: string, periodTo: string): string {
+  const end = new Date(`${periodTo}T12:00:00Z`);
+  const month = end.toLocaleString("en-GB", { month: "short", timeZone: "UTC" }).toUpperCase();
+  const year = end.getUTCFullYear();
+  if (mode === "daily") {
+    return `TREATMENT PROMOS · ${end.getUTCDate()} ${month} ${year}`;
+  }
+  const start = new Date(`${periodFrom}T12:00:00Z`);
+  return `TREATMENT PROMOS · MTD ${start.getUTCDate()}–${end.getUTCDate()} ${month} ${year}`;
+}
+
+function offListCodesInLines(lines: StoredPromoLine[], approved: Set<string>): string[] {
+  return [
+    ...new Set(lines.map((l) => l.promoCode.toUpperCase()).filter((c) => c && !approved.has(c))),
+  ].sort();
+}
+
 export function buildSpaCategoryBarsForWeek(lines: StoredPromoLine[], weekKey: string): SpaCategoryBarRow[] {
   return buildSpaCategoryBars(lines, (l) => l.kind === "treatment" && isoWeekKey(l.periodTo) === weekKey);
 }
@@ -409,14 +444,22 @@ function formatMonthLabel(from: string, to: string): string {
   return `${from} → ${to}`;
 }
 
-export type HomePromoCardData = {
-  date: string | null;
+export type HomePromoCardSlice = {
+  periodFrom: string;
+  periodTo: string;
   spaBars: SpaCategoryBarRow[];
   offListCodes: string[];
   shareJumpSpas: string[];
 };
 
-/** Compact Home snapshot: latest single-day treatment promos. */
+export type HomePromoCardData = {
+  /** Month to date through the latest DSR day (default on Home). */
+  mtd: HomePromoCardSlice;
+  /** Latest single-day promo snapshot (optional toggle). */
+  daily: HomePromoCardSlice | null;
+};
+
+/** Compact Home snapshot: MTD treatment promos with optional latest-day drill-down. */
 export function buildHomePromoCardData(
   periods: StoredPromoPeriod[],
   lines: StoredPromoLine[],
@@ -426,28 +469,29 @@ export function buildHomePromoCardData(
   const daily = buildDailyView(periods, lines, salesDays, approved);
   if (!daily.date) return null;
 
-  const period = periods.find(
-    (p) => p.kind === "treatment" && p.periodFrom === daily.date && p.periodTo === daily.date,
-  );
-  const spaBars = (
-    period ? buildSpaCategoryBarsForPeriod(lines, period.periodFrom, period.periodTo) : []
-  ).slice(0, 12);
+  const latestDate = daily.date;
+  const monthStart = `${latestDate.slice(0, 7)}-01`;
 
-  const dayLines = lines.filter(
-    (l) =>
-      l.kind === "treatment" &&
-      l.periodFrom === daily.date &&
-      l.periodTo === daily.date,
-  );
-  const offListCodes = [
-    ...new Set(
-      dayLines.map((l) => l.promoCode.toUpperCase()).filter((c) => c && !approved.has(c)),
-    ),
-  ].sort();
+  const mtdLines = lines.filter((l) => isTreatmentSingleDayOnOrBetween(l, monthStart, latestDate));
+  const dayLines = lines.filter((l) => isTreatmentSingleDayOnOrBetween(l, latestDate, latestDate));
 
-  const shareJumpSpas = daily.spas.filter((s) => s.shareAlert).map((s) => s.spa);
+  const mtd: HomePromoCardSlice = {
+    periodFrom: monthStart,
+    periodTo: latestDate,
+    spaBars: buildSpaCategoryBarsForDateRange(lines, monthStart, latestDate),
+    offListCodes: offListCodesInLines(mtdLines, approved),
+    shareJumpSpas: [],
+  };
 
-  return { date: daily.date, spaBars, offListCodes, shareJumpSpas };
+  const dailySlice: HomePromoCardSlice = {
+    periodFrom: latestDate,
+    periodTo: latestDate,
+    spaBars: buildSpaCategoryBarsForDateRange(lines, latestDate, latestDate),
+    offListCodes: offListCodesInLines(dayLines, approved),
+    shareJumpSpas: daily.spas.filter((s) => s.shareAlert).map((s) => s.spa),
+  };
+
+  return { mtd, daily: dailySlice };
 }
 
 function sumTreatmentRevenueInRange(days: LoadedDay[], spa: string, from: string, to: string): number | null {
