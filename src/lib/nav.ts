@@ -23,6 +23,7 @@ export function navItems(role: Role, chatOnly = false, appAccess?: AppAccess | s
     { href: "/chat", label: "Chat" },
     { href: "/knowledge", label: "Knowledge" },
     { href: "/sales", label: "Sales" },
+    { href: "/promotions", label: "Promotions" },
     { href: "/agents", label: "Agents" },
     { href: "/memories", label: "Memories" },
   ];

@@ -11,8 +11,13 @@ type ImportResponse = {
   error?: string;
   issues?: string[];
   ok?: boolean;
+  kind?: string;
   businessDate?: string;
+  periodFrom?: string;
+  periodTo?: string;
+  promoKind?: string;
   locations?: number;
+  lines?: number;
   netSales?: number;
 };
 
@@ -87,8 +92,9 @@ export function SalesActions({ canRun }: { canRun: boolean }) {
             <DialogTitle>Import one business date</DialogTitle>
             <DialogDescription>
               Daily totals: CSV with business_date, location, net_sales, treatments, budget; or the usual location-rows JSON. Item lines: JSON with
-              businessDate, currency, and an items array (location, category treatment or retail, name, quantity, netSales). Re-importing a date replaces
-              that date&apos;s rows for the spas in the file.
+              businessDate, currency, and an items array. Promotions: JSON from{" "}
+              <span className="font-mono text-xs">promo_to_import.py</span> (period_from, period_to, kind, rows, totals). Re-importing replaces that
+              scope.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -105,14 +111,16 @@ export function SalesActions({ canRun }: { canRun: boolean }) {
                   setImportError(body.error || "The file was not stored.");
                   return;
                 }
-                const confirmation =
-                  body.businessDate && body.locations != null && body.netSales != null
-                    ? formatImportConfirmation({
-                        businessDate: body.businessDate,
-                        locations: body.locations,
-                        netSales: body.netSales,
-                      })
-                    : "Saved.";
+                let confirmation = "Saved.";
+                if (body.kind === "promotions" && body.periodFrom && body.periodTo && body.netSales != null) {
+                  confirmation = `Saved promos ${body.periodFrom}–${body.periodTo} (${body.promoKind ?? "?"}) · ${body.lines ?? 0} lines · $${Math.round(body.netSales).toLocaleString("en-US")}`;
+                } else if (body.businessDate && body.locations != null && body.netSales != null) {
+                  confirmation = formatImportConfirmation({
+                    businessDate: body.businessDate,
+                    locations: body.locations,
+                    netSales: body.netSales,
+                  });
+                }
                 const withIssues =
                   body.issues && body.issues.length > 0 ? `${confirmation}. ${body.issues.join(" ")}` : confirmation;
                 setImportSaved(withIssues);

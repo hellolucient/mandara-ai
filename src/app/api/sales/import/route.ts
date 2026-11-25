@@ -2,6 +2,8 @@ import { canManage } from "@/lib/members";
 import { importTotals } from "@/lib/sales-import";
 import { isItemLinesImport, validateItemLinesExtract } from "@/lib/sales-item-validate";
 import { saveItemLines } from "@/lib/sales-item-store";
+import { isPromotionsImport, validatePromotionsExtract } from "@/lib/promo-validate";
+import { savePromotions } from "@/lib/promo-store";
 import { parseCsv, validateExtract } from "@/lib/sales-validate";
 import { saveExtract } from "@/lib/sales-store";
 import { json, rejectCrossOrigin } from "@/lib/http";
@@ -26,6 +28,7 @@ export async function POST(request: Request) {
       return json({ error: "The file was not valid JSON." }, 400);
     }
     if (isItemLinesImport(parsed)) return storeItemLines(member.stage, parsed);
+    if (isPromotionsImport(parsed)) return storePromotionsResponse(member.stage, parsed);
     const validated = validateExtract(parsed);
     if (!validated.ok) return json({ error: validated.error }, 422);
     await saveExtract(member.stage, validated.extract, "import");
@@ -53,6 +56,7 @@ export async function POST(request: Request) {
       return json({ error: "The file was not valid JSON." }, 400);
     }
     if (isItemLinesImport(parsed)) return storeItemLines(member.stage, parsed);
+    if (isPromotionsImport(parsed)) return storePromotionsResponse(member.stage, parsed);
     const validated = validateExtract(parsed);
     if (!validated.ok) return json({ error: validated.error }, 422);
     await saveExtract(member.stage, validated.extract, "import");
@@ -77,6 +81,23 @@ export async function POST(request: Request) {
     businessDate: validated.extract.businessDate,
     locations: totals.locations,
     netSales: totals.netSales,
+  });
+}
+
+async function storePromotionsResponse(stage: string, parsed: unknown) {
+  const validated = validatePromotionsExtract(parsed);
+  if (!validated.ok) return json({ error: validated.error }, 422);
+  const saved = await savePromotions(stage, validated.extract);
+  return json({
+    ok: true,
+    kind: "promotions",
+    issues: validated.extract.issues,
+    periodFrom: validated.extract.periodFrom,
+    periodTo: validated.extract.periodTo,
+    promoKind: validated.extract.kind,
+    locations: saved.spas,
+    lines: saved.lines,
+    netSales: validated.extract.totals.totalUsd,
   });
 }
 
