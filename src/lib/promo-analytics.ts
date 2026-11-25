@@ -1,12 +1,21 @@
 import { addDays, businessToday } from "@/lib/dates";
 import {
   addUsdToCategory,
+  isFullPriceCode,
   promoCategoryForCode,
   promoCategoryLabel,
+  promoCategorySortKey,
   slicesFromUsdByCategory,
   type CategoryUsdSlice,
   type PromoCategoryId,
 } from "@/lib/promo-categories";
+
+function sumPromoUsd(lines: StoredPromoLine[], opts?: { excludeFullPrice?: boolean }): number {
+  return lines.reduce((s, line) => {
+    if (opts?.excludeFullPrice && isFullPriceCode(line.promoCode)) return s;
+    return s + line.usd;
+  }, 0);
+}
 import type { PromoKind, StoredPromoLine, StoredPromoPeriod } from "@/lib/promo-types";
 import type { LoadedDay } from "@/lib/sales-types";
 
@@ -30,8 +39,11 @@ export type PromoCodeRow = {
 export type DailySpaPromos = {
   spa: string;
   date: string;
+  /** Discounted / low-rate promo USD (excludes Full Price). */
   promoUsd: number;
+  fullPricePromoUsd: number;
   treatmentRevenue: number | null;
+  /** Share of treatment revenue from discounted promos only. */
   promoSharePct: number | null;
   shareAlert: boolean;
   codes: PromoCodeRow[];
@@ -53,6 +65,7 @@ export type WeeklySpaDelta = {
 export type MonthlySpaSummary = {
   spa: string;
   promoUsd: number;
+  fullPricePromoUsd: number;
   treatmentRevenue: number | null;
   promoSharePct: number | null;
   categorySlices: CategoryUsdSlice[];
@@ -174,7 +187,8 @@ export function buildDailyView(
     date: period.periodFrom,
     spas: spas.map((spa) => {
       const codes = dayLines.filter((l) => l.locationName === spa);
-      const promoUsd = codes.reduce((s, c) => s + c.usd, 0);
+      const promoUsd = sumPromoUsd(codes, { excludeFullPrice: true });
+      const fullPricePromoUsd = sumPromoUsd(codes.filter((l) => isFullPriceCode(l.promoCode)));
       const treatmentRevenue = treatmentRevenueForSpa(salesDays, spa, period.periodFrom);
       const promoSharePct =
         treatmentRevenue != null && treatmentRevenue > 0 ? Math.round((promoUsd / treatmentRevenue) * 1000) / 10 : null;
@@ -185,7 +199,7 @@ export function buildDailyView(
           lines.filter((l) => l.kind === "treatment" && l.locationName === spa),
           week,
         );
-        const weekUsd = weekLines.reduce((s, l) => s + l.usd, 0);
+        const weekUsd = sumPromoUsd(weekLines, { excludeFullPrice: true });
         if (weekUsd <= 0) continue;
         // Without daily DSR for that week, skip share — use week promo intensity vs max day revenue if present
         const rev = treatmentRevenueForSpa(salesDays, spa, period.periodFrom);
@@ -199,14 +213,14 @@ export function buildDailyView(
         spa,
         date: period.periodFrom,
         promoUsd,
+        fullPricePromoUsd,
         treatmentRevenue,
         promoSharePct,
         shareAlert,
         codes: codes
           .sort(
             (a, b) =>
-              promoCategoryLabel(a.promoCode).localeCompare(promoCategoryLabel(b.promoCode)) ||
-              b.usd - a.usd,
+              promoCategorySortKey(a.promoCode).localeCompare(promoCategorySortKey(b.promoCode)) || b.usd - a.usd,
           )
           .map((c) => ({
             promoCode: c.promoCode,
@@ -281,7 +295,8 @@ export function buildWeeklyView(
 
   rows.sort(
     (a, b) =>
-      a.categoryLabel.localeCompare(b.categoryLabel) || Math.abs(b.changeUsd) - Math.abs(a.changeUsd),
+      promoCategorySortKey(a.promoCode).localeCompare(promoCategorySortKey(b.promoCode)) ||
+      Math.abs(b.changeUsd) - Math.abs(a.changeUsd),
   );
   return { weekKey, priorWeekKey, rows };
 }
@@ -312,7 +327,8 @@ export function buildMonthlySummaries(
 
     const spaSummaries: MonthlySpaSummary[] = spas.map((spa) => {
       const spaLines = periodLines.filter((l) => l.locationName === spa);
-      const promoUsd = spaLines.reduce((s, l) => s + l.usd, 0);
+      const promoUsd = sumPromoUsd(spaLines, { excludeFullPrice: true });
+      const fullPricePromoUsd = sumPromoUsd(spaLines.filter((l) => isFullPriceCode(l.promoCode)));
       const treatmentRevenue = sumTreatmentRevenueInRange(salesDays, spa, period.periodFrom, period.periodTo);
       const byCode = new Map<string, number>();
       const categoryTotals: Partial<Record<PromoCategoryId, number>> = {};
@@ -333,6 +349,7 @@ export function buildMonthlySummaries(
       return {
         spa,
         promoUsd,
+        fullPricePromoUsd,
         treatmentRevenue,
         promoSharePct:
           treatmentRevenue != null && treatmentRevenue > 0

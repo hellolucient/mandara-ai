@@ -132,8 +132,11 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                 <div>
                   <h3 className="font-medium">{spa.spa}</h3>
                   <p className="text-xs text-muted-foreground">
-                    Promo {money(spa.promoUsd, "USD")}
-                    {spa.promoSharePct != null ? ` · ${spa.promoSharePct}% of treatment revenue` : " · no DSR treatment revenue for this date"}
+                    Discounted promo {money(spa.promoUsd, "USD")}
+                    {spa.fullPricePromoUsd > 0 ? ` · Full price ${money(spa.fullPricePromoUsd, "USD")}` : ""}
+                    {spa.promoSharePct != null
+                      ? ` · ${spa.promoSharePct}% of treatment revenue (excl. Full Price)`
+                      : " · no DSR treatment revenue for this date"}
                   </p>
                 </div>
                 {spa.shareAlert ? <Badge variant="destructive">Share jump</Badge> : null}
@@ -253,7 +256,8 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                 <thead className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                   <tr>
                     <th className="py-2 font-medium">Spa</th>
-                    <th className="py-2 text-right font-medium">Promo USD</th>
+                    <th className="py-2 text-right font-medium">Discounted promo</th>
+                    <th className="py-2 text-right font-medium">Full price</th>
                     <th className="py-2 text-right font-medium">Promo % rev</th>
                     <th className="hidden py-2 font-medium sm:table-cell">Category mix</th>
                     <th className="py-2 pr-1 font-medium">Top codes</th>
@@ -264,6 +268,9 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                     <tr key={spa.spa} className="border-b last:border-0">
                       <td className="py-2">{spa.spa}</td>
                       <td className="py-2 text-right">{money(spa.promoUsd, "USD")}</td>
+                      <td className="py-2 text-right">
+                        {spa.fullPricePromoUsd > 0 ? money(spa.fullPricePromoUsd, "USD") : "—"}
+                      </td>
                       <td className="py-2 text-right">{spa.promoSharePct != null ? `${spa.promoSharePct}%` : "—"}</td>
                       <td className="hidden py-2 sm:table-cell">
                         <PromoCategoryStackedBar
