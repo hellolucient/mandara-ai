@@ -143,7 +143,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                 </div>
                 {spa.shareAlert ? <Badge variant="destructive">Share jump</Badge> : null}
               </header>
-              <HorizontalScrollInset className="mt-0" scrollId="promo-daily" edgeFade={false}>
+              <HorizontalScrollInset className="mt-0" scrollId="promo-daily">
               <table className="w-full min-w-[520px] text-sm">
                 <thead className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                   <tr>
@@ -189,7 +189,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
             {weekly.priorWeekKey ? ` vs ${weekly.priorWeekKey}` : ""} — treatment promos assigned by ISO week of period end.
           </p>
           <PromoSpaCategoryBars rows={weeklyBars} title="Treatment promo by category · this week" />
-          <HorizontalScrollInset className="mt-4" scrollId="promo-weekly" edgeFade={false}>
+          <HorizontalScrollInset className="mt-4" scrollId="promo-weekly">
             <table className="w-full min-w-[640px] text-sm">
               <thead className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                 <tr>
@@ -256,7 +256,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
               {block.offListCodes.length > 0 ? (
                 <p className="mt-2 text-xs text-amber-800">Off-list codes this month: {block.offListCodes.join(", ")}</p>
               ) : null}
-              <HorizontalScrollInset className="mt-4" scrollId="promo-monthly" edgeFade={false}>
+              <HorizontalScrollInset className="mt-4" scrollId="promo-monthly">
               <table className="w-full min-w-[720px] text-sm">
                 <thead className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                   <tr>

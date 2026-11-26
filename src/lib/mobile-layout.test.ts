@@ -26,4 +26,12 @@ describe("mobile page width containment", () => {
     assert.match(page, /overflow-x-hidden/);
     assert.match(page, /HorizontalScrollInset/);
   });
+
+  it("scrolls the mobile tab bar inside the header, not the page", () => {
+    const shell = readFileSync("src/components/shell.tsx", "utf8");
+    const nav = readFileSync("src/components/nav-links.tsx", "utf8");
+    assert.match(shell, /min-w-0 shrink-0 overflow-x-hidden border-b bg-card md:hidden/);
+    assert.match(nav, /overflow-x-auto overscroll-x-contain/);
+    assert.match(nav, /min-w-0/);
+  });
 });
