@@ -124,6 +124,61 @@ describe("stored records", () => {
       restoreEnv(previous);
     }
   });
+  it("keeps Home MTD on the latest DSR month when today is the 1st of the next month", async () => {
+    const stage = "mtd-month-boundary-test";
+    const day = (businessDate: string, rows: unknown[]) => {
+      const result = validateExtract({ businessDate, currency: "USD", rows });
+      if (!result.ok) throw new Error(result.error);
+      return result.extract;
+    };
+    await saveExtract(
+      stage,
+      day("2026-11-29", [
+        { location: "Dhonveli", netSales: 1000, treatments: 10, budget: null, treatmentSales: 900, retailSales: 100 },
+      ]),
+      "import",
+    );
+    await saveExtract(
+      stage,
+      day("2026-11-30", [
+        { location: "Dhonveli", netSales: 2000, treatments: 20, budget: null, treatmentSales: 1800, retailSales: 200 },
+      ]),
+      "import",
+    );
+
+    // as_of = last day of the month, still in November: MTD is 1–30 Nov.
+    const onLastDay = await calculateHomeKPIs(stage, "2026-11-30");
+    assert.ok(onLastDay);
+    assert.equal(onLastDay.latestDate, "2026-11-30");
+    assert.equal(onLastDay.mtdRevenue, 3000);
+    assert.equal(onLastDay.mtdRetailSales, 300);
+
+    // Today is 1 Dec; latest DSR is still 30 Nov. Cards must not flip to an empty December.
+    const onFirst = await calculateHomeKPIs(stage, "2026-12-01");
+    assert.ok(onFirst);
+    assert.equal(onFirst.latestDate, "2026-11-30");
+    assert.equal(onFirst.mtdRevenue, 3000);
+    assert.equal(onFirst.mtdRetailSales, 300);
+    const spas = await getSpaSummaries(stage, "2026-12-01");
+    const dhonveli = spas.find((spa) => spa.locationName === "Dhonveli");
+    assert.equal(dhonveli?.mtdRevenue, 3000);
+    assert.equal(dhonveli?.mtdRetailSales, 300);
+    assert.equal(dhonveli?.latestDate, "2026-11-30");
+
+    // Once a December DSR is loaded, MTD switches to that month only.
+    await saveExtract(
+      stage,
+      day("2026-12-01", [
+        { location: "Dhonveli", netSales: 400, treatments: 4, budget: null, treatmentSales: 350, retailSales: 50 },
+      ]),
+      "import",
+    );
+    const december = await calculateHomeKPIs(stage, "2026-12-02");
+    assert.ok(december);
+    assert.equal(december.latestDate, "2026-12-01");
+    assert.equal(december.mtdRevenue, 400);
+    assert.equal(december.mtdRetailSales, 50);
+  });
 });
 
 function restoreEnv(previous: Record<string, string | undefined>) {

@@ -6,6 +6,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import type { SpaSummary } from "@/lib/home-kpis";
+import { mtdPeriodFromLatest } from "@/lib/dates";
 
 export type DrilldownScope = "day" | "14d" | "mtd";
 
@@ -63,9 +64,9 @@ export function SpaDrilldownPanel({ spa, open, onClose, currency, defaultDate, t
       if (dates.length === 0) return { date: selectedDate };
       return { from: dates[0]!, to: dates.at(-1)! };
     }
-    const monthStart = `${today.slice(0, 7)}-01`;
-    const end = spa.latestDate && spa.latestDate < today ? spa.latestDate : today;
-    return { from: monthStart, to: end };
+    const asOf = spa.latestDate ?? today;
+    const period = mtdPeriodFromLatest(asOf);
+    return { from: period.from, to: period.to };
   }, [scope, selectedDate, reportedDates, spa, today]);
 
   const load = useCallback(async () => {

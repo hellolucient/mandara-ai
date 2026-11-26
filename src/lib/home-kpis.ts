@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { mtdPeriodFromLatest } from "@/lib/dates";
 import { groupSpasByBrand } from "@/lib/spa-groups";
 
 export type HomeKPIs = {
@@ -73,9 +74,9 @@ export async function calculateHomeKPIs(stage: string, today: string): Promise<H
   // Latest day revenue
   const latestRevenue = num(latestDay.net_sales) ?? 0;
 
-  // MTD calculations
-  const currentMonth = today.slice(0, 7); // YYYY-MM
-  const mtdDays = days.filter((d) => d.business_date.startsWith(currentMonth) && d.business_date <= today);
+  // MTD is the month of the latest DSR day, not the calendar month of "today".
+  const period = mtdPeriodFromLatest(latestDate);
+  const mtdDays = days.filter((d) => d.business_date >= period.from && d.business_date <= period.to);
 
   const mtdRevenue = mtdDays.reduce((sum, d) => sum + (num(d.net_sales) ?? 0), 0);
   const mtdTreatments = mtdDays.reduce((sum, d) => sum + (num(d.treatments) ?? 0), 0);
@@ -103,11 +104,17 @@ export async function calculateHomeKPIs(stage: string, today: string): Promise<H
  * Get sparkline data (last 14 days) and MTD per spa location.
  */
 export async function getSpaSummaries(stage: string, today: string): Promise<SpaSummary[]> {
+  const latestRow = await sql<{ latest: string | null }>(
+    `select to_char(max(business_date), 'YYYY-MM-DD') as latest from sales_days where stage = $1`,
+    [stage],
+  );
+  const latestLoaded = latestRow[0]?.latest;
+  if (!latestLoaded) return [];
+  const period = mtdPeriodFromLatest(latestLoaded);
   const lookback = new Date(Date.parse(today) - 45 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const currentMonth = today.slice(0, 7);
-  const monthStart = `${currentMonth}-01`;
+  const monthStart = period.from;
   const fromDate = monthStart < lookback ? monthStart : lookback;
-  const [year, month] = currentMonth.split("-").map(Number);
+  const [year, month] = period.monthKey.split("-").map(Number);
 
   const [locations, budgets, salesData] = await Promise.all([
     sql<{ location_id: string; location_name: string }>(
@@ -157,7 +164,7 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
     .slice(-14);
   const latestMtdDate = salesData
     .map((s) => s.business_date)
-    .filter((d) => d.startsWith(currentMonth) && d <= today)
+    .filter((d) => d >= period.from && d <= period.to)
     .sort()
     .pop();
   const daysCovered = latestMtdDate ? Number(latestMtdDate.slice(8, 10)) : 0;
@@ -174,7 +181,7 @@ export async function getSpaSummaries(stage: string, today: string): Promise<Spa
     const latestRetailSales = latest?.retail_sales ?? null;
 
     // MTD revenue
-    const mtdSales = locSales.filter((s) => s.business_date.startsWith(currentMonth) && s.business_date <= today);
+    const mtdSales = locSales.filter((s) => s.business_date >= period.from && s.business_date <= period.to);
     const mtdRevenue = mtdSales.reduce((sum, s) => sum + (s.net_sales ?? 0), 0);
     const mtdRetailSales = sumKnown(mtdSales.map((s) => s.retail_sales));
 

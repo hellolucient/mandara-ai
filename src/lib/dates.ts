@@ -9,6 +9,17 @@ export function businessToday(now = new Date()): string {
   }).format(now);
 }
 
+/**
+ * Month-to-date window for Home dashboard figures.
+ * Always the calendar month of the latest loaded DSR business date, through that date —
+ * never the calendar month of "today". On the 1st of a new month, before that month's
+ * first DSR is in, every panel still shows the previous month.
+ */
+export function mtdPeriodFromLatest(latestDate: string): { monthKey: string; from: string; to: string } {
+  const monthKey = latestDate.slice(0, 7);
+  return { monthKey, from: `${monthKey}-01`, to: latestDate };
+}
+
 export function addDays(iso: string, days: number): string {
   const [year, month, day] = iso.split("-").map(Number);
   const utc = new Date(Date.UTC(year, month - 1, day));

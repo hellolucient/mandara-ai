@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { isSalesDataStale, num, sumKnown } from "./home-kpis.js";
+import { mtdPeriodFromLatest } from "./dates.js";
 
 describe("home KPIs", () => {
   it("detects stale sales data (>2 days old)", () => {
@@ -61,6 +62,29 @@ describe("home KPIs", () => {
     assert.equal(num(null), null);
     assert.equal(num("abc"), null);
     assert.equal(["092", "1228"].reduce((s, v) => s + (num(v) ?? 0), 0), 1320);
+  });
+
+  it("MTD window follows the latest DSR day when as_of is the last day of a month", () => {
+    // as_of = latest loaded DSR = 30 Nov (last day of the month).
+    const asOf = "2026-11-30";
+    const period = mtdPeriodFromLatest(asOf);
+    assert.deepEqual(period, { monthKey: "2026-11", from: "2026-11-01", to: "2026-11-30" });
+
+    // On 1 Dec the calendar month is December, but Home MTD must still be November
+    // until a December DSR is loaded.
+    const today = "2026-12-01";
+    assert.notEqual(today.slice(0, 7), period.monthKey);
+    const days = ["2026-11-29", "2026-11-30", "2026-12-01"];
+    const mtdDays = days.filter((d) => d >= period.from && d <= period.to);
+    assert.deepEqual(mtdDays, ["2026-11-29", "2026-11-30"]);
+  });
+
+  it("switches MTD to the new month once that month's first DSR is loaded", () => {
+    assert.deepEqual(mtdPeriodFromLatest("2026-12-01"), {
+      monthKey: "2026-12",
+      from: "2026-12-01",
+      to: "2026-12-01",
+    });
   });
 
   it("sums retail only where it was reported, and keeps all-missing as missing", () => {
