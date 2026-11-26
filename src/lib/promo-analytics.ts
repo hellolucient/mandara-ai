@@ -273,13 +273,38 @@ function isTreatmentSingleDayOnOrBetween(line: StoredPromoLine, from: string, to
   );
 }
 
-/** Sum single-day treatment promo lines across a calendar date range (inclusive). */
+/**
+ * Treatment promo lines that cover `from`..`to` exactly once: the longest stored range report that starts
+ * on `from` and ends on or before `to` (e.g. the Steiners Promotion Analysis for 1–24 Nov), plus single-day
+ * reports for the days after it. Without a range report this falls back to single days only.
+ */
+export function treatmentPromoLinesForDateRange(lines: StoredPromoLine[], from: string, to: string): StoredPromoLine[] {
+  let coveredTo: string | null = null;
+  for (const line of lines) {
+    if (line.kind !== "treatment" || line.periodFrom !== from || line.periodTo === line.periodFrom) continue;
+    if (line.periodTo > to) continue;
+    if (!coveredTo || line.periodTo > coveredTo) coveredTo = line.periodTo;
+  }
+  const out: StoredPromoLine[] = [];
+  for (const line of lines) {
+    if (line.kind !== "treatment") continue;
+    if (coveredTo && line.periodFrom === from && line.periodTo === coveredTo) {
+      out.push(line);
+      continue;
+    }
+    if (isTreatmentSingleDayOnOrBetween(line, from, to) && (!coveredTo || line.periodFrom > coveredTo)) out.push(line);
+  }
+  return out;
+}
+
+/** Treatment promo bars across a calendar date range (inclusive), using range reports plus later single days. */
 export function buildSpaCategoryBarsForDateRange(
   lines: StoredPromoLine[],
   from: string,
   to: string,
 ): SpaCategoryBarRow[] {
-  return buildSpaCategoryBars(lines, (l) => isTreatmentSingleDayOnOrBetween(l, from, to));
+  const covered = new Set(treatmentPromoLinesForDateRange(lines, from, to));
+  return buildSpaCategoryBars(lines, (l) => covered.has(l));
 }
 
 export function formatHomePromoHeading(mode: "mtd" | "daily", periodFrom: string, periodTo: string): string {
@@ -300,7 +325,10 @@ function offListCodesInLines(lines: StoredPromoLine[], approved: Set<string>): s
 }
 
 export function buildSpaCategoryBarsForWeek(lines: StoredPromoLine[], weekKey: string): SpaCategoryBarRow[] {
-  return buildSpaCategoryBars(lines, (l) => l.kind === "treatment" && isoWeekKey(l.periodTo) === weekKey);
+  return buildSpaCategoryBars(
+    lines,
+    (l) => l.kind === "treatment" && l.periodFrom === l.periodTo && isoWeekKey(l.periodTo) === weekKey,
+  );
 }
 
 export function buildWeeklyView(
@@ -308,7 +336,8 @@ export function buildWeeklyView(
   approved: Set<string>,
   kind: PromoKind = "treatment",
 ): { weekKey: string; priorWeekKey: string | null; rows: WeeklySpaDelta[] } {
-  const kindLines = lines.filter((l) => l.kind === kind);
+  // Weeks are built from single-day reports only; month/range reports would otherwise land in the week of their end date.
+  const kindLines = lines.filter((l) => l.kind === kind && l.periodFrom === l.periodTo);
   const weeks = [...new Set(kindLines.map((l) => isoWeekKey(l.periodTo)))].sort();
   const weekKey = weeks.at(-1) ?? "";
   const priorWeekKey = weeks.length > 1 ? weeks.at(-2) ?? null : null;
@@ -448,6 +477,8 @@ export type HomePromoCardSlice = {
   periodFrom: string;
   periodTo: string;
   spaBars: SpaCategoryBarRow[];
+  /** Grand total per promotion category across every spa in the window. */
+  allSpas: SpaCategoryBarRow | null;
   offListCodes: string[];
   shareJumpSpas: string[];
 };
@@ -458,6 +489,15 @@ export type HomePromoCardData = {
   /** Latest single-day promo snapshot (optional toggle). */
   daily: HomePromoCardSlice | null;
 };
+
+/** Sum spa rows into one "All spas" row (grand total revenue per promotion category). */
+export function allSpasCategoryBar(rows: SpaCategoryBarRow[]): SpaCategoryBarRow | null {
+  const totals: Partial<Record<PromoCategoryId, number>> = {};
+  for (const row of rows) for (const slice of row.slices) totals[slice.id] = (totals[slice.id] ?? 0) + slice.usd;
+  const slices = slicesFromUsdByCategory(totals);
+  const totalUsd = slices.reduce((s, x) => s + x.usd, 0);
+  return totalUsd > 0 ? { spa: "All spas", totalUsd, slices } : null;
+}
 
 /** Compact Home snapshot: MTD treatment promos with optional latest-day drill-down. */
 export function buildHomePromoCardData(
@@ -472,13 +512,16 @@ export function buildHomePromoCardData(
   const latestDate = daily.date;
   const monthStart = `${latestDate.slice(0, 7)}-01`;
 
-  const mtdLines = lines.filter((l) => isTreatmentSingleDayOnOrBetween(l, monthStart, latestDate));
+  const mtdLines = treatmentPromoLinesForDateRange(lines, monthStart, latestDate);
   const dayLines = lines.filter((l) => isTreatmentSingleDayOnOrBetween(l, latestDate, latestDate));
 
+  const mtdBars = buildSpaCategoryBarsForDateRange(lines, monthStart, latestDate);
+  const dayBars = buildSpaCategoryBarsForDateRange(lines, latestDate, latestDate);
   const mtd: HomePromoCardSlice = {
     periodFrom: monthStart,
     periodTo: latestDate,
-    spaBars: buildSpaCategoryBarsForDateRange(lines, monthStart, latestDate),
+    spaBars: mtdBars,
+    allSpas: allSpasCategoryBar(mtdBars),
     offListCodes: offListCodesInLines(mtdLines, approved),
     shareJumpSpas: [],
   };
@@ -486,7 +529,8 @@ export function buildHomePromoCardData(
   const dailySlice: HomePromoCardSlice = {
     periodFrom: latestDate,
     periodTo: latestDate,
-    spaBars: buildSpaCategoryBarsForDateRange(lines, latestDate, latestDate),
+    spaBars: dayBars,
+    allSpas: allSpasCategoryBar(dayBars),
     offListCodes: offListCodesInLines(dayLines, approved),
     shareJumpSpas: daily.spas.filter((s) => s.shareAlert).map((s) => s.spa),
   };

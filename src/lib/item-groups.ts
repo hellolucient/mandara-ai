@@ -172,6 +172,24 @@ export function mapRetailBrandByCode(itemCode: string): RetailBrand | null {
   return null;
 }
 
+/** Steiners Statistic supplier names that clearly identify a boutique brand (fallback after SKU prefixes). */
+const SUPPLIER_BRANDS: Record<string, RetailBrand> = {
+  elemis: "Elemis",
+  mandaraspa: "Mandara Spa (Alodia)",
+  "mandara spa": "Mandara Spa (Alodia)",
+  alodia: "Mandara Spa (Alodia)",
+  "we are feel good inc": "We Are Feel Good",
+  "we are feel good": "We Are Feel Good",
+  "cosmerc trading": "Cosmerc",
+  cosmerc: "Cosmerc",
+};
+
+export function mapRetailBrandBySupplier(supplier: string | null | undefined): RetailBrand | null {
+  const key = (supplier ?? "").trim().toLowerCase();
+  if (!key) return null;
+  return SUPPLIER_BRANDS[key] ?? null;
+}
+
 export function mapTreatmentSection(itemName: string): TreatmentSection {
   const key = normalizeItemName(itemName);
   const override = TREATMENT_OVERRIDES[key];
@@ -191,6 +209,8 @@ export function mapRetailBrand(itemName: string, context?: RetailBrandContext): 
   const key = normalizeItemName(itemName);
   const override = RETAIL_OVERRIDES[key];
   if (override) return override;
+  const fromSupplier = mapRetailBrandBySupplier(context?.supplier);
+  if (fromSupplier) return fromSupplier;
   for (const rule of RETAIL_KEYWORD_RULES) {
     if (rule.pattern.test(itemName)) return rule.group;
   }

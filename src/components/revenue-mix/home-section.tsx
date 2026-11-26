@@ -11,26 +11,31 @@ import { RevenueMixCategoryBar } from "@/components/revenue-mix/revenue-mix-bars
 
 type Props = {
   snapshot: RevenueMixHomeSnapshot;
+  /** Month-to-date lines (Statistic range + later DSR days). */
   linesJson: string;
+  /** Latest DSR day item lines. */
+  dayLinesJson: string;
 };
 
 function periodFromLines(lines: StoredItemLine[]): RevenueMixPeriod {
   return buildRevenueMixPeriod(lines);
 }
 
-export function RevenueMixHomeSection({ snapshot, linesJson }: Props) {
+export function RevenueMixHomeSection({ snapshot, linesJson, dayLinesJson }: Props) {
   const allLines = useMemo(() => JSON.parse(linesJson) as StoredItemLine[], [linesJson]);
+  const dayLines = useMemo(() => JSON.parse(dayLinesJson) as StoredItemLine[], [dayLinesJson]);
   const [spaId, setSpaId] = useState("");
 
   const filtered = useMemo(() => {
     const scoped = spaId ? allLines.filter((l) => l.locationId === spaId) : allLines;
-    const yesterdayLines = scoped.filter((l) => l.businessDate === snapshot.latestDate);
+    const scopedDay = spaId ? dayLines.filter((l) => l.locationId === spaId) : dayLines;
+    const yesterdayLines = scopedDay.filter((l) => l.businessDate === snapshot.latestDate);
     const mtdLines = scoped.filter((l) => l.businessDate >= snapshot.monthStart && l.businessDate <= snapshot.latestDate);
     return {
       yesterday: periodFromLines(yesterdayLines),
       mtd: periodFromLines(mtdLines),
     };
-  }, [allLines, spaId, snapshot.latestDate, snapshot.monthStart]);
+  }, [allLines, dayLines, spaId, snapshot.latestDate, snapshot.monthStart]);
 
   const unmapped = [
     ...new Set([

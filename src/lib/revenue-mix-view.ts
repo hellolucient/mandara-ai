@@ -50,6 +50,39 @@ export function buildRevenueMixPeriod(lines: StoredItemLine[]): RevenueMixPeriod
   };
 }
 
+/**
+ * Month-to-date (or any range) item lines without gaps or double counting.
+ *
+ * Daily DSR item lines only exist from the day item imports started, so a range built from them alone
+ * covers a few days while the KPI cards cover the whole month. Steiners Statistic range exports
+ * (`sales_period_items`) cover `from`..X; we take, per category, the longest range that starts on `from`
+ * and ends on or before `to`, then add daily lines only for days after X.
+ */
+export function composeRangeItemLines(
+  periodLines: StoredItemLine[],
+  dailyLines: StoredItemLine[],
+  from: string,
+  to: string,
+): { lines: StoredItemLine[]; coveredTo: Partial<Record<"treatment" | "retail", string>> } {
+  const coveredTo: Partial<Record<"treatment" | "retail", string>> = {};
+  for (const line of periodLines) {
+    if (line.periodFrom !== from || line.businessDate > to || line.businessDate < from) continue;
+    const prev = coveredTo[line.category];
+    if (!prev || line.businessDate > prev) coveredTo[line.category] = line.businessDate;
+  }
+  const out: StoredItemLine[] = [];
+  for (const line of periodLines) {
+    if (line.periodFrom === from && coveredTo[line.category] === line.businessDate) out.push(line);
+  }
+  for (const line of dailyLines) {
+    if (line.businessDate < from || line.businessDate > to) continue;
+    const cut = coveredTo[line.category];
+    if (cut && line.businessDate <= cut) continue;
+    out.push(line);
+  }
+  return { lines: out, coveredTo };
+}
+
 export type RevenueMixHomeSnapshot = {
   latestDate: string;
   monthStart: string;

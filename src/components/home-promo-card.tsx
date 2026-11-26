@@ -80,6 +80,12 @@ export function HomePromoCard({ data }: { data: HomePromoCardData }) {
           <p className="mt-4 text-sm text-muted-foreground">{emptyLabel}</p>
         ) : (
           <ul className="mt-4 space-y-2.5">
+            {active.allSpas ? (
+              <li className="grid grid-cols-[minmax(0,5.5rem)_1fr] items-start gap-2 border-b border-black/[0.06] pb-3 md:gap-3 dark:border-white/10">
+                <span className="truncate pt-0.5 text-[13px] font-semibold">All spas</span>
+                <PromoCategoryStackedBar slices={active.allSpas.slices} totalUsd={active.allSpas.totalUsd} />
+              </li>
+            ) : null}
             {groupSpasByBrand(active.spaBars, (r) => r.totalUsd, (r) => r.spa).map((group) => (
               <Fragment key={group.groupId}>
                 <li className="pt-1 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">{group.groupLabel}</li>

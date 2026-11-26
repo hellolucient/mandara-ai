@@ -7,7 +7,7 @@ import { canSeeRevenueMix } from "@/lib/revenue-mix-access";
 import {
   buildRevenueMixPeriod,
   buildSpaMixRows,
-  loadItemLinesForMix,
+  loadRangeItemLinesForMix,
   listSpasWithItemLines,
   monthRangeContaining,
   weekRangeContaining,
@@ -48,7 +48,7 @@ export default async function RevenueMixPage({ searchParams }: { searchParams: P
   }
 
   const [lines, spas] = await Promise.all([
-    loadItemLinesForMix(member.stage, from, to, spaFilter || null),
+    loadRangeItemLinesForMix(member.stage, from, to, spaFilter || null),
     listSpasWithItemLines(member.stage),
   ]);
   const period = buildRevenueMixPeriod(lines);

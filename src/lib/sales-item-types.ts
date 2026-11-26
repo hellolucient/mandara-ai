@@ -30,6 +30,8 @@ export type StoredItemLine = {
   currency: string;
   itemCode?: string | null;
   supplier?: string | null;
+  /** Set when the line comes from a Steiners Statistic range export (period_from..businessDate), not a single DSR day. */
+  periodFrom?: string | null;
 };
 
 export type AggregatedItemLine = {
