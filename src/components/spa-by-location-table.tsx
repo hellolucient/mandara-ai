@@ -8,6 +8,13 @@ import { Sparkline } from "@/components/sparkline";
 import { SpaDrilldownPanel } from "@/components/spa-drilldown-panel";
 import { addDays, latestDayColumnLabels } from "@/lib/dates";
 import { TyLyVarianceCells } from "@/components/spa-comparison-cells";
+import { HorizontalScrollInset } from "@/components/horizontal-scroll-inset";
+
+/** Sticky first column: spa names stay visible while scrolling metric bands on small screens. */
+const STICKY_SPA =
+  "sticky left-0 z-10 bg-card shadow-[4px_0_12px_-6px_rgba(20,40,35,0.14)] dark:shadow-[4px_0_12px_-6px_rgba(0,0,0,0.45)]";
+const STICKY_SPA_HEAD =
+  "sticky left-0 z-20 bg-card shadow-[4px_0_12px_-6px_rgba(20,40,35,0.14)] dark:shadow-[4px_0_12px_-6px_rgba(0,0,0,0.45)]";
 
 /**
  * Paper-tone column bands from the app stone palette (`--background` oklch(0.965 0.012 92), `--card` 0.985).
@@ -63,7 +70,7 @@ export function SpaByLocationTable({ spas, currency, latestDate, today, comparis
   const grouped = groupSpasByBrand(spas, (s) => s.mtdRevenue, (s) => s.locationName);
 
   return (
-    <section className="mt-12">
+    <section className="mt-12 min-w-0">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-heading text-[19px] font-normal tracking-[-0.005em] text-foreground">By spa</h2>
         <p className="hidden text-[12px] text-muted-foreground sm:block">
@@ -73,12 +80,11 @@ export function SpaByLocationTable({ spas, currency, latestDate, today, comparis
         </p>
       </div>
 
-      <div className="mt-4 -mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-        <div className="min-w-0 overflow-x-auto rounded-2xl border border-black/[0.06] bg-card shadow-[0_1px_2px_rgba(20,40,35,0.04)] dark:border-white/10">
-          <table className="w-full min-w-[1040px] border-collapse text-[14px]">
+      <HorizontalScrollInset className="mt-4" scrollId="by-spa">
+        <table className="w-full min-w-[1040px] border-collapse text-[14px]">
             <thead>
               <tr>
-                <th rowSpan={2} className={`${COL.spa} border-b border-black/[0.08] text-left text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase dark:border-white/10`}>
+                <th rowSpan={2} className={`${COL.spa} ${STICKY_SPA_HEAD} border-b border-black/[0.08] text-left text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase dark:border-white/10`}>
                   Spa
                 </th>
                 <th colSpan={2} className={`${COL.dayStart} ${GROUPHEAD}`}>
@@ -112,7 +118,7 @@ export function SpaByLocationTable({ spas, currency, latestDate, today, comparis
               {grouped.map((group) => (
                 <Fragment key={group.groupId}>
                   <tr className="border-b border-black/[0.06] dark:border-white/[0.08]">
-                    <td className={`${COL.spa} ${BRAND_ROW}`}>{group.groupLabel}</td>
+                    <td className={`${COL.spa} ${STICKY_SPA} ${BRAND_ROW}`}>{group.groupLabel}</td>
                     <td colSpan={2} className={`${COL.dayStart} ${BRAND_ROW}`} aria-hidden="true" />
                     <td colSpan={3} className={`${COL.mtdStart} ${BRAND_ROW}`} aria-hidden="true" />
                     <td colSpan={3} className={`${COL.ytdStart} ${BRAND_ROW}`} aria-hidden="true" />
@@ -126,7 +132,7 @@ export function SpaByLocationTable({ spas, currency, latestDate, today, comparis
                         key={spa.locationId}
                         className="border-b border-black/[0.06] transition-[filter] last:border-0 hover:brightness-[0.985] dark:border-white/[0.07] dark:hover:brightness-110"
                       >
-                        <td className={COL.spa}>
+                        <td className={`${COL.spa} ${STICKY_SPA}`}>
                           <SpaNameButton name={spaDisplayName(spa.locationName)} onClick={() => setActive(spa)} />
                         </td>
                         <td className={`${COL.dayStart} text-right whitespace-nowrap text-muted-foreground tabular-nums`}>
@@ -170,11 +176,10 @@ export function SpaByLocationTable({ spas, currency, latestDate, today, comparis
               ))}
             </tbody>
           </table>
-          <p className="px-4 py-2.5 text-[12px] text-muted-foreground sm:px-6">
-            TY from DSR and period imports; LY from stored Statistic range exports when present. Scroll sideways on small screens. Tap a spa for item detail.
-          </p>
-        </div>
-      </div>
+        <p className="border-t border-black/[0.06] px-4 py-2.5 text-[12px] text-muted-foreground sm:px-6 dark:border-white/10">
+          TY from DSR and period imports; LY from stored Statistic range exports when present. Scroll sideways inside this card on small screens. Tap a spa for item detail.
+        </p>
+      </HorizontalScrollInset>
 
       <SpaDrilldownPanel
         spa={active}

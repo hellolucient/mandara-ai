@@ -19,6 +19,7 @@ import { money } from "@/lib/dates";
 import { canManage } from "@/lib/members";
 import { loadDays } from "@/lib/sales-store";
 import { currentMember } from "@/lib/session";
+import { HorizontalScrollInset } from "@/components/horizontal-scroll-inset";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -69,7 +70,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
   ].sort();
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6 md:px-8">
+    <main className="mx-auto w-full min-w-0 max-w-5xl overflow-x-hidden px-4 py-6 md:px-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="font-heading text-3xl">Promotions</h1>
@@ -142,7 +143,8 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                 </div>
                 {spa.shareAlert ? <Badge variant="destructive">Share jump</Badge> : null}
               </header>
-              <table className="w-full text-sm">
+              <HorizontalScrollInset className="mt-0" scrollId="promo-daily" edgeFade={false}>
+              <table className="w-full min-w-[520px] text-sm">
                 <thead className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                   <tr>
                     <th className="py-2 pl-3 font-medium">Code</th>
@@ -173,6 +175,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                   ))}
                 </tbody>
               </table>
+              </HorizontalScrollInset>
             </article>
           ))}
         </section>
@@ -186,8 +189,8 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
             {weekly.priorWeekKey ? ` vs ${weekly.priorWeekKey}` : ""} — treatment promos assigned by ISO week of period end.
           </p>
           <PromoSpaCategoryBars rows={weeklyBars} title="Treatment promo by category · this week" />
-          <div className="mt-4 overflow-hidden rounded-xl border bg-card">
-            <table className="w-full text-sm">
+          <HorizontalScrollInset className="mt-4" scrollId="promo-weekly" edgeFade={false}>
+            <table className="w-full min-w-[640px] text-sm">
               <thead className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                 <tr>
                   <th className="py-3 pl-3 font-medium">Spa</th>
@@ -223,7 +226,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                 ))}
               </tbody>
             </table>
-          </div>
+          </HorizontalScrollInset>
         </section>
       ) : null}
 
@@ -253,7 +256,8 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
               {block.offListCodes.length > 0 ? (
                 <p className="mt-2 text-xs text-amber-800">Off-list codes this month: {block.offListCodes.join(", ")}</p>
               ) : null}
-              <table className="mt-4 w-full text-sm">
+              <HorizontalScrollInset className="mt-4" scrollId="promo-monthly" edgeFade={false}>
+              <table className="w-full min-w-[720px] text-sm">
                 <thead className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                   <tr>
                     <th className="py-2 font-medium">Spa</th>
@@ -289,6 +293,7 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                   ))}
                 </tbody>
               </table>
+              </HorizontalScrollInset>
             </article>
           ))}
           {retailMonthly.length > 0 ? (

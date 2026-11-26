@@ -87,7 +87,7 @@ export default async function HomePage() {
   const showApps = canSeeQuickAccess(member);
 
   return (
-    <main className="mx-auto max-w-[1200px] px-5 pt-8 pb-16 md:px-10 md:pt-12">
+    <main className="mx-auto w-full min-w-0 max-w-[1200px] overflow-x-hidden px-5 pt-8 pb-16 md:px-10 md:pt-12">
       {/* Header */}
       <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
@@ -149,15 +149,15 @@ function Overview({ kpis, spas, today }: { kpis: HomeKPIs; spas: SpaSummary[]; t
   const monthLabel = new Date(`${kpis.latestDate}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
 
   return (
-    <section className="mt-10 md:mt-12">
+    <section className="mt-10 min-w-0 md:mt-12">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SectionTitle>Performance</SectionTitle>
         <StatusPill stale={kpis.isStale} daysOld={daysOld} latestDate={kpis.latestDate} />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-6">
+      <div className="mt-4 grid min-w-0 grid-cols-2 gap-3 md:gap-4 lg:grid-cols-6">
         {/* Hero: month to date */}
-        <div className="relative col-span-2 overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground shadow-[0_1px_2px_rgba(20,40,35,0.12),0_12px_32px_-12px_rgba(20,60,55,0.45)] md:p-6">
+        <div className="relative col-span-2 min-w-0 overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground shadow-[0_1px_2px_rgba(20,40,35,0.12),0_12px_32px_-12px_rgba(20,60,55,0.45)] md:p-6">
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -top-24 -right-16 size-56 rounded-full bg-[radial-gradient(closest-side,rgba(255,240,215,0.09),transparent)]"
@@ -203,7 +203,7 @@ function Overview({ kpis, spas, today }: { kpis: HomeKPIs; spas: SpaSummary[]; t
 
 function KpiCard({ label, value, note }: { label: string; value: string; note: string }) {
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-black/[0.06] bg-card p-5 shadow-[0_1px_2px_rgba(20,40,35,0.04)] dark:border-white/10">
+    <div className="flex min-w-0 flex-col justify-between rounded-2xl border border-black/[0.06] bg-card p-5 shadow-[0_1px_2px_rgba(20,40,35,0.04)] dark:border-white/10">
       <p className="text-[11px] font-medium tracking-[0.18em] text-muted-foreground uppercase">{label}</p>
       <div className="mt-4">
         <p className="text-[26px] leading-none font-medium tracking-[-0.02em] text-foreground tabular-nums">{value}</p>
@@ -217,7 +217,7 @@ function StatusPill({ stale, daysOld, latestDate }: { stale: boolean; daysOld: n
   const age = daysOld === 0 ? "today" : daysOld === 1 ? "1 day ago" : `${daysOld} days ago`;
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] ${
+      className={`inline-flex max-w-full min-w-0 items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] ${
         stale
           ? "border-amber-300/60 bg-amber-50 text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200"
           : "border-black/[0.06] bg-card text-muted-foreground dark:border-white/10"

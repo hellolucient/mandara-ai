@@ -82,7 +82,7 @@ export function Shell({
             This is the preview workspace. Its records stay separate from the live workspace.
           </p>
         ) : null}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">{children}</div>
       </div>
     </div>
   );
