@@ -24,7 +24,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   const max = day ? Math.max(...day.lines.map((line) => line.netSales ?? 0), 1) : 1;
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6 md:px-8">
+    <main className="mx-auto w-full min-w-0 max-w-5xl overflow-x-hidden px-4 py-6 md:px-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="font-heading text-3xl">Sales</h1>

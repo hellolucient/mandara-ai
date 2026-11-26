@@ -13,7 +13,7 @@ export function NavLinks({
 }) {
   const pathname = usePathname();
   return (
-    <nav className={tone === "rail" ? "flex flex-col gap-1" : "flex gap-1 overflow-x-auto"}>
+    <nav className={tone === "rail" ? "flex flex-col gap-1" : "flex w-full min-w-0 gap-1 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]"}>
       {items.map((item) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (

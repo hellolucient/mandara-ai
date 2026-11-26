@@ -201,7 +201,7 @@ describe("sales answer layout and sparkline polish", () => {
     const page = readFileSync("src/components/spa-by-location-table.tsx", "utf8");
     assert.match(page, /rowSpan=\{2\}/);
     assert.match(page, /Month to date/);
-    assert.match(page, /overflow-x-auto/);
+    assert.match(page, /HorizontalScrollInset/);
     assert.match(page, /whitespace-nowrap/);
     assert.match(page, /min-w-\[1040px\]/);
     assert.match(page, /bg-\[var\(--background\)\]/);

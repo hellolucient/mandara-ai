@@ -50,7 +50,7 @@ export function Shell({
         </div>
       </aside>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="shrink-0 border-b bg-card md:hidden">
+        <header className="min-w-0 shrink-0 overflow-x-hidden border-b bg-card md:hidden">
           <div className="flex items-center gap-3 px-4 py-3">
             <span className="text-primary">{MARK}</span>
             <div>
@@ -63,8 +63,12 @@ export function Shell({
               </div>
             ) : null}
           </div>
-          <div className="px-3 pb-3">
+          <div className="relative min-w-0 px-3 pb-3">
             <NavLinks items={items} tone="bar" />
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-y-0 right-0 w-7 bg-gradient-to-l from-card from-30% to-transparent"
+            />
           </div>
         </header>
         {needsOwner ? (
@@ -82,7 +86,7 @@ export function Shell({
             This is the preview workspace. Its records stay separate from the live workspace.
           </p>
         ) : null}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">{children}</div>
       </div>
     </div>
   );
