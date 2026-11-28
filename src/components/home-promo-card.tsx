@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Fragment } from "react";
 import { PromoCategoryLegend } from "@/components/promo-category-legend";
 import { PromoCategoryStackedBar } from "@/components/promo-category-cell";
+import { PromoReconciliationLine } from "@/components/promo-reconciliation-line";
 import type { HomePromoCardData, HomePromoCardSlice } from "@/lib/promo-analytics";
 import { formatHomePromoHeading } from "@/lib/promo-analytics";
 import { groupSpasByBrand, spaDisplayName } from "@/lib/spa-groups";
@@ -76,6 +77,10 @@ export function HomePromoCard({ data }: { data: HomePromoCardData }) {
         <div className="mt-3">
           <PromoCategoryLegend compact />
         </div>
+        <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+          Only real promotions and discounts are shown. Under each bar, revenue is split into promotions, full-price
+          treatments, retail, and other treatments (sold with no promotion code in the DSR), so it adds up to the spa&apos;s revenue.
+        </p>
         {active.spaBars.length === 0 ? (
           <p className="mt-4 text-sm text-muted-foreground">{emptyLabel}</p>
         ) : (
@@ -83,7 +88,10 @@ export function HomePromoCard({ data }: { data: HomePromoCardData }) {
             {active.allSpas ? (
               <li className="grid grid-cols-[minmax(0,5.5rem)_1fr] items-start gap-2 border-b border-black/[0.06] pb-3 md:gap-3 dark:border-white/10">
                 <span className="truncate pt-0.5 text-[13px] font-semibold">All spas</span>
-                <PromoCategoryStackedBar slices={active.allSpas.slices} totalUsd={active.allSpas.totalUsd} />
+                <div className="min-w-0">
+                  <PromoCategoryStackedBar slices={active.allSpas.slices} totalUsd={active.allSpas.totalUsd} />
+                  <PromoReconciliationLine data={active.allSpas.reconciliation} className="mt-1" />
+                </div>
               </li>
             ) : null}
             {groupSpasByBrand(active.spaBars, (r) => r.totalUsd, (r) => r.spa).map((group) => (
@@ -92,7 +100,10 @@ export function HomePromoCard({ data }: { data: HomePromoCardData }) {
                 {group.items.map((row) => (
                   <li key={row.spa} className="grid grid-cols-[minmax(0,5.5rem)_1fr] items-start gap-2 md:gap-3">
                     <span className="truncate pt-0.5 text-[13px] font-medium">{spaDisplayName(row.spa)}</span>
-                    <PromoCategoryStackedBar slices={row.slices} totalUsd={row.totalUsd} />
+                    <div className="min-w-0">
+                      <PromoCategoryStackedBar slices={row.slices} totalUsd={row.totalUsd} />
+                      <PromoReconciliationLine data={row.reconciliation} className="mt-1" />
+                    </div>
                   </li>
                 ))}
               </Fragment>

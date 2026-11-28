@@ -132,7 +132,7 @@ export function PromoCategoryStackedBar({
         </div>
         {showTotal ? (
           <dl className="shrink-0 text-right leading-tight">
-            <dt className="text-[9px] font-medium tracking-[0.12em] text-muted-foreground uppercase md:text-[10px]">Total</dt>
+            <dt className="text-[9px] font-medium tracking-[0.12em] text-muted-foreground uppercase md:text-[10px]">Promotions</dt>
             <dd className="text-[12px] font-semibold tabular-nums text-foreground md:text-[13px]">{money(barTotal, currency)}</dd>
           </dl>
         ) : null}

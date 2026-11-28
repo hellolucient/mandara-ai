@@ -1,5 +1,6 @@
 import { Fragment } from "react";
 import { PromoCategoryStackedBar } from "@/components/promo-category-cell";
+import { PromoReconciliationLine } from "@/components/promo-reconciliation-line";
 import type { SpaCategoryBarRow } from "@/lib/promo-analytics";
 import { groupSpasByBrand, spaDisplayName } from "@/lib/spa-groups";
 
@@ -18,6 +19,7 @@ export function PromoSpaCategoryBars({ rows, title }: { rows: SpaCategoryBarRow[
               <li key={row.spa}>
                 <p className="mb-1 text-sm font-medium">{spaDisplayName(row.spa)}</p>
                 <PromoCategoryStackedBar slices={row.slices} totalUsd={row.totalUsd} />
+                <PromoReconciliationLine data={row.reconciliation} className="mt-1" />
               </li>
             ))}
           </Fragment>

@@ -54,13 +54,13 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
       : null;
   const dailyBars =
     dailyPeriod != null
-      ? buildSpaCategoryBarsForPeriod(lines, dailyPeriod.periodFrom, dailyPeriod.periodTo)
+      ? buildSpaCategoryBarsForPeriod(lines, dailyPeriod.periodFrom, dailyPeriod.periodTo, salesDays)
       : [];
   const weeklyBars = weekly.weekKey ? buildSpaCategoryBarsForWeek(lines, weekly.weekKey) : [];
   const latestMonthly = monthly.at(-1);
   const monthlyBars =
     latestMonthly != null
-      ? buildSpaCategoryBarsForPeriod(lines, latestMonthly.periodFrom, latestMonthly.periodTo)
+      ? buildSpaCategoryBarsForPeriod(lines, latestMonthly.periodFrom, latestMonthly.periodTo, salesDays)
       : [];
 
   const offList = [
@@ -103,6 +103,11 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
 
       <div className="mt-4 rounded-xl border bg-card px-4 py-3">
         <PromoCategoryLegend />
+        <p className="mt-2 text-xs leading-snug text-muted-foreground">
+          Only real promotions and discounts are counted. Full-price treatments (codes FP, MV, GM, LWR) are not promotions. Where a
+          line shows revenue, it adds up as promotions + full price + retail + other treatments (treatments sold with no promotion
+          code in the DSR).
+        </p>
       </div>
 
       {periods.length === 0 ? (
@@ -134,10 +139,9 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                 <div>
                   <h3 className="font-medium">{spaDisplayName(spa.spa)}</h3>
                   <p className="text-xs text-muted-foreground">
-                    Discounted promo {money(spa.promoUsd, "USD")}
-                    {spa.fullPricePromoUsd > 0 ? ` · Full price ${money(spa.fullPricePromoUsd, "USD")}` : ""}
+                    Promotions {money(spa.promoUsd, "USD")}
                     {spa.promoSharePct != null
-                      ? ` · ${spa.promoSharePct}% of treatment revenue (excl. Full Price)`
+                      ? ` · ${spa.promoSharePct}% of treatment revenue`
                       : " · no DSR treatment revenue for this date"}
                   </p>
                 </div>
@@ -261,9 +265,9 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                 <thead className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                   <tr>
                     <th className="py-2 font-medium">Spa</th>
-                    <th className="py-2 text-right font-medium">Discounted promo</th>
-                    <th className="py-2 text-right font-medium">Full price</th>
-                    <th className="py-2 text-right font-medium">Promo % rev</th>
+                    <th className="py-2 text-right font-medium">Promotions</th>
+                    <th className="py-2 text-right font-medium">Promo % treatment rev</th>
+                    <th className="py-2 text-right font-medium">Revenue</th>
                     <th className="hidden py-2 font-medium sm:table-cell">Category mix</th>
                     <th className="py-2 pr-1 font-medium">Top codes</th>
                   </tr>
@@ -273,14 +277,14 @@ export default async function PromotionsPage({ searchParams }: { searchParams: P
                     <tr key={spa.spa} className="border-b last:border-0">
                       <td className="py-2">{spaDisplayName(spa.spa)}</td>
                       <td className="py-2 text-right">{money(spa.promoUsd, "USD")}</td>
-                      <td className="py-2 text-right">
-                        {spa.fullPricePromoUsd > 0 ? money(spa.fullPricePromoUsd, "USD") : "—"}
-                      </td>
                       <td className="py-2 text-right">{spa.promoSharePct != null ? `${spa.promoSharePct}%` : "—"}</td>
+                      <td className="py-2 text-right">
+                        {spa.reconciliation ? money(spa.reconciliation.revenueUsd, "USD") : "—"}
+                      </td>
                       <td className="hidden py-2 sm:table-cell">
                         <PromoCategoryStackedBar
                           slices={spa.categorySlices}
-                          totalUsd={spa.promoUsd + spa.fullPricePromoUsd}
+                          totalUsd={spa.promoUsd}
                           widthClass="w-28 md:w-44"
                         />
                       </td>

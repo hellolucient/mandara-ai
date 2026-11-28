@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   aggregateMixTotals,
+  canonicalTreatmentName,
   mapRetailBrand,
   mapRetailBrandByCode,
   mapTreatmentSection,
@@ -221,5 +222,50 @@ describe("aggregateMixTotals", () => {
     ]);
     assert.equal(result.retail["Mandara Spa (Alodia)"], 25);
     assert.deepEqual(result.unmappedRetailNames, []);
+  });
+});
+describe("Tenille Keats fixes, 28 Nov 2026", () => {
+  it("files Sultry Citrus Body Buff as a Package, by name and by SKU", () => {
+    assert.equal(mapTreatmentSection("Sultry Citrus Body Buff"), "Packages");
+    assert.equal(mapTreatmentSection("anything", { itemCode: "P44" }), "Packages");
+  });
+
+  it("files Smooth Down 15 mnt (the 45 to 60 minute upgrade charge) as an Enhancement add-on", () => {
+    assert.equal(mapTreatmentSection("Smooth Down 15 mnt"), "Enhancements");
+    assert.equal(mapTreatmentSection("Smooth Down 15 mnt", { itemCode: "B09" }), "Enhancements");
+  });
+
+  it("maps Flight Recovery and every Jet Lag Recovery spelling to one Jet Lag Recovery package", () => {
+    for (const name of ["Flight Recovery", "flight recovery", "Jet Lag Recovery", "Jet Lag Recovery, duration 90mins."]) {
+      assert.equal(canonicalTreatmentName(name), "Jet Lag Recovery", name);
+    }
+    assert.equal(canonicalTreatmentName("Whatever", "HYRICE03"), "Jet Lag Recovery");
+    assert.equal(canonicalTreatmentName("Balinese Massage 60", "B116"), "Balinese Massage 60");
+    assert.equal(mapTreatmentSection("Flight Recovery", { itemCode: "HYRICE03" }), "Packages");
+    assert.equal(mapTreatmentSection("Jet Lag Recovery"), "Packages");
+  });
+
+  it("files the other Normatec treatments away from Unmapped", () => {
+    assert.equal(mapTreatmentSection("Normatec Recovery Boots", { itemCode: "HYRICE01" }), "More of Mandara");
+    assert.equal(mapTreatmentSection("Quick Fix Muscle Release", { itemCode: "HYRICE02" }), "More of Mandara");
+  });
+
+  it("files every Wellness Programs SKU in the Steiners master list, including ones that end in a digit", () => {
+    const codes = ["WLCAJ", "WLCTJ", "WLCWE", "WLDRP", "WLHH", "WLICR", "WLIRR", "WLIWSE", "WLRBM", "WLRR2", "WLRRG", "WLRR1", "WLRHR", "WLSS", "WLSCR", "WLSHH", "WLCAR", "WLESJ", "WLPP", "WLVS"];
+    for (const code of codes) assert.equal(mapTreatmentSection("x", { itemCode: code }), "Wellness Programs", code);
+  });
+
+  it("files every Wellness Programs name in the Steiners master list by name when the SKU is missing", () => {
+    const names = ["Chakra Awakening Journey", "Chavana Therapy Journey", "Chavana Wellness Experience", "Detox Reset Program", "Harmony Haven", "Island Coconut Reset", "Island Rejuvenation Ritual", "Island Wellness Escape Experience", "Rebalance Body", "Rebalance and Renew", "Relax, Reset, Glow", "Reset and Restore", "Royal Healing Retreat", "Serenity Shift", "Signature Chavana Ritual", "Soul Harmony Healing", "The Core Alignment Reset", "The Elemental Serenity Journey", "The Peace Practise", "The Vitality Sequence"];
+    for (const name of names) assert.equal(mapTreatmentSection(name), "Wellness Programs", name);
+  });
+
+  it("files every Little Wellness Rituals SKU and name variant", () => {
+    for (const code of ["LWR01", "LWR02", "LWR03", "LWR04", "LWR05", "LWR06", "LWR07", "LWR08", "LWR09", "LWR10", "LWR011", "LWR012"]) {
+      assert.equal(mapTreatmentSection("x", { itemCode: code }), "Little Wellness Rituals", code);
+    }
+    for (const name of ["Mother and Daugther Moment", "Mother and Daughter Moment", "Litter Star Journey", "Little Star Journey", "Soothing Coconut Scrub and Conditioner", "Soothing Coconut Scrub & Conditioner", "Bubble Bath"]) {
+      assert.equal(mapTreatmentSection(name), "Little Wellness Rituals", name);
+    }
   });
 });

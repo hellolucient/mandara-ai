@@ -20,10 +20,32 @@ function sumPromoUsd(lines: StoredPromoLine[], opts?: { excludeFullPrice?: boole
 import type { PromoKind, StoredPromoLine, StoredPromoPeriod } from "@/lib/promo-types";
 import type { LoadedDay } from "@/lib/sales-types";
 
+/**
+ * How a spa's revenue splits, so the Promotions section reconciles to revenue:
+ * revenue = promotions + full price + retail + other treatments.
+ *
+ * - promotions: real promotions and discounts only (the bars).
+ * - fullPrice: treatments sold at full price (Promotion Analysis codes FP, MV, GM, LWR). Not a promotion.
+ * - retail: retail sales. The Promotion Analysis treatment report never includes retail.
+ * - otherTreatments: whatever is left of the treatment revenue, i.e. treatments the spa sold without any
+ *   promotion code in the DSR (or that the promotion report leaves out, like a 15 minute upgrade charge).
+ */
+export type PromoReconciliation = {
+  revenueUsd: number;
+  promoUsd: number;
+  fullPriceUsd: number;
+  retailUsd: number;
+  otherTreatmentUsd: number;
+};
+
 export type SpaCategoryBarRow = {
   spa: string;
+  /** Promotions and discounts only. Full Price is not included. */
   totalUsd: number;
   slices: CategoryUsdSlice[];
+  /** Full-price treatments in the same window (shown only in the reconciliation line, never as a promotion). */
+  fullPriceUsd?: number;
+  reconciliation?: PromoReconciliation | null;
 };
 
 export type PromoCodeRow = {
@@ -67,6 +89,7 @@ export type MonthlySpaSummary = {
   spa: string;
   promoUsd: number;
   fullPricePromoUsd: number;
+  reconciliation?: PromoReconciliation | null;
   treatmentRevenue: number | null;
   promoSharePct: number | null;
   categorySlices: CategoryUsdSlice[];
@@ -118,25 +141,88 @@ function linesInWeek(lines: StoredPromoLine[], weekKey: string): StoredPromoLine
   return lines.filter((line) => isoWeekKey(line.periodTo) === weekKey);
 }
 
+function dayLineForSpa(day: LoadedDay, spa: string) {
+  return day.lines.find((l) => l.locationName.toLowerCase() === spa.toLowerCase());
+}
+
+/**
+ * Splits a spa's DSR revenue over a date range into promotions, full price, retail and the rest, so that
+ * promotions + full price + retail + other treatments = revenue exactly. Null when the DSR has no line for the spa.
+ */
+export function reconcilePromoRevenue(
+  days: LoadedDay[],
+  spa: string,
+  from: string,
+  to: string,
+  promoUsd: number,
+  fullPriceUsd: number,
+): PromoReconciliation | null {
+  let revenue = 0;
+  let retail = 0;
+  let any = false;
+  for (const day of days) {
+    if (day.businessDate < from || day.businessDate > to) continue;
+    const line = dayLineForSpa(day, spa);
+    if (!line || line.netSales == null) continue;
+    any = true;
+    revenue += line.netSales;
+    retail += line.retailSales ?? 0;
+  }
+  if (!any) return null;
+  const round = (n: number) => Math.round(n * 100) / 100;
+  return {
+    revenueUsd: round(revenue),
+    promoUsd: round(promoUsd),
+    fullPriceUsd: round(fullPriceUsd),
+    retailUsd: round(retail),
+    otherTreatmentUsd: round(revenue - promoUsd - fullPriceUsd - retail),
+  };
+}
+
+/** Adds the reconciliation to each bar row, plus a row for any spa that has revenue but no promotion lines. */
+export function withPromoReconciliation(
+  rows: SpaCategoryBarRow[],
+  days: LoadedDay[],
+  from: string,
+  to: string,
+): SpaCategoryBarRow[] {
+  const out = rows.map((row) => ({
+    ...row,
+    reconciliation: reconcilePromoRevenue(days, row.spa, from, to, row.totalUsd, row.fullPriceUsd ?? 0),
+  }));
+  const have = new Set(out.map((r) => r.spa.toLowerCase()));
+  const extra = new Set<string>();
+  for (const day of days) {
+    if (day.businessDate < from || day.businessDate > to) continue;
+    for (const line of day.lines) if ((line.netSales ?? 0) > 0 && !have.has(line.locationName.toLowerCase())) extra.add(line.locationName);
+  }
+  for (const spa of [...extra].sort()) {
+    out.push({ spa, totalUsd: 0, slices: [], fullPriceUsd: 0, reconciliation: reconcilePromoRevenue(days, spa, from, to, 0, 0) });
+  }
+  return groupSpasByBrand(out, (r) => r.totalUsd, (r) => r.spa).flatMap((g) => g.items);
+}
+
+/** Promotions only: Full Price lines are left out of the slices and the total, and counted separately. */
 export function buildSpaCategoryBars(
   lines: StoredPromoLine[],
   filter: (line: StoredPromoLine) => boolean,
 ): SpaCategoryBarRow[] {
-  const bySpa = new Map<string, Partial<Record<PromoCategoryId, number>>>();
+  const bySpa = new Map<string, { promo: Partial<Record<PromoCategoryId, number>>; fullPrice: number }>();
   for (const line of lines) {
     if (!filter(line)) continue;
     if (line.kind !== "treatment") continue;
-    const spaBucket = bySpa.get(line.locationName) ?? {};
-    addUsdToCategory(spaBucket, line.promoCode, line.usd);
-    bySpa.set(line.locationName, spaBucket);
+    const bucket = bySpa.get(line.locationName) ?? { promo: {}, fullPrice: 0 };
+    if (isFullPriceCode(line.promoCode)) bucket.fullPrice += line.usd;
+    else addUsdToCategory(bucket.promo, line.promoCode, line.usd);
+    bySpa.set(line.locationName, bucket);
   }
   const rows = [...bySpa.entries()]
-    .map(([spa, totals]) => {
-      const slices = slicesFromUsdByCategory(totals);
+    .map(([spa, { promo, fullPrice }]) => {
+      const slices = slicesFromUsdByCategory(promo);
       const totalUsd = slices.reduce((s, x) => s + x.usd, 0);
-      return { spa, totalUsd, slices };
+      return { spa, totalUsd, slices, fullPriceUsd: fullPrice };
     })
-    .filter((r) => r.totalUsd > 0);
+    .filter((r) => r.totalUsd > 0 || r.fullPriceUsd > 0);
   return groupSpasByBrand(rows, (r) => r.totalUsd, (r) => r.spa).flatMap((g) => g.items);
 }
 
@@ -231,6 +317,7 @@ export function buildDailyView(
         promoSharePct,
         shareAlert,
         codes: codes
+          .filter((c) => !isFullPriceCode(c.promoCode))
           .sort(
             (a, b) =>
               promoCategorySortKey(a.promoCode).localeCompare(promoCategorySortKey(b.promoCode)) || b.usd - a.usd,
@@ -257,11 +344,13 @@ export function buildSpaCategoryBarsForPeriod(
   lines: StoredPromoLine[],
   periodFrom: string,
   periodTo: string,
+  salesDays?: LoadedDay[],
 ): SpaCategoryBarRow[] {
-  return buildSpaCategoryBars(
+  const rows = buildSpaCategoryBars(
     lines,
     (l) => l.kind === "treatment" && l.periodFrom === periodFrom && l.periodTo === periodTo,
   );
+  return salesDays ? withPromoReconciliation(rows, salesDays, periodFrom, periodTo) : rows;
 }
 
 function isTreatmentSingleDayOnOrBetween(line: StoredPromoLine, from: string, to: string): boolean {
@@ -343,8 +432,10 @@ export function buildWeeklyView(
   const priorWeekKey = weeks.length > 1 ? weeks.at(-2) ?? null : null;
   if (!weekKey) return { weekKey: "", priorWeekKey: null, rows: [] };
 
-  const thisMap = sumBySpaCode(linesInWeek(kindLines, weekKey));
-  const priorMap = priorWeekKey ? sumBySpaCode(linesInWeek(kindLines, priorWeekKey)) : new Map();
+  // Promotions only: Full Price is not a promotion.
+  const promoOnly = (ls: StoredPromoLine[]) => ls.filter((l) => !isFullPriceCode(l.promoCode));
+  const thisMap = sumBySpaCode(promoOnly(linesInWeek(kindLines, weekKey)));
+  const priorMap = priorWeekKey ? sumBySpaCode(promoOnly(linesInWeek(kindLines, priorWeekKey))) : new Map();
 
   const keys = new Set([...thisMap.keys(), ...priorMap.keys()]);
   const rows: WeeklySpaDelta[] = [...keys].map((key) => {
@@ -389,6 +480,18 @@ export function buildMonthlySummaries(
     .filter((p) => p.kind === kind && p.periodFrom !== p.periodTo)
     .sort((a, b) => a.periodFrom.localeCompare(b.periodFrom));
 
+  // Promotions only: Full Price lines are not promotions, so they are left out of every total here.
+  const promoTotal = (period: StoredPromoPeriod) =>
+    lines
+      .filter(
+        (l) =>
+          l.periodFrom === period.periodFrom &&
+          l.periodTo === period.periodTo &&
+          l.kind === kind &&
+          !(kind === "treatment" && isFullPriceCode(l.promoCode)),
+      )
+      .reduce((sum, l) => sum + l.usd, 0);
+
   const results: MonthlyPeriodCompare[] = [];
   for (let i = 0; i < monthlies.length; i++) {
     const period = monthlies[i];
@@ -404,12 +507,13 @@ export function buildMonthlySummaries(
 
     const spaSummaries: MonthlySpaSummary[] = spas.map((spa) => {
       const spaLines = periodLines.filter((l) => l.locationName === spa);
+      const promoLines = spaLines.filter((l) => !isFullPriceCode(l.promoCode));
       const promoUsd = sumPromoUsd(spaLines, { excludeFullPrice: true });
       const fullPricePromoUsd = sumPromoUsd(spaLines.filter((l) => isFullPriceCode(l.promoCode)));
       const treatmentRevenue = sumTreatmentRevenueInRange(salesDays, spa, period.periodFrom, period.periodTo);
       const byCode = new Map<string, number>();
       const categoryTotals: Partial<Record<PromoCategoryId, number>> = {};
-      for (const line of spaLines) {
+      for (const line of promoLines) {
         byCode.set(line.promoCode, (byCode.get(line.promoCode) ?? 0) + line.usd);
         addUsdToCategory(categoryTotals, line.promoCode, line.usd);
       }
@@ -427,6 +531,10 @@ export function buildMonthlySummaries(
         spa,
         promoUsd,
         fullPricePromoUsd,
+        reconciliation:
+          kind === "treatment"
+            ? reconcilePromoRevenue(salesDays, spa, period.periodFrom, period.periodTo, promoUsd, fullPricePromoUsd)
+            : null,
         treatmentRevenue,
         promoSharePct:
           treatmentRevenue != null && treatmentRevenue > 0
@@ -437,23 +545,22 @@ export function buildMonthlySummaries(
       };
     });
 
-    const priorTotal = prior?.totalUsd ?? null;
+    const totalUsd = promoTotal(period);
+    const priorTotal = prior ? promoTotal(prior) : null;
     const changePct =
-      priorTotal != null && priorTotal > 0
-        ? Math.round(((period.totalUsd - priorTotal) / priorTotal) * 1000) / 10
-        : null;
+      priorTotal != null && priorTotal > 0 ? Math.round(((totalUsd - priorTotal) / priorTotal) * 1000) / 10 : null;
 
     results.push({
       label,
       periodFrom: period.periodFrom,
       periodTo: period.periodTo,
-      totalUsd: period.totalUsd,
+      totalUsd,
       priorLabel: prior ? formatMonthLabel(prior.periodFrom, prior.periodTo) : null,
       priorTotalUsd: priorTotal,
       changePct,
       spas: groupSpasByBrand(
         spaSummaries,
-        (s) => s.promoUsd + s.fullPricePromoUsd,
+        (s) => s.promoUsd,
         (s) => s.spa,
       ).flatMap((g) => g.items),
       offListCodes,
@@ -490,13 +597,43 @@ export type HomePromoCardData = {
   daily: HomePromoCardSlice | null;
 };
 
-/** Sum spa rows into one "All spas" row (grand total revenue per promotion category). */
+/** Sum spa rows into one "All spas" row (grand total per promotion category, promotions only). */
 export function allSpasCategoryBar(rows: SpaCategoryBarRow[]): SpaCategoryBarRow | null {
   const totals: Partial<Record<PromoCategoryId, number>> = {};
-  for (const row of rows) for (const slice of row.slices) totals[slice.id] = (totals[slice.id] ?? 0) + slice.usd;
+  let fullPriceUsd = 0;
+  const rec: PromoReconciliation = { revenueUsd: 0, promoUsd: 0, fullPriceUsd: 0, retailUsd: 0, otherTreatmentUsd: 0 };
+  let anyRec = false;
+  for (const row of rows) {
+    for (const slice of row.slices) totals[slice.id] = (totals[slice.id] ?? 0) + slice.usd;
+    fullPriceUsd += row.fullPriceUsd ?? 0;
+    if (row.reconciliation) {
+      anyRec = true;
+      rec.revenueUsd += row.reconciliation.revenueUsd;
+      rec.promoUsd += row.reconciliation.promoUsd;
+      rec.fullPriceUsd += row.reconciliation.fullPriceUsd;
+      rec.retailUsd += row.reconciliation.retailUsd;
+      rec.otherTreatmentUsd += row.reconciliation.otherTreatmentUsd;
+    }
+  }
   const slices = slicesFromUsdByCategory(totals);
   const totalUsd = slices.reduce((s, x) => s + x.usd, 0);
-  return totalUsd > 0 ? { spa: "All spas", totalUsd, slices } : null;
+  if (totalUsd <= 0 && !anyRec) return null;
+  const round = (n: number) => Math.round(n * 100) / 100;
+  return {
+    spa: "All spas",
+    totalUsd,
+    slices,
+    fullPriceUsd,
+    reconciliation: anyRec
+      ? {
+          revenueUsd: round(rec.revenueUsd),
+          promoUsd: round(rec.promoUsd),
+          fullPriceUsd: round(rec.fullPriceUsd),
+          retailUsd: round(rec.retailUsd),
+          otherTreatmentUsd: round(rec.otherTreatmentUsd),
+        }
+      : null,
+  };
 }
 
 /** Compact Home snapshot: MTD treatment promos with optional latest-day drill-down. */
@@ -515,8 +652,18 @@ export function buildHomePromoCardData(
   const mtdLines = treatmentPromoLinesForDateRange(lines, monthStart, latestDate);
   const dayLines = lines.filter((l) => isTreatmentSingleDayOnOrBetween(l, latestDate, latestDate));
 
-  const mtdBars = buildSpaCategoryBarsForDateRange(lines, monthStart, latestDate);
-  const dayBars = buildSpaCategoryBarsForDateRange(lines, latestDate, latestDate);
+  const mtdBars = withPromoReconciliation(
+    buildSpaCategoryBarsForDateRange(lines, monthStart, latestDate),
+    salesDays,
+    monthStart,
+    latestDate,
+  );
+  const dayBars = withPromoReconciliation(
+    buildSpaCategoryBarsForDateRange(lines, latestDate, latestDate),
+    salesDays,
+    latestDate,
+    latestDate,
+  );
   const mtd: HomePromoCardSlice = {
     periodFrom: monthStart,
     periodTo: latestDate,

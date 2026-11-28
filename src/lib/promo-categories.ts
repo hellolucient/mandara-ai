@@ -1,6 +1,7 @@
 /**
  * Promo code families for reporting (Tenille / spa director view).
- * Six categories in fixed order. Full price (FP) is never part of discount / low-rate totals.
+ * Five promotion / discount categories plus Full Price. Full price (FP) is not a promotion: it is never part of the
+ * Promotions section's bars or totals, and only appears in the "revenue = promotions + full price + ..." line.
  */
 
 export type PromoCategoryId =
@@ -63,8 +64,10 @@ export const PROMO_CATEGORIES: readonly PromoCategoryDef[] = [
     label: "Full Price",
     color: PROMO_CATEGORY_COLORS.full_price,
     // FP = rack rate; MV/GM = local outside-market full-paying guests (spa/gym membership).
+    // LWR = Little Wellness Rituals, an ordinary menu line that is "not applicable with any discounts or promotions".
     // AC (airline crew) is in-house hotel guests and stays in Other, not Full Price.
-    codes: ["FP", "MV", "GM"],
+    // Full Price is NOT a promotion (Tenille Keats, 28 Nov 2026): the Promotions section never shows it.
+    codes: ["FP", "MV", "GM", "LWR"],
   },
 ] as const;
 

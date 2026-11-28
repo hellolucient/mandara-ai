@@ -2,7 +2,7 @@ import { promoCategoriesForLegend } from "@/lib/promo-categories";
 import { PromoCategorySwatch } from "@/components/promo-category-swatch";
 
 export function PromoCategoryLegend({ compact }: { compact?: boolean }) {
-  const { discount, fullPrice } = promoCategoriesForLegend();
+  const { discount } = promoCategoriesForLegend();
   const text = compact ? "text-[10px] md:text-xs" : "text-xs md:text-sm";
   const swatch = compact ? "size-2 md:size-3.5" : "size-2.5 md:size-3.5";
 
@@ -16,11 +16,6 @@ export function PromoCategoryLegend({ compact }: { compact?: boolean }) {
           </li>
         ))}
       </ul>
-      <div className="flex flex-wrap items-center gap-2 border-t border-black/[0.08] pt-2 md:pt-2.5 dark:border-white/12">
-        <PromoCategorySwatch color={fullPrice.color} className={swatch} />
-        <span className="font-medium text-foreground">{fullPrice.label}</span>
-        <span className="text-muted-foreground">(not included in discount / low-rate totals)</span>
-      </div>
     </div>
   );
 }

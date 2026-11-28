@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db";
 import { newId, slug } from "@/lib/ids";
 import { num } from "@/lib/home-kpis";
+import { canonicalTreatmentName } from "@/lib/item-groups";
 import type { AggregatedItemLine, ItemCategory, SalesItemsExtract, StoredItemLine } from "@/lib/sales-item-types";
 
 type ItemRow = {
@@ -121,7 +122,8 @@ export function aggregateItemLines(
   const bucket = (category: ItemCategory) => {
     const map = new Map<string, AggregatedItemLine>();
     for (const line of lines.filter((l) => l.category === category)) {
-      const key = line.itemName;
+      // Same treatment, booked under different names at different spas (Flight Recovery = Jet Lag Recovery).
+      const key = category === "treatment" ? canonicalTreatmentName(line.itemName, line.itemCode) : line.itemName;
       const existing = map.get(key);
       if (existing) {
         existing.quantity += line.quantity;

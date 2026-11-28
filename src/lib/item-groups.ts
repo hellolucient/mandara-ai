@@ -144,7 +144,63 @@ const TREATMENT_OVERRIDES: Record<string, TreatmentSection> = {
   "coconut oil head & shoulder massage": "Little Wellness Rituals",
   "coconut oil head, shoulder massage": "Little Wellness Rituals",
   "bubble bath": "Little Wellness Rituals",
+  "soothing coconut scrub and conditioner": "Little Wellness Rituals",
+  // Wellness Programs: the rest of the Steiners master list (WL… codes), so a new property that sells one is filed
+  // correctly by name even when the SKU is missing from a report.
+  "chakra awakening journey": "Wellness Programs",
+  "chavana therapy journey": "Wellness Programs",
+  "chavana wellness experience": "Wellness Programs",
+  "detox reset program": "Wellness Programs",
+  "harmony haven": "Wellness Programs",
+  "rebalance body": "Wellness Programs",
+  "rebalance and renew": "Wellness Programs",
+  "relax, reset, glow": "Wellness Programs",
+  "reset and restore": "Wellness Programs",
+  "serenity shift": "Wellness Programs",
+  "signature chavana ritual": "Wellness Programs",
+  "the core alignment reset": "Wellness Programs",
+  "the elemental serenity journey": "Wellness Programs",
+  "the peace practise": "Wellness Programs",
+  "the peace practice": "Wellness Programs",
+  "the vitality sequence": "Wellness Programs",
+  // Tenille Keats, 28 Nov 2026: ordinary spa treatments, never promotions.
+  // Sultry Citrus Body Buff (Steiners P44, group PACKAGE) is a menu package.
+  "sultry citrus body buff": "Packages",
+  // Smooth Down 15 mnt (B09) is the charge for upgrading a guest from 45 to 60 minutes: an add-on line.
+  "smooth down 15 mnt": "Enhancements",
+  "smooth down 15 min": "Enhancements",
+  "smooth down": "Enhancements",
+  // Jet Lag Recovery (Normatec). Some spas book it as "Flight Recovery" (Steiners HYRICE03); same treatment.
+  "jet lag recovery": "Packages",
+  "flight recovery": "Packages",
+  "jet lag": "Packages",
+  // Other Normatec (Hyperice) recovery treatments.
+  "normatec recovery boots": "More of Mandara",
+  "quick fix muscle release": "More of Mandara",
 };
+
+/**
+ * Steiners SKUs that decide the menu section first. Jet Lag Recovery is booked under different names at
+ * different spas ("Flight Recovery" at Kunaavashi and Vadoo, HYRICE03), so the name is made the same everywhere.
+ */
+const TREATMENT_CODE_SECTIONS: Record<string, TreatmentSection> = {
+  P44: "Packages", // Sultry Citrus Body Buff
+  B09: "Enhancements", // Smooth Down 15 mnt (45 -> 60 minute upgrade)
+  HYRICE03: "Packages", // Jet Lag Recovery / Flight Recovery (Normatec)
+  HYRICE01: "More of Mandara", // Normatec Recovery Boots
+  HYRICE02: "More of Mandara", // Quick Fix Muscle Release
+};
+
+export const JET_LAG_RECOVERY_NAME = "Jet Lag Recovery";
+
+/** One name for treatments that spas record differently. Everything else keeps the name as booked. */
+export function canonicalTreatmentName(itemName: string, itemCode?: string | null): string {
+  const code = normalizeItemCode(itemCode ?? "");
+  if (code === "HYRICE03" || /^(flight|jet\s*lag)\s+recovery\b/i.test(itemName.trim()) || /^jet\s*lag$/i.test(itemName.trim())) {
+    return JET_LAG_RECOVERY_NAME;
+  }
+  return itemName;
+}
 
 const RETAIL_OVERRIDES: Record<string, RetailBrand> = {
   "kit: pro-collagen prep & replenish routine": "Elemis",
@@ -236,7 +292,7 @@ export function mapRetailBrandBySupplier(supplier: string | null | undefined): R
 }
 
 /**
- * Wellness Programs (codes WL…, e.g. WLICR, WLIWSE, WLRHR) and Little Wellness Rituals (codes LWR01, LWR011…)
+ * Wellness Programs (codes WL…, e.g. WLICR, WLIWSE, WLRHR, WLRR1) and Little Wellness Rituals (codes LWR01, LWR011…)
  * are ordinary menu treatments, never promotions. The SKU decides first, so a new item on those menus lands in
  * the right section even before its name is added above.
  */
@@ -244,8 +300,8 @@ export function mapTreatmentSectionByCode(itemCode: string | null | undefined): 
   const code = normalizeItemCode(itemCode ?? "");
   if (!code) return null;
   if (/^LWR\d+$/.test(code)) return "Little Wellness Rituals";
-  if (/^WL[A-Z]{2,}$/.test(code)) return "Wellness Programs";
-  return null;
+  if (/^WL[A-Z]{2,}\d*$/.test(code)) return "Wellness Programs"; // WLRR1 and WLRR2 end in a digit
+  return TREATMENT_CODE_SECTIONS[code] ?? null;
 }
 
 export function mapTreatmentSection(itemName: string, context?: TreatmentContext): TreatmentSection {
