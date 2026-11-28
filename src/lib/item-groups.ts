@@ -18,6 +18,7 @@ export type RetailBrand =
   | "We Are Feel Good"
   | "Cosmerc"
   | "SUD"
+  | "Samapura"
   | typeof UNMAPPED_LABEL;
 
 /** Treatment menu sections from the spa menu (plus Unmapped). */
@@ -28,6 +29,8 @@ export type TreatmentSection =
   | "Body of Mandara"
   | "Enhancements"
   | "More of Mandara"
+  | "Wellness Programs"
+  | "Little Wellness Rituals"
   | typeof UNMAPPED_LABEL;
 
 export type RevenueMixGroup = RetailBrand | TreatmentSection;
@@ -45,6 +48,7 @@ export const RETAIL_BRAND_ORDER: readonly RetailBrand[] = [
   "We Are Feel Good",
   "Cosmerc",
   "SUD",
+  "Samapura",
   UNMAPPED_LABEL,
 ];
 
@@ -55,6 +59,8 @@ export const TREATMENT_SECTION_ORDER: readonly TreatmentSection[] = [
   "Body of Mandara",
   "Enhancements",
   "More of Mandara",
+  "Wellness Programs",
+  "Little Wellness Rituals",
   UNMAPPED_LABEL,
 ];
 
@@ -65,6 +71,7 @@ export const RETAIL_BRAND_COLORS: Record<RetailBrand, GroupColorDef> = {
   "We Are Feel Good": { label: "We Are Feel Good", color: "#7B1FA2" },
   Cosmerc: { label: "Cosmerc", color: "#F9A825" },
   SUD: { label: "SUD", color: "#00838F" },
+  Samapura: { label: "Samapura", color: "#AD1457" },
   Unmapped: { label: UNMAPPED_LABEL, color: "#BDBDBD" },
 };
 
@@ -75,6 +82,8 @@ export const TREATMENT_SECTION_COLORS: Record<TreatmentSection, GroupColorDef> =
   "Body of Mandara": { label: "Body of Mandara", color: "#7B1FA2" },
   Enhancements: { label: "Enhancements", color: "#F9A825" },
   "More of Mandara": { label: "More of Mandara", color: "#00838F" },
+  "Wellness Programs": { label: "Wellness Programs", color: "#AD1457" },
+  "Little Wellness Rituals": { label: "Little Wellness Rituals", color: "#6D4C41" },
   Unmapped: { label: UNMAPPED_LABEL, color: "#BDBDBD" },
 };
 
@@ -83,6 +92,10 @@ type KeywordRule<T extends string> = { pattern: RegExp; group: T };
 export type RetailBrandContext = {
   itemCode?: string | null;
   supplier?: string | null;
+};
+
+export type TreatmentContext = {
+  itemCode?: string | null;
 };
 
 /** Case-insensitive explicit overrides (normalized key = trim + lower). */
@@ -106,6 +119,31 @@ const TREATMENT_OVERRIDES: Record<string, TreatmentSection> = {
   "spa membership card": "More of Mandara",
   shirobhyangam: "More of Mandara",
   "ai stress relief": "More of Mandara",
+  // Wellness Programs: ordinary menu offerings, not promotions (Tenille Keats, 27 Nov 2026).
+  "island coconut reset": "Wellness Programs",
+  "island rejuvenation ritual": "Wellness Programs",
+  "island wellness escape experience": "Wellness Programs",
+  "royal healing retreat": "Wellness Programs",
+  "soul harmony healing": "Wellness Programs",
+  // Little Wellness Rituals (kids menu, Chavana Spa menu 300326). Includes spellings seen in the DSR.
+  "mother and daughter moment": "Little Wellness Rituals",
+  "mother and daugther moment": "Little Wellness Rituals",
+  "father and son timeout": "Little Wellness Rituals",
+  "father & son timeout": "Little Wellness Rituals",
+  "little star journey": "Little Wellness Rituals",
+  "litter star journey": "Little Wellness Rituals",
+  "island fruity glow": "Little Wellness Rituals",
+  "tropical toes": "Little Wellness Rituals",
+  "heavenly hands": "Little Wellness Rituals",
+  "cucumber hydrating facial": "Little Wellness Rituals",
+  "soothing coconut scrub & conditioner": "Little Wellness Rituals",
+  "back, neck & scalp massage": "Little Wellness Rituals",
+  "back, neck, scalp massage": "Little Wellness Rituals",
+  "shoulder, hand & foot massage": "Little Wellness Rituals",
+  "shoulder, hand, foot massage": "Little Wellness Rituals",
+  "coconut oil head & shoulder massage": "Little Wellness Rituals",
+  "coconut oil head, shoulder massage": "Little Wellness Rituals",
+  "bubble bath": "Little Wellness Rituals",
 };
 
 const RETAIL_OVERRIDES: Record<string, RetailBrand> = {
@@ -131,12 +169,16 @@ const RETAIL_KEYWORD_RULES: KeywordRule<RetailBrand>[] = [
   { pattern: /\bfeel\s*good\b/i, group: "We Are Feel Good" },
   { pattern: /\bcosmerc\b/i, group: "Cosmerc" },
   { pattern: /\bsud\b/i, group: "SUD" },
+  { pattern: /\bsamapura\b/i, group: "Samapura" },
   { pattern: /\bmandara\b/i, group: "Mandara Spa (Alodia)" },
 ];
 
 const MANDARA_CODE_PREFIXES = ["26MS", "ALO", "BL-MOR"] as const;
 const MILK_SHAKE_CODE_PREFIX = "MSH";
 const FEEL_GOOD_CODE_PREFIX = "WAFG";
+/** We Are Feel Good sun-care SKUs that are posted as SS101..SS106 (supplier is We Are Feel Good Inc in the Statistic export). */
+const FEEL_GOOD_SS_CODE = /^SS10\d$/;
+const SAMAPURA_CODE_PREFIX = "BRCS";
 const ELEMIS_CODE_PREFIX = "ELMRRP";
 // TODO(Tenille): Confirm Cosmerc SKU prefix from Steiners Statistic export.
 const COSMERC_CODE_PREFIXES = ["COS"] as const;
@@ -165,7 +207,8 @@ export function mapRetailBrandByCode(itemCode: string): RetailBrand | null {
   if (!code) return null;
   if (startsWithAny(code, MANDARA_CODE_PREFIXES)) return "Mandara Spa (Alodia)";
   if (code.startsWith(MILK_SHAKE_CODE_PREFIX)) return "Milk Shake";
-  if (code.startsWith(FEEL_GOOD_CODE_PREFIX)) return "We Are Feel Good";
+  if (code.startsWith(FEEL_GOOD_CODE_PREFIX) || FEEL_GOOD_SS_CODE.test(code)) return "We Are Feel Good";
+  if (code.startsWith(SAMAPURA_CODE_PREFIX)) return "Samapura";
   if (code.startsWith(ELEMIS_CODE_PREFIX) || isNumericElemisSku(code)) return "Elemis";
   if (startsWithAny(code, COSMERC_CODE_PREFIXES)) return "Cosmerc";
   if (startsWithAny(code, SUD_CODE_PREFIXES)) return "SUD";
@@ -180,6 +223,8 @@ const SUPPLIER_BRANDS: Record<string, RetailBrand> = {
   alodia: "Mandara Spa (Alodia)",
   "we are feel good inc": "We Are Feel Good",
   "we are feel good": "We Are Feel Good",
+  wafg: "We Are Feel Good",
+  samapura: "Samapura",
   "cosmerc trading": "Cosmerc",
   cosmerc: "Cosmerc",
 };
@@ -190,7 +235,22 @@ export function mapRetailBrandBySupplier(supplier: string | null | undefined): R
   return SUPPLIER_BRANDS[key] ?? null;
 }
 
-export function mapTreatmentSection(itemName: string): TreatmentSection {
+/**
+ * Wellness Programs (codes WL…, e.g. WLICR, WLIWSE, WLRHR) and Little Wellness Rituals (codes LWR01, LWR011…)
+ * are ordinary menu treatments, never promotions. The SKU decides first, so a new item on those menus lands in
+ * the right section even before its name is added above.
+ */
+export function mapTreatmentSectionByCode(itemCode: string | null | undefined): TreatmentSection | null {
+  const code = normalizeItemCode(itemCode ?? "");
+  if (!code) return null;
+  if (/^LWR\d+$/.test(code)) return "Little Wellness Rituals";
+  if (/^WL[A-Z]{2,}$/.test(code)) return "Wellness Programs";
+  return null;
+}
+
+export function mapTreatmentSection(itemName: string, context?: TreatmentContext): TreatmentSection {
+  const fromCode = mapTreatmentSectionByCode(context?.itemCode);
+  if (fromCode) return fromCode;
   const key = normalizeItemName(itemName);
   const override = TREATMENT_OVERRIDES[key];
   if (override) return override;
@@ -222,7 +282,7 @@ export function mapItemToGroup(
   itemName: string,
   context?: RetailBrandContext,
 ): RevenueMixGroup {
-  return category === "retail" ? mapRetailBrand(itemName, context) : mapTreatmentSection(itemName);
+  return category === "retail" ? mapRetailBrand(itemName, context) : mapTreatmentSection(itemName, context);
 }
 
 export type MixSlice = {
@@ -276,7 +336,7 @@ export function aggregateMixTotals(lines: ItemLineInput[]): {
 
   for (const line of lines) {
     if (line.category === "treatment") {
-      const section = mapTreatmentSection(line.itemName);
+      const section = mapTreatmentSection(line.itemName, { itemCode: line.itemCode });
       treatments[section] = (treatments[section] ?? 0) + line.netSales;
       if (section === UNMAPPED_LABEL) unmappedTreatments.add(line.itemName);
     } else {

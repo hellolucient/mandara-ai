@@ -103,6 +103,61 @@ describe("item-groups treatment mapping", () => {
   });
 });
 
+describe("item-groups Wellness Programs and Little Wellness Rituals (Tenille, 27 Nov 2026)", () => {
+  it("maps Wellness Programs by name and by WL code", () => {
+    assert.equal(mapTreatmentSection("Island Coconut Reset"), "Wellness Programs");
+    assert.equal(mapTreatmentSection("Island Wellness Escape Experience"), "Wellness Programs");
+    assert.equal(mapTreatmentSection("Royal Healing Retreat"), "Wellness Programs");
+    assert.equal(mapTreatmentSection("Some New Program", { itemCode: "WLNEW" }), "Wellness Programs");
+  });
+
+  it("maps every Chavana Little Wellness Rituals menu item and LWR code", () => {
+    for (const name of [
+      "Mother and Daughter Moment",
+      "Mother and Daugther Moment",
+      "Father and Son Timeout",
+      "Little Star Journey",
+      "Island Fruity Glow",
+      "Tropical Toes",
+      "Heavenly Hands",
+      "Cucumber Hydrating Facial",
+      "Soothing Coconut Scrub & Conditioner",
+      "Back, Neck & Scalp Massage",
+      "Shoulder, Hand & Foot Massage",
+      "Coconut Oil Head & Shoulder Massage",
+      "Bubble Bath",
+    ]) {
+      assert.equal(mapTreatmentSection(name), "Little Wellness Rituals", name);
+    }
+    assert.equal(mapTreatmentSection("Anything", { itemCode: "LWR011" }), "Little Wellness Rituals");
+    assert.equal(mapTreatmentSection("Cucumber Hydrating Facial", { itemCode: "LWR07" }), "Little Wellness Rituals");
+  });
+
+  it("does not pull ordinary menu items into the new sections", () => {
+    assert.equal(mapTreatmentSection("Back Neck and Scalp Massage", { itemCode: "BNSM" }), "Enhancements");
+    assert.equal(mapTreatmentSection("Pure Nature Facial 60", { itemCode: "F72" }), "Face of Mandara");
+    assert.equal(mapTreatmentSection("Honeymoon Package", { itemCode: "P69" }), "Packages");
+  });
+
+  it("rolls the new sections up in the mix totals", () => {
+    const result = aggregateMixTotals([
+      { category: "treatment", itemName: "Island Fruity Glow", itemCode: "LWR04", netSales: 58.27 },
+      { category: "treatment", itemName: "Island Coconut Reset", itemCode: "WLICR", netSales: 100 },
+    ]);
+    assert.equal(result.treatments["Little Wellness Rituals"], 58.27);
+    assert.equal(result.treatments["Wellness Programs"], 100);
+    assert.deepEqual(result.unmappedTreatmentNames, []);
+  });
+
+  it("maps Samapura and WAFG suppliers to their brands", () => {
+    assert.equal(mapRetailBrand("samapura bracelet", { itemCode: "BRCS001" }), "Samapura");
+    assert.equal(mapRetailBrand("samapura bracelet"), "Samapura");
+    assert.equal(mapRetailBrand("bracelet", { supplier: "Samapura" }), "Samapura");
+    assert.equal(mapRetailBrand("some lip balm", { supplier: "WAFG" }), "We Are Feel Good");
+    assert.equal(mapRetailBrand("coconut lip balm spf50+", { itemCode: "SS105" }), "We Are Feel Good");
+  });
+});
+
 describe("item-groups retail mapping", () => {
   it("maps Mandara, Elemis, and Milk Shake lines by name", () => {
     assert.equal(mapRetailBrand("mandara mango massage & body oil 100ml"), "Mandara Spa (Alodia)");
